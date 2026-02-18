@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FleetShield AI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">🛡️ <span>FleetShield AI</span></div>
+      <span class="badge" id="api-badge">SEED DATA</span>
+    </div>
+    <div class="header-right">
+      <span class="timestamp" id="timestamp"></span>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <main class="dashboard">
+    <!-- KPI Cards Row -->
+    <section class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Vehicles</div>
+        <div class="kpi-value" id="kpi-vehicles">--</div>
+        <div class="kpi-sub" id="kpi-vehicles-sub">active</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Drivers</div>
+        <div class="kpi-value" id="kpi-drivers">--</div>
+        <div class="kpi-sub" id="kpi-drivers-sub">active</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Safety Events (30d)</div>
+        <div class="kpi-value" id="kpi-events">--</div>
+        <div class="kpi-sub" id="kpi-events-sub">events/1000mi</div>
+      </div>
+      <div class="kpi-card accent">
+        <div class="kpi-label">Fleet Score</div>
+        <div class="kpi-value" id="kpi-score">--</div>
+        <div class="kpi-sub" id="kpi-score-sub">grade</div>
+      </div>
+    </section>
+
+    <!-- Main Content: Score + Drivers -->
+    <section class="main-grid">
+      <!-- Left: Insurance Score -->
+      <div class="panel score-panel">
+        <h2>Fleet Insurability Score</h2>
+        <div class="score-gauge">
+          <svg viewBox="0 0 200 120" class="gauge-svg">
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#ef4444"/>
+                <stop offset="50%" style="stop-color:#f59e0b"/>
+                <stop offset="100%" style="stop-color:#10b981"/>
+              </linearGradient>
+            </defs>
+            <!-- Background arc -->
+            <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#1e293b" stroke-width="16" stroke-linecap="round"/>
+            <!-- Score arc -->
+            <path id="score-arc" d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 251.3"/>
+          </svg>
+          <div class="score-number" id="score-number">--</div>
+          <div class="score-grade" id="score-grade">--</div>
+        </div>
+        <div class="score-details">
+          <div class="score-component">
+            <span class="comp-label">Safe Driving</span>
+            <div class="comp-bar"><div class="comp-fill" id="comp-safe" style="width:0%"></div></div>
+            <span class="comp-value" id="comp-safe-val">--</span>
+          </div>
+          <div class="score-component">
+            <span class="comp-label">Compliance</span>
+            <div class="comp-bar"><div class="comp-fill" id="comp-compliance" style="width:0%"></div></div>
+            <span class="comp-value" id="comp-compliance-val">--</span>
+          </div>
+          <div class="score-component">
+            <span class="comp-label">Maintenance</span>
+            <div class="comp-bar"><div class="comp-fill" id="comp-maint" style="width:0%"></div></div>
+            <span class="comp-value" id="comp-maint-val">--</span>
+          </div>
+          <div class="score-component">
+            <span class="comp-label">Driver Quality</span>
+            <div class="comp-bar"><div class="comp-fill" id="comp-quality" style="width:0%"></div></div>
+            <span class="comp-value" id="comp-quality-val">--</span>
+          </div>
+        </div>
+        <div class="premium-banner" id="premium-banner">
+          Potential Annual Savings: <strong>$--</strong>
+        </div>
+      </div>
+
+      <!-- Right: Driver Risk Grid -->
+      <div class="panel drivers-panel">
+        <h2>Driver Risk Overview</h2>
+        <div class="driver-grid" id="driver-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Row: Wellness + Financial -->
+    <section class="bottom-grid">
+      <div class="panel wellness-panel">
+        <h2>Wellness & Retention</h2>
+        <div class="wellness-stats" id="wellness-stats">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="panel financial-panel">
+        <h2>Financial Impact</h2>
+        <div class="financial-content" id="financial-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Chat Panel -->
+  <div class="chat-toggle" id="chat-toggle" onclick="toggleChat()">💬</div>
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-header">
+      <span>🛡️ Ava - Fleet Analyst</span>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg bot">
+        <div class="chat-bubble">Hi! I'm Ava, your fleet risk analyst. Ask me anything about your fleet -- insurance scores, driver risk, wellness, financial impact, or generate a report.</div>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Voice input">🎙️</button>
+      <input type="text" id="chat-input" placeholder="Ask Ava about your fleet..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send" onclick="sendChat()">→</button>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+
+    // --- DATA LOADING ---
+    async function loadDashboard() {
+      try {
+        const [overview, score, risks, wellness] = await Promise.all([
+          fetch(`${API}/api/fleet/overview`).then(r => r.json()),
+          fetch(`${API}/api/fleet/score`).then(r => r.json()),
+          fetch(`${API}/api/fleet/risks`).then(r => r.json()),
+          fetch(`${API}/api/fleet/wellness`).then(r => r.json()),
+        ]);
+
+        renderKPIs(overview, score);
+        renderScore(score);
+        renderDrivers(risks);
+        renderWellness(wellness);
+        renderFinancial(score, wellness, risks);
+        checkAPI();
+      } catch (e) {
+        console.error('Failed to load dashboard:', e);
+      }
+    }
+
+    async function checkAPI() {
+      try {
+        const h = await fetch(`${API}/api/health`).then(r => r.json());
+        const badge = document.getElementById('api-badge');
+        if (h.geotabConfigured) {
+          badge.textContent = 'LIVE DATA';
+          badge.classList.add('live');
+        }
+      } catch(e) {}
+    }
+
+    // --- KPIs ---
+    function renderKPIs(overview, score) {
+      document.getElementById('kpi-vehicles').textContent = overview.totalVehicles;
+      document.getElementById('kpi-vehicles-sub').textContent = `${overview.activeVehicles} active`;
+      document.getElementById('kpi-drivers').textContent = overview.totalDrivers;
+      document.getElementById('kpi-drivers-sub').textContent = `${overview.activeDrivers} active`;
+      document.getElementById('kpi-events').textContent = overview.totalSafetyEvents;
+      document.getElementById('kpi-events-sub').textContent = `${overview.eventsPerMile} /mi`;
+      document.getElementById('kpi-score').textContent = score.overallScore;
+      document.getElementById('kpi-score-sub').textContent = score.grade;
+      document.getElementById('timestamp').textContent = new Date().toLocaleString();
+    }
+
+    // --- INSURANCE SCORE ---
+    function renderScore(score) {
+      // Animate gauge arc
+      const maxArc = 251.3;
+      const pct = score.overallScore / 100;
+      const arc = document.getElementById('score-arc');
+      setTimeout(() => { arc.style.strokeDasharray = `${pct * maxArc} ${maxArc}`; }, 100);
+
+      document.getElementById('score-number').textContent = score.overallScore;
+      const gradeEl = document.getElementById('score-grade');
+      gradeEl.textContent = score.grade;
+      gradeEl.className = 'score-grade ' + (score.overallScore >= 80 ? 'good' : score.overallScore >= 60 ? 'warn' : 'bad');
+
+      // Components
+      const comps = [
+        { id: 'safe', data: score.components.safeDriving },
+        { id: 'compliance', data: score.components.compliance },
+        { id: 'maint', data: score.components.maintenance },
+        { id: 'quality', data: score.components.driverQuality },
+      ];
+      comps.forEach(({ id, data }) => {
+        document.getElementById(`comp-${id}`).style.width = `${data.score}%`;
+        document.getElementById(`comp-${id}`).style.backgroundColor = data.score >= 80 ? '#10b981' : data.score >= 60 ? '#f59e0b' : '#ef4444';
+        document.getElementById(`comp-${id}-val`).textContent = data.score;
+      });
+
+      document.getElementById('premium-banner').innerHTML =
+        `Potential Annual Savings: <strong>$${score.premiumImpact.estimatedAnnualSavings.toLocaleString()}</strong> &nbsp;|&nbsp; Percentile: Top ${100 - score.percentile}%`;
+    }
+
+    // --- DRIVER RISK GRID ---
+    function renderDrivers(risks) {
+      const grid = document.getElementById('driver-grid');
+      grid.innerHTML = '';
+      risks.slice(0, 15).forEach(r => {
+        const tile = document.createElement('div');
+        tile.className = `driver-tile ${r.tier}`;
+        tile.innerHTML = `
+          <div class="driver-name">${r.driverName.split(' ').map(n => n[0]).join('')}</div>
+          <div class="driver-score">${r.riskScore}</div>
+          <div class="driver-tier">${r.tier}</div>
+        `;
+        tile.title = `${r.driverName}\nRisk: ${r.riskScore}/100 (${r.tier})\nCost: $${r.annualizedCost.toLocaleString()}/yr`;
+        tile.onclick = () => sendPresetChat(`Tell me about ${r.driverName}'s risk profile`);
+        grid.appendChild(tile);
+      });
+    }
+
+    // --- WELLNESS ---
+    function renderWellness(wellness) {
+      const el = document.getElementById('wellness-stats');
+      el.innerHTML = `
+        <div class="wellness-metric">
+          <div class="wm-value ${wellness.highBurnoutRisk > 0 ? 'danger' : ''}">${wellness.highBurnoutRisk}</div>
+          <div class="wm-label">High Burnout Risk</div>
+        </div>
+        <div class="wellness-metric">
+          <div class="wm-value warn">${wellness.moderateBurnoutRisk}</div>
+          <div class="wm-label">Moderate Risk</div>
+        </div>
+        <div class="wellness-metric">
+          <div class="wm-value">${wellness.avgWellnessScore}</div>
+          <div class="wm-label">Avg Wellness</div>
+        </div>
+        <div class="wellness-metric">
+          <div class="wm-value danger">$${wellness.totalRetentionCostAtRisk.toLocaleString()}</div>
+          <div class="wm-label">Retention Cost at Risk</div>
+        </div>
+        ${wellness.driversAtRisk.length > 0 ? `
+          <div class="at-risk-list">
+            <h3>Drivers at Risk</h3>
+            ${wellness.driversAtRisk.map(d => `
+              <div class="at-risk-driver" onclick="sendPresetChat('Show wellness details for ${d.name}')">
+                <span class="ard-name">${d.name}</span>
+                <span class="ard-prob">${(d.burnoutProbability * 100).toFixed(0)}% burnout</span>
+                <span class="ard-cost">$${d.retentionCost.toLocaleString()}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
+
+    // --- FINANCIAL ---
+    function renderFinancial(score, wellness, risks) {
+      const insuranceSavings = score.premiumImpact.estimatedAnnualSavings;
+      const retentionSavings = Math.round(wellness.totalRetentionCostAtRisk * 0.6);
+      const totalRiskCost = risks.reduce((s, r) => s + r.annualizedCost, 0);
+      const accidentSavings = Math.round(totalRiskCost * 0.4);
+      const total = insuranceSavings + retentionSavings + accidentSavings;
+
+      document.getElementById('financial-content').innerHTML = `
+        <div class="financial-total">
+          <div class="ft-value">$${total.toLocaleString()}</div>
+          <div class="ft-label">Total Annual Savings Potential</div>
+        </div>
+        <div class="financial-breakdown">
+          <div class="fb-item">
+            <div class="fb-bar" style="width:${(insuranceSavings/total*100).toFixed(0)}%; background:#10b981"></div>
+            <span>Insurance: $${insuranceSavings.toLocaleString()}</span>
+          </div>
+          <div class="fb-item">
+            <div class="fb-bar" style="width:${(retentionSavings/total*100).toFixed(0)}%; background:#6366f1"></div>
+            <span>Retention: $${retentionSavings.toLocaleString()}</span>
+          </div>
+          <div class="fb-item">
+            <div class="fb-bar" style="width:${(accidentSavings/total*100).toFixed(0)}%; background:#f59e0b"></div>
+            <span>Accident Avoidance: $${accidentSavings.toLocaleString()}</span>
+          </div>
+        </div>
+        <button class="report-btn" onclick="sendPresetChat('Generate an insurance report')">📄 Generate Insurance Report</button>
+      `;
+    }
+
+    // --- CHAT ---
+    let chatOpen = false;
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      document.getElementById('chat-panel').classList.toggle('open', chatOpen);
+      document.getElementById('chat-toggle').classList.toggle('hidden', chatOpen);
+      if (chatOpen) document.getElementById('chat-input').focus();
+    }
+
+    function sendPresetChat(msg) {
+      if (!chatOpen) toggleChat();
+      document.getElementById('chat-input').value = msg;
+      sendChat();
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+
+      const messages = document.getElementById('chat-messages');
+      messages.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${escapeHtml(msg)}</div></div>`;
+
+      const botBubble = document.createElement('div');
+      botBubble.className = 'chat-msg bot';
+      botBubble.innerHTML = '<div class="chat-bubble thinking">Thinking...</div>';
+      messages.appendChild(botBubble);
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const res = await fetch(`${API}/api/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg }),
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'text') {
+                fullText += data.content;
+                botBubble.querySelector('.chat-bubble').innerHTML = renderMarkdown(fullText);
+                botBubble.querySelector('.chat-bubble').classList.remove('thinking');
+              }
+            } catch(e) {}
+          }
+        }
+
+        if (!fullText) {
+          botBubble.querySelector('.chat-bubble').textContent = 'No response received.';
+          botBubble.querySelector('.chat-bubble').classList.remove('thinking');
+        }
+      } catch (e) {
+        botBubble.querySelector('.chat-bubble').textContent = 'Error: Could not reach Ava.';
+        botBubble.querySelector('.chat-bubble').classList.remove('thinking');
+      }
+
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderMarkdown(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/\n/g, '<br>')
+        .replace(/\$([0-9,]+)/g, '<span class="money">$$$1</span>');
+    }
+
+    // --- VOICE ---
+    let voiceWs = null;
+    let recognition = null;
+    let isListening = false;
+    let ttsQueue = [];
+    let isSpeaking = false;
+
+    function toggleVoice() {
+      if (isListening) stopVoice();
+      else startVoice();
+    }
+
+    function startVoice() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Voice not supported in this browser. Use Chrome.');
+        return;
+      }
+
+      // Connect WebSocket
+      const wsUrl = `ws://${location.host}/ws`;
+      voiceWs = new WebSocket(wsUrl);
+      voiceWs.onopen = () => {
+        voiceWs.send(JSON.stringify({ type: 'start' }));
+      };
+      voiceWs.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleVoiceMessage(msg);
+      };
+
+      // Start speech recognition
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            const text = result[0].transcript.trim();
+            if (text.length >= 3) {
+              voiceWs?.send(JSON.stringify({ type: 'transcript', text, isFinal: true }));
+              // Show in chat
+              const messages = document.getElementById('chat-messages');
+              messages.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">🎙️ ${escapeHtml(text)}</div></div>`;
+              messages.scrollTop = messages.scrollHeight;
+            }
+          }
+        }
+      };
+
+      recognition.onerror = (e) => { if (e.error !== 'no-speech') console.error('STT error:', e.error); };
+      recognition.onend = () => { if (isListening) recognition.start(); };
+      recognition.start();
+
+      isListening = true;
+      document.getElementById('mic-btn').classList.add('active');
+      if (!chatOpen) toggleChat();
+    }
+
+    function stopVoice() {
+      isListening = false;
+      recognition?.stop();
+      recognition = null;
+      voiceWs?.close();
+      voiceWs = null;
+      speechSynthesis.cancel();
+      document.getElementById('mic-btn').classList.remove('active');
+    }
+
+    function handleVoiceMessage(msg) {
+      if (msg.type === 'tts') {
+        speak(msg.content);
+      } else if (msg.type === 'filler') {
+        const messages = document.getElementById('chat-messages');
+        messages.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble" style="color:var(--text-dim);font-style:italic">${msg.content}</div></div>`;
+        messages.scrollTop = messages.scrollHeight;
+        speak(msg.content);
+      } else if (msg.type === 'text') {
+        // Accumulate text for display
+        let lastBot = document.querySelector('.chat-messages .chat-msg.bot:last-child .chat-bubble.streaming');
+        if (!lastBot) {
+          const bubble = document.createElement('div');
+          bubble.className = 'chat-msg bot';
+          bubble.innerHTML = '<div class="chat-bubble streaming"></div>';
+          document.getElementById('chat-messages').appendChild(bubble);
+          lastBot = bubble.querySelector('.chat-bubble');
+        }
+        lastBot.innerHTML += msg.content;
+      } else if (msg.type === 'action') {
+        handleDashboardAction(msg);
+      }
+    }
+
+    function speak(text) {
+      if (!text) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      // Prefer a female voice
+      const voices = speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.name.includes('Samantha')) || voices.find(v => v.name.includes('Female')) || voices[0];
+      if (preferred) utterance.voice = preferred;
+      speechSynthesis.speak(utterance);
+    }
+
+    function handleDashboardAction(msg) {
+      const panels = {
+        'highlight-score': '.score-panel',
+        'highlight-drivers': '.drivers-panel',
+        'highlight-wellness': '.wellness-panel',
+        'highlight-financial': '.financial-panel',
+      };
+      const selector = panels[msg.action];
+      if (selector) {
+        const el = document.querySelector(selector);
+        if (el) {
+          el.style.outline = '2px solid var(--emerald)';
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => { el.style.outline = ''; }, 3000);
+        }
+      }
+    }
+
+    // --- INIT ---
+    loadDashboard();
+    // Preload voices
+    speechSynthesis.getVoices();
+    setInterval(() => {
+      document.getElementById('timestamp').textContent = new Date().toLocaleString();
+    }, 60000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "FleetShield AI",
+  "supportEmail": "support@fleetshield.ai",
+  "version": "1.0.0",
+  "items": [
+    {
+      "url": "addin.html",
+      "path": "ActivityLink/",
+      "menuName": {
+        "en": "FleetShield AI"
+      },
+      "icon": "https://raw.githubusercontent.com/your-repo/main/icon.svg"
+    }
+  ],
+  "isSigned": false,
+  "signature": ""
+}
