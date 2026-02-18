@@ -148,10 +148,11 @@ export class PulseSTTPipeline {
       this.ws.send(boosted);
       this.audioChunksSent++;
       if (this.audioChunksSent % 10 === 1) {
-        const samples = new Int16Array(boosted.buffer, boosted.byteOffset, boosted.length / 2);
+        const logBuf = Buffer.from(boosted);
+        const logSamples = new Int16Array(logBuf.buffer, logBuf.byteOffset, logBuf.length / 2);
         let sum = 0;
-        for (let i = 0; i < samples.length; i++) sum += (samples[i] / 32768) ** 2;
-        const rms = Math.sqrt(sum / samples.length);
+        for (let i = 0; i < logSamples.length; i++) sum += (logSamples[i] / 32768) ** 2;
+        const rms = Math.sqrt(sum / logSamples.length);
         console.log(`[PulseSTT] Audio chunk #${this.audioChunksSent}, RMS: ${rms.toFixed(5)} (gain: ${this.currentGain.toFixed(1)}x), size: ${boosted.length}b, gotResponse: ${this.gotAnyResponse}`);
       }
     }
@@ -168,7 +169,9 @@ export class PulseSTTPipeline {
   private static readonly GAIN_SMOOTHING = 0.15; // How fast gain adapts (0-1)
 
   private applyGain(pcmBuffer: Buffer): Buffer {
-    const samples = new Int16Array(pcmBuffer.buffer, pcmBuffer.byteOffset, pcmBuffer.length / 2);
+    // Copy to aligned buffer to avoid Int16Array alignment errors
+    const aligned = Buffer.from(pcmBuffer);
+    const samples = new Int16Array(aligned.buffer, aligned.byteOffset, aligned.length / 2);
 
     // Measure raw RMS
     let sum = 0;
