@@ -457,7 +457,7 @@ wss.on('connection', (ws) => {
 
   ws.on('message', async (raw, isBinary) => {
     // Binary data = PCM audio frames from the browser mic
-    if (isBinary || Buffer.isBuffer(raw)) {
+    if (isBinary) {
       if (session) {
         session.feedAudio(Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer));
       }
