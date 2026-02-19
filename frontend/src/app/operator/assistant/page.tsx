@@ -38,7 +38,13 @@ const quickActions = [
 let msgCounter = 0;
 function genId() { return `msg-${++msgCounter}-${Date.now()}`; }
 
-function renderMarkdown(text: string): string {
+/** Strip any leaked <voice>...</voice> tags from display text */
+function stripVoiceTags(text: string): string {
+  return text.replace(/<voice>[\s\S]*?<\/voice>/g, '').replace(/<\/?voice>/g, '').trimStart();
+}
+
+function renderMarkdown(raw: string): string {
+  const text = stripVoiceTags(raw);
   const lines = text.split('\n');
   const html: string[] = [];
   let inTable = false;
@@ -46,7 +52,7 @@ function renderMarkdown(text: string): string {
   let listType: 'ul' | 'ol' = 'ul';
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    const line = lines[i];
 
     // Skip table separator rows (|---|---|)
     if (/^\s*\|[\s-:|]+\|\s*$/.test(line)) continue;
@@ -56,7 +62,6 @@ function renderMarkdown(text: string): string {
       if (!inTable) { html.push('<table class="w-full text-xs my-2 border-collapse">'); inTable = true; }
       if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
       const cells = line.split('|').filter(c => c.trim());
-      // First table row after header = check if previous was header
       const isHeader = i > 0 && /^\s*\|[\s-:|]+\|\s*$/.test(lines[i + 1] || '');
       const tag = isHeader ? 'th' : 'td';
       const cellClass = isHeader
@@ -83,13 +88,13 @@ function renderMarkdown(text: string): string {
     }
 
     // Bullet lists (- or * )
-    if (/^\s*[-*•]\s+/.test(line)) {
+    if (/^\s*[-*]\s+/.test(line)) {
       if (!inList || listType !== 'ul') {
         if (inList) html.push('</ol>');
         html.push('<ul class="space-y-0.5 my-1">');
         inList = true; listType = 'ul';
       }
-      const content = line.replace(/^\s*[-*•]\s+/, '');
+      const content = line.replace(/^\s*[-*]\s+/, '');
       html.push(`<li class="flex gap-1.5 text-xs text-gray-700"><span class="text-amber-500 mt-0.5 shrink-0">•</span><span>${inlineFormat(content)}</span></li>`);
       continue;
     }
@@ -166,45 +171,13 @@ export default function AssistantPage() {
   // Audio context for playing TTS
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Clean markdown text for voice output
-  const cleanForVoice = useCallback((text: string): string => {
-    let clean = text
-      .replace(/#{1,6}\s*/g, '')               // ## headers
-      .replace(/\*\*(.*?)\*\*/g, '$1')         // **bold** → bold
-      .replace(/\*(.*?)\*/g, '$1')             // *italic* → italic
-      .replace(/`([^`]*)`/g, '$1')             // `code` → code
-      .replace(/\|[^\n]*\|/g, '')              // | table rows |
-      .replace(/[-─]{3,}/g, '')                // --- separators
-      .replace(/^\s*[-*•]\s+/gm, '')           // - bullet points
-      .replace(/^\s*\d+\.\s+/gm, '')           // 1. numbered lists
-      .replace(/[→⚠️✅]/g, '')                 // special chars/emoji
-      .replace(/<[^>]+>/g, '')                 // HTML tags
-      .replace(/\n{2,}/g, '. ')                // double newlines → sentence break
-      .replace(/\n/g, ' ')                     // single newlines → space
-      .replace(/\s{2,}/g, ' ')                 // collapse whitespace
-      .trim();
-
-    // Extract only the conversational intro (before any detailed breakdown)
-    const introEnd = clean.search(/Score Breakdown|Key Insights|Opportunities|Quick Wins|Component|Breakdown|Details|Here'?s (the|a) |The following/i);
-    if (introEnd > 30) {
-      clean = clean.slice(0, introEnd).trim();
-    }
-
-    // Take up to 3 natural sentences
-    const sentences = clean.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 5).slice(0, 3);
-    return sentences.join(' ');
-  }, []);
-
-  // Speak via Smallest AI lightning-v3.1 TTS, fallback to browser SpeechSynthesis
-  const speak = useCallback(async (text: string) => {
-    if (!voiceEnabled || typeof window === 'undefined') return;
-
-    const spokenText = cleanForVoice(text);
-    if (!spokenText) return;
+  // Speak via Smallest AI lightning-v3.1 TTS — takes pre-cleaned voice summary text directly
+  const speak = useCallback(async (voiceText: string) => {
+    if (!voiceEnabled || typeof window === 'undefined' || !voiceText.trim()) return;
 
     // Try Smallest AI TTS first
     try {
-      const res = await api.ttsSynthesize(spokenText);
+      const res = await api.ttsSynthesize(voiceText);
       if (res.ok) {
         const arrayBuffer = await res.arrayBuffer();
         if (!audioContextRef.current) {
@@ -225,11 +198,11 @@ export default function AssistantPage() {
 
     // Fallback: browser SpeechSynthesis
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(spokenText);
+    const utterance = new SpeechSynthesisUtterance(voiceText);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
     window.speechSynthesis.speak(utterance);
-  }, [voiceEnabled, cleanForVoice]);
+  }, [voiceEnabled]);
 
   // Send message
   const sendMessage = useCallback(async (text: string) => {
@@ -261,19 +234,19 @@ export default function AssistantPage() {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let sseBuffer = '';
       let currentText = '';
-      let firstTextSent = false;
-      const renderedTools = new Set<string>(); // Dedup tool results
+      let voiceSpoken = false;
+      const renderedTools = new Set<string>(); // Dedup tool results by toolName
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         if (abort.signal.aborted) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split('\n');
+        sseBuffer = lines.pop() || '';
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
@@ -282,62 +255,50 @@ export default function AssistantPage() {
 
             if (data.type === 'text') {
               currentText += data.content;
-              setMessages(prev => {
-                const updated = [...prev];
-                const msg = updated.find(m => m.id === assistantId);
-                if (!msg) return prev;
-                // Find or create the last text part
-                const lastPart = msg.parts[msg.parts.length - 1];
+              // Update message with immutable state (no mutation)
+              setMessages(prev => prev.map(m => {
+                if (m.id !== assistantId) return m;
+                const lastPart = m.parts[m.parts.length - 1];
                 if (lastPart && lastPart.type === 'text') {
-                  lastPart.content = currentText;
+                  const newParts = m.parts.map((p, idx) =>
+                    idx === m.parts.length - 1 ? { ...p, content: currentText } : p
+                  );
+                  return { ...m, parts: newParts };
                 } else {
-                  msg.parts.push({ type: 'text', content: currentText });
+                  return { ...m, parts: [...m.parts, { type: 'text', content: currentText }] };
                 }
-                return [...updated];
-              });
-            } else if (data.type === 'tool_result') {
-              // Dedup: skip if we already rendered this exact tool in this message
-              const dedupKey = `${data.toolName}:${JSON.stringify(data.result).slice(0, 100)}`;
-              if (renderedTools.has(dedupKey)) continue;
-              renderedTools.add(dedupKey);
+              }));
 
-              // Flush current text and start a new text segment after component
-              const textBeforeComponent = currentText;
+            } else if (data.type === 'voice_summary') {
+              // Backend-generated spoken summary — play via TTS, don't display
+              if (!voiceSpoken) {
+                speak(data.content);
+                voiceSpoken = true;
+              }
+
+            } else if (data.type === 'tool_result') {
+              // Dedup: only render one component per tool name per message
+              if (renderedTools.has(data.toolName)) continue;
+              renderedTools.add(data.toolName);
+
+              // Reset text accumulator for post-component text
               currentText = '';
 
-              setMessages(prev => {
-                const updated = [...prev];
-                const msg = updated.find(m => m.id === assistantId);
-                if (!msg) return prev;
-                // Add the component part
-                msg.parts.push({ type: 'component', toolName: data.toolName, toolResult: data.result });
-                return [...updated];
-              });
-
-              // Voice: speak summary of first text chunk
-              if (!firstTextSent && textBeforeComponent.trim()) {
-                speak(textBeforeComponent);
-                firstTextSent = true;
-              }
+              // Add component part with immutable state update
+              setMessages(prev => prev.map(m => {
+                if (m.id !== assistantId) return m;
+                return { ...m, parts: [...m.parts, { type: 'component', toolName: data.toolName, toolResult: data.result }] };
+              }));
             }
           } catch {}
         }
       }
-
-      // Final voice for text after last component
-      if (!firstTextSent && currentText.trim()) {
-        speak(currentText);
-      }
     } catch (err) {
       if (!abort.signal.aborted) {
-        setMessages(prev => {
-          const updated = [...prev];
-          const msg = updated.find(m => m.id === assistantId);
-          if (msg) {
-            msg.parts = [{ type: 'text', content: 'Connection error. Make sure the backend server is running.' }];
-          }
-          return [...updated];
-        });
+        setMessages(prev => prev.map(m => {
+          if (m.id !== assistantId) return m;
+          return { ...m, parts: [{ type: 'text', content: 'Connection error. Make sure the backend server is running.' }] };
+        }));
       }
     } finally {
       setStreaming(false);
@@ -433,7 +394,7 @@ export default function AssistantPage() {
               >
                 <div className={`${msg.role === 'user' ? 'max-w-[75%]' : 'max-w-full w-full'}`}>
                   {msg.parts.map((part, pi) => (
-                    <div key={pi}>
+                    <div key={`${msg.id}-${pi}`}>
                       {part.type === 'text' && part.content && (
                         <div
                           className={`px-4 py-3 text-sm leading-relaxed ${
@@ -445,9 +406,14 @@ export default function AssistantPage() {
                         />
                       )}
                       {part.type === 'component' && part.toolName && (
-                        <div className={pi > 0 ? 'mt-2' : ''}>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className={pi > 0 ? 'mt-2' : ''}
+                        >
                           <ComponentRenderer toolName={part.toolName} result={part.toolResult} />
-                        </div>
+                        </motion.div>
                       )}
                     </div>
                   ))}

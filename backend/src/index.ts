@@ -239,12 +239,60 @@ app.post('/api/assistant/stream', async (req, res) => {
     console.log('[Assistant Stream] Starting for message:', message.slice(0, 80));
     const result = await streamAssistantResponse(message, currentPage);
 
+    // Voice tag parser: buffer text until <voice>...</voice> is extracted or determined absent
+    let voiceBuffer = '';
+    let streamingDirectly = false;
+    let voiceEmitted = false;
+
     for await (const part of result.fullStream) {
       switch (part.type) {
         case 'text-delta':
-          res.write(`data: ${JSON.stringify({ type: 'text', content: part.textDelta })}\n\n`);
+          if (streamingDirectly) {
+            // Past voice tag, stream text directly
+            res.write(`data: ${JSON.stringify({ type: 'text', content: part.textDelta })}\n\n`);
+          } else {
+            voiceBuffer += part.textDelta;
+
+            // Check if voice tag is complete
+            const closeIdx = voiceBuffer.indexOf('</voice>');
+            if (closeIdx !== -1) {
+              const openIdx = voiceBuffer.indexOf('<voice>');
+              if (openIdx !== -1) {
+                const voiceContent = voiceBuffer.slice(openIdx + 7, closeIdx).trim();
+                if (voiceContent) {
+                  res.write(`data: ${JSON.stringify({ type: 'voice_summary', content: voiceContent })}\n\n`);
+                  voiceEmitted = true;
+                  console.log('[Assistant Stream] Voice summary extracted:', voiceContent.slice(0, 60));
+                }
+              }
+              // Emit any text after the closing voice tag
+              const remaining = voiceBuffer.slice(closeIdx + 8);
+              if (remaining.trimStart()) {
+                res.write(`data: ${JSON.stringify({ type: 'text', content: remaining.trimStart() })}\n\n`);
+              }
+              voiceBuffer = '';
+              streamingDirectly = true;
+            } else if (voiceBuffer.length > 500 || (!voiceBuffer.includes('<') && voiceBuffer.length > 80)) {
+              // No voice tag coming — flush buffer as regular text
+              const clean = voiceBuffer.replace(/<\/?voice>/g, '');
+              if (clean.trim()) {
+                res.write(`data: ${JSON.stringify({ type: 'text', content: clean })}\n\n`);
+              }
+              voiceBuffer = '';
+              streamingDirectly = true;
+            }
+          }
           break;
         case 'tool-call':
+          // Flush any pending voice buffer before tool calls
+          if (!streamingDirectly && voiceBuffer) {
+            const clean = voiceBuffer.replace(/<voice>[\s\S]*?<\/voice>/g, '').replace(/<\/?voice>/g, '');
+            if (clean.trim()) {
+              res.write(`data: ${JSON.stringify({ type: 'text', content: clean })}\n\n`);
+            }
+            voiceBuffer = '';
+            streamingDirectly = true;
+          }
           console.log('[Assistant Stream] Tool call:', part.toolName);
           res.write(`data: ${JSON.stringify({ type: 'tool_call', toolName: part.toolName, args: part.args })}\n\n`);
           break;
@@ -256,6 +304,14 @@ app.post('/api/assistant/stream', async (req, res) => {
           console.error('[Assistant Stream] Stream error event:', part.error);
           res.write(`data: ${JSON.stringify({ type: 'error', content: String(part.error) })}\n\n`);
           break;
+      }
+    }
+
+    // Flush any remaining buffer
+    if (!streamingDirectly && voiceBuffer) {
+      const clean = voiceBuffer.replace(/<voice>[\s\S]*?<\/voice>/g, '').replace(/<\/?voice>/g, '');
+      if (clean.trim()) {
+        res.write(`data: ${JSON.stringify({ type: 'text', content: clean })}\n\n`);
       }
     }
 
