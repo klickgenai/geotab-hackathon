@@ -264,6 +264,7 @@ export default function AssistantPage() {
       let buffer = '';
       let currentText = '';
       let firstTextSent = false;
+      const renderedTools = new Set<string>(); // Dedup tool results
 
       while (true) {
         const { done, value } = await reader.read();
@@ -295,6 +296,11 @@ export default function AssistantPage() {
                 return [...updated];
               });
             } else if (data.type === 'tool_result') {
+              // Dedup: skip if we already rendered this exact tool in this message
+              const dedupKey = `${data.toolName}:${JSON.stringify(data.result).slice(0, 100)}`;
+              if (renderedTools.has(dedupKey)) continue;
+              renderedTools.add(dedupKey);
+
               // Flush current text and start a new text segment after component
               const textBeforeComponent = currentText;
               currentText = '';
