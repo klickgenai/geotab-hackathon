@@ -410,7 +410,7 @@ export function detectDangerousZones(): DangerousZone[] {
         id: `zone_${index + 1}`,
         latitude: Math.round(avgLat * 10000) / 10000,
         longitude: Math.round(avgLng * 10000) / 10000,
-        radius: cellSize * 111 / 2, // approx km (1 degree ~ 111 km)
+        radius: Math.round(cellSize * 111 / 2 * 10) / 10, // approx km (1 degree ~ 111 km)
         eventCount: cell.events.length,
         topEventType: topType[0] as SafetyEventType,
         affectedDrivers: Array.from(driverSet),

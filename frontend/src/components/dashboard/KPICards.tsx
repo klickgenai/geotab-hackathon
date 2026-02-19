@@ -32,7 +32,7 @@ export default function KPICards({ overview, score }: KPICardsProps) {
     {
       label: 'Safety Events',
       value: overview.totalSafetyEvents,
-      sub: `${overview.eventsPerMile.toFixed(4)}/mi · 30 days`,
+      sub: `${(overview.eventsPerThousandMiles ?? (overview.eventsPerMile * 1000)).toFixed(1)}/1K mi · 30 days`,
       icon: AlertTriangle,
       iconBg: 'bg-amber-50',
       iconColor: 'text-amber-500',

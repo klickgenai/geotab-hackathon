@@ -44,6 +44,8 @@ export default function PredictivePage() {
   const [corridors, setCorridors] = useState<DangerousZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
+  const [showAllRisks, setShowAllRisks] = useState(false);
+  const [showAllTrends, setShowAllTrends] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -119,7 +121,7 @@ export default function PredictivePage() {
                 <span className="ml-auto text-xs text-gray-400">{risks.length} drivers</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {risks.slice(0, 12).map((risk, i) => (
+                {(showAllRisks ? risks : risks.slice(0, 12)).map((risk, i) => (
                   <motion.div
                     key={risk.driverId}
                     initial={{ opacity: 0, y: 10 }}
@@ -165,6 +167,14 @@ export default function PredictivePage() {
                   </motion.div>
                 ))}
               </div>
+              {risks.length > 12 && (
+                <button
+                  onClick={() => setShowAllRisks(!showAllRisks)}
+                  className="mt-3 w-full py-2 text-xs font-medium text-[#BF7408] hover:bg-[#FFF8EB] rounded-lg transition-colors"
+                >
+                  {showAllRisks ? 'Show less' : `Show all ${risks.length} drivers`}
+                </button>
+              )}
             </div>
           </div>
 
@@ -228,7 +238,7 @@ export default function PredictivePage() {
                 </tr>
               </thead>
               <tbody>
-                {trends.slice(0, 15).map((trend, i) => (
+                {(showAllTrends ? trends : trends.slice(0, 15)).map((trend, i) => (
                   <motion.tr
                     key={trend.driverId}
                     initial={{ opacity: 0 }}
@@ -255,6 +265,14 @@ export default function PredictivePage() {
                 ))}
               </tbody>
             </table>
+            {trends.length > 15 && (
+              <button
+                onClick={() => setShowAllTrends(!showAllTrends)}
+                className="mt-3 w-full py-2 text-xs font-medium text-[#BF7408] hover:bg-[#FFF8EB] rounded-lg transition-colors"
+              >
+                {showAllTrends ? 'Show less' : `Show all ${trends.length} drivers`}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -30,6 +30,10 @@ import {
   initiateDispatcherCall,
   getDriverLeaderboardTool,
   updateDriverLoadStatus,
+  getHOSStatus,
+  getPreShiftBriefing,
+  getSafetyCoaching,
+  reportIncident,
 } from '../tools/index.js';
 
 const SYSTEM_PROMPT = `You are Ava, the FleetShield AI assistant. You serve two types of users:
@@ -78,6 +82,10 @@ When talking to a driver, be warm and encouraging. Celebrate good scores. When t
 16. **Dispatcher Call** -- Simulate calling dispatch (talk to Mike) about loads, ETAs, issues
 17. **Driver Leaderboard** -- Safety rankings comparing all drivers
 18. **Update Load Status** -- Mark loads as picked up, in transit, delivered, etc.
+19. **HOS Status** -- Hours of Service compliance: remaining drive time, on-duty limits, break requirements
+20. **Pre-Shift Briefing** -- Personalized safety briefing with risk assessment, focus areas, weather, route hazards
+21. **Safety Coaching** -- Personalized coaching tips based on driving patterns and improvement areas
+22. **Incident Report** -- Voice-driven incident/near-miss reporting with automatic classification
 
 ## Response Guidelines
 - Start with the key insight, then provide supporting data
@@ -118,6 +126,11 @@ export const fleetshieldTools = {
   initiateDispatcherCall,
   getDriverLeaderboardTool,
   updateDriverLoadStatus,
+  // Driver intelligence tools
+  getHOSStatus,
+  getPreShiftBriefing,
+  getSafetyCoaching,
+  reportIncident,
 };
 
 export async function streamAgentResponse(message: string) {

@@ -15,6 +15,9 @@ export interface SeedVehicle {
   model: string;
   odometer: number;
   activeFrom: string;
+  faultCount?: number;
+  activeFaultCount?: number;
+  fuelTankCapacity?: number;
 }
 
 export interface SeedDriver {
@@ -375,6 +378,7 @@ export function getFleetSummary() {
     totalSafetyEvents: totalEvents,
     avgSafetyScore,
     eventsPerMile: totalDistance > 0 ? Math.round(totalEvents / (totalDistance * 0.621371) * 10000) / 10000 : 0,
+    eventsPerThousandMiles: totalDistance > 0 ? Math.round(totalEvents / (totalDistance * 0.621371) * 1000 * 100) / 100 : 0,
     fuelConsumed: Math.round(kpis30.reduce((s, k) => s + k.fuelConsumed, 0)),
     avgIdlingPercent: kpis30.length > 0 ? Math.round(kpis30.reduce((s, k) => s + k.idlingPercent, 0) / kpis30.length * 10) / 10 : 0,
     riskDistribution,

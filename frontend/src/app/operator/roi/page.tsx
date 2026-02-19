@@ -133,17 +133,16 @@ export default function ROIPage() {
                 className="flex items-center gap-3">
                 <div className="w-8">{savingsIcons[item.key]}</div>
                 <div className="w-36 text-sm font-medium text-gray-700">{item.label}</div>
-                <div className="flex-1">
-                  <div className="w-full bg-gray-100 rounded-full h-6">
+                <div className="flex-1 flex items-center gap-2">
+                  <div className="flex-1 bg-gray-100 rounded-full h-6">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${maxSaving > 0 ? (item.value / maxSaving) * 100 : 0}%` }}
                       transition={{ duration: 0.8, delay: i * 0.1 }}
-                      className="h-6 rounded-full bg-gradient-to-r from-[#FBAF1A] to-emerald-400 flex items-center justify-end pr-2"
-                    >
-                      <span className="text-xs font-bold text-white">${item.value.toLocaleString()}</span>
-                    </motion.div>
+                      className="h-6 rounded-full bg-gradient-to-r from-[#FBAF1A] to-emerald-400"
+                    />
                   </div>
+                  <span className="text-xs font-bold text-gray-700 whitespace-nowrap">${item.value.toLocaleString()}</span>
                 </div>
               </motion.div>
             ))}
@@ -179,9 +178,11 @@ export default function ROIPage() {
                         <td className="py-2 text-sm text-gray-700 font-medium">{m.name}</td>
                         <td className="py-2 text-right text-sm text-gray-500">{m.before.toLocaleString()}</td>
                         <td className="py-2 text-right text-sm text-gray-900 font-medium">{m.after.toLocaleString()}</td>
-                        <td className={`py-2 text-right text-sm font-semibold flex items-center justify-end gap-1 ${improved ? 'text-emerald-600' : 'text-red-500'}`}>
-                          {improved ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                          {m.changePercent > 0 ? '+' : ''}{m.changePercent}%
+                        <td className={`py-2 text-right text-sm font-semibold ${improved ? 'text-emerald-600' : 'text-red-500'}`}>
+                          <span className="inline-flex items-center gap-1">
+                            {improved ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                            {m.changePercent > 0 ? '+' : ''}{m.changePercent}%
+                          </span>
                         </td>
                         <td className="py-2 text-right text-sm font-semibold text-emerald-600">
                           ${m.dollarImpact.toLocaleString()}

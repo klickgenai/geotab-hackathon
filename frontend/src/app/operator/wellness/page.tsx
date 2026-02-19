@@ -147,7 +147,7 @@ export default function WellnessPage() {
                 <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Total Retention Cost at Risk</span>
               </div>
               <div className="text-5xl font-extrabold text-red-400 mt-3 font-mono-kpi">
-                ${(totalRetentionCost / 1000).toFixed(0)}K
+                ${(summary.totalRetentionCostAtRisk / 1000).toFixed(0)}K
               </div>
               <div className="text-sm text-white/30 mt-2">
                 across {summary.highBurnoutRisk + summary.moderateBurnoutRisk} at-risk drivers

@@ -17,3 +17,9 @@ export {
   getDriverLeaderboardTool,
   updateDriverLoadStatus,
 } from './driver-dashboard.js';
+export {
+  getHOSStatus,
+  getPreShiftBriefing,
+  getSafetyCoaching,
+  reportIncident,
+} from './driver-intelligence.js';

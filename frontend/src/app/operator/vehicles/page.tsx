@@ -34,7 +34,8 @@ export default function VehiclesPage() {
 
   const stats = useMemo(() => {
     const totalOdometer = vehicles.reduce((s, v) => s + v.odometer, 0);
-    const avgAge = vehicles.length > 0 ? Math.round(vehicles.reduce((s, v) => s + (2026 - v.year), 0) / vehicles.length * 10) / 10 : 0;
+    const currentYear = new Date().getFullYear();
+    const avgAge = vehicles.length > 0 ? Math.round(vehicles.reduce((s, v) => s + (currentYear - v.year), 0) / vehicles.length * 10) / 10 : 0;
     const makes = new Set(vehicles.map((v) => v.make));
     return { total: vehicles.length, totalOdometer, avgAge, makes: makes.size };
   }, [vehicles]);

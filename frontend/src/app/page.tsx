@@ -7,6 +7,62 @@ import {
   ChevronRight, ArrowRight, Zap, Users, Truck, AlertTriangle,
 } from 'lucide-react';
 
+function FleetShieldLogo({ size = 40, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      {/* Shield body */}
+      <path
+        d="M24 4L6 12v12c0 11.1 7.7 21.5 18 24 10.3-2.5 18-12.9 18-24V12L24 4z"
+        fill="url(#shieldGrad)"
+        stroke="url(#shieldStroke)"
+        strokeWidth="1"
+      />
+      {/* Inner shield highlight */}
+      <path
+        d="M24 8L10 14.5v9.5c0 9.2 6.3 17.8 14 19.8V8z"
+        fill="rgba(255,255,255,0.06)"
+      />
+      {/* Signal pulse lines - representing data/AI */}
+      <g stroke="#FBAF1A" strokeWidth="2" strokeLinecap="round" opacity="0.9">
+        <path d="M17 24h3l2-6 3 12 2.5-8 2.5 4h3" />
+      </g>
+      {/* Center dot */}
+      <circle cx="24" cy="24" r="2" fill="#FBAF1A" />
+      {/* Top shield accent */}
+      <path
+        d="M24 4L6 12v2l18-8 18 8v-2L24 4z"
+        fill="rgba(251,175,26,0.3)"
+      />
+      <defs>
+        <linearGradient id="shieldGrad" x1="6" y1="4" x2="42" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#1a2540" />
+          <stop offset="100%" stopColor="#0f1729" />
+        </linearGradient>
+        <linearGradient id="shieldStroke" x1="6" y1="4" x2="42" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FBAF1A" stopOpacity="0.5" />
+          <stop offset="50%" stopColor="#FBAF1A" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#10B981" stopOpacity="0.3" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+function FleetShieldWordmark({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-3 ${className}`}>
+      <FleetShieldLogo size={40} />
+      <div className="flex flex-col">
+        <span className="text-lg font-extrabold tracking-tight leading-none">
+          <span className="text-white">Fleet</span>
+          <span className="text-[#FBAF1A]">Shield</span>
+        </span>
+        <span className="text-[9px] font-bold text-white/30 tracking-[3px] uppercase leading-none mt-0.5">Intelligence</span>
+      </div>
+    </div>
+  );
+}
+
 function AnimatedCounter({ end, prefix = '', suffix = '', duration = 2000 }: { end: number; prefix?: string; suffix?: string; duration?: number }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -101,15 +157,7 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-[#0B0F1A]/95 backdrop-blur-xl border-b border-white/[0.06]' : ''}`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="font-bold text-lg tracking-tight">FleetShield AI</div>
-              <div className="text-[10px] text-[#FBAF1A]/60 font-medium tracking-[2px] uppercase">Risk Intelligence</div>
-            </div>
-          </div>
+          <FleetShieldWordmark />
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/operator')}
@@ -142,21 +190,37 @@ export default function LandingPage() {
         </div>
 
         <div className="relative max-w-5xl mx-auto px-6 text-center">
+          {/* Hero Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 blur-[40px] bg-[#FBAF1A]/20 rounded-full scale-150" />
+              <FleetShieldLogo size={80} className="relative" />
+            </div>
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.08] tracking-tight mb-4">
+            <span className="text-white">Fleet</span>
+            <span className="bg-gradient-to-r from-[#FBAF1A] to-[#BF7408] bg-clip-text text-transparent">Shield</span>
+          </h1>
+          <div className="text-sm md:text-base font-semibold text-white/30 tracking-[6px] uppercase mb-8">
+            Predictive Fleet Intelligence
+          </div>
+
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-sm text-white/60">Powered by Geotab Telematics + AI</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.08] tracking-tight mb-6">
-            <span className="text-white">Your fleet data has a </span>
+          <h2 className="text-2xl md:text-4xl font-bold leading-tight mb-6 text-white/80">
+            Your fleet data has a{' '}
             <span className="bg-gradient-to-r from-[#FBAF1A] to-emerald-400 bg-clip-text text-transparent">
               hidden insurance story
             </span>
-          </h1>
+          </h2>
 
           <p className="text-lg md:text-xl text-white/50 max-w-3xl mx-auto leading-relaxed mb-10">
             Fleet safety data exists everywhere — but nobody bridges it to insurance savings,
-            driver wellness, or dollars. FleetShield AI translates Geotab telematics into
+            driver wellness, or dollars. FleetShield translates Geotab telematics into
             insurance-ready scores, predicts burnout, and quantifies every improvement in real money.
           </p>
 
@@ -378,10 +442,10 @@ export default function LandingPage() {
       <footer className="border-t border-white/[0.06] py-8 px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
-              <Shield className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-sm font-semibold text-white/40">FleetShield AI</span>
+            <FleetShieldLogo size={28} />
+            <span className="text-sm font-semibold text-white/40">
+              <span className="text-white/60">Fleet</span><span className="text-[#FBAF1A]/60">Shield</span>
+            </span>
           </div>
           <div className="text-xs text-white/20">
             Built with Geotab Telematics &middot; Geotab Vibe Coding Hackathon 2026

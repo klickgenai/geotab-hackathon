@@ -24,6 +24,7 @@ export default function SafetyEventsPage() {
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [visibleCount, setVisibleCount] = useState(100);
 
   const loadData = () => {
     setLoading(true);
@@ -157,7 +158,7 @@ export default function SafetyEventsPage() {
         {/* Events timeline */}
         <div className="bg-white rounded-2xl border border-[#E5E2DC] overflow-hidden">
           <div className="divide-y divide-gray-50">
-            {filtered.slice(0, 100).map((event, i) => {
+            {filtered.slice(0, visibleCount).map((event, i) => {
               const cfg = severityConfig[event.severity];
               return (
                 <motion.div
@@ -193,6 +194,14 @@ export default function SafetyEventsPage() {
               );
             })}
           </div>
+          {filtered.length > visibleCount && (
+            <button
+              onClick={() => setVisibleCount((c) => c + 100)}
+              className="w-full py-3 text-sm font-medium text-[#BF7408] hover:bg-[#FFF8EB] transition-colors border-t border-[#F0EDE7]"
+            >
+              Show more ({filtered.length - visibleCount} remaining)
+            </button>
+          )}
         </div>
       </div>
     </>

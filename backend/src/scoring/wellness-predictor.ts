@@ -208,7 +208,9 @@ export function getFleetWellnessSummary() {
   const all = predictAllWellness();
   const highRisk = all.filter((r) => r.burnoutRisk === 'high');
   const moderateRisk = all.filter((r) => r.burnoutRisk === 'moderate');
-  const totalRetentionCost = all.reduce((s, r) => s + r.retentionCost, 0);
+  // Only sum retention cost for at-risk drivers (high + moderate), not the entire fleet
+  const atRiskDrivers = all.filter((r) => r.burnoutRisk === 'high' || r.burnoutRisk === 'moderate');
+  const totalRetentionCost = atRiskDrivers.reduce((s, r) => s + r.retentionCost, 0);
 
   return {
     totalDrivers: all.length,

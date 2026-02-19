@@ -31,9 +31,14 @@ import {
   updateLoadStatus,
   getDriverMessages,
   getDriverLeaderboard,
+  getDriverActionItems,
+  addDriverActionItem,
+  completeDriverActionItem,
+  dismissDriverActionItem,
 } from './data/driver-session.js';
 import { simulateDispatcherCall } from './data/dispatcher-ai.js';
 import { calculateFleetROI, calculateBeforeAfter, calculateRetentionSavings } from './scoring/roi-engine.js';
+import { getGamificationState, getPointsHistory, getDriverBadges, getRewardsCatalog, getDailyChallenge, checkChallengeProgress } from './scoring/gamification-engine.js';
 import { simulateWhatIf, getDefaultScenarios } from './scoring/what-if-simulator.js';
 import { geotabAce } from './services/geotab-ace.js';
 import { isUsingLiveData } from './data/fleet-data-provider.js';
@@ -84,9 +89,10 @@ app.get('/api/fleet/drivers', (_req, res) => {
 // --- Single Driver ---
 app.get('/api/fleet/drivers/:id', (req, res) => {
   try {
+    const driver = seedDrivers.find((d) => d.id === req.params.id);
+    if (!driver) return res.status(404).json({ error: 'Driver not found' });
     const stats = getDriverStats(req.params.id);
-    if (!stats) return res.status(404).json({ error: 'Driver not found' });
-    res.json(stats);
+    res.json({ ...driver, stats });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get driver' });
   }
@@ -386,6 +392,234 @@ app.get('/api/driver/leaderboard', (_req, res) => {
     res.json(getDriverLeaderboard());
   } catch (error) {
     res.status(500).json({ error: 'Failed to get driver leaderboard' });
+  }
+});
+
+// --- Pre-Shift Briefing ---
+app.get('/api/driver/:id/pre-shift-briefing', (req, res) => {
+  try {
+    const driverId = req.params.id;
+    const driver = seedDrivers.find((d) => d.id === driverId);
+    if (!driver) return res.status(404).json({ error: 'Driver not found' });
+
+    // Get risk data from existing engines
+    const preShift = calculatePreShiftRisk(driverId);
+    const driverRisk = calculateDriverRisk(driverId);
+    const wellness = predictWellness(driverId);
+    const session = getDriverSession(driverId);
+    const dangerousZones = detectDangerousZones();
+
+    // Determine risk level
+    const riskLevel = preShift?.riskLevel || 'low';
+    const riskScore = preShift?.riskScore || 0;
+
+    // Generate greeting based on time of day and streak
+    const hour = new Date().getHours();
+    const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    const streakDays = session?.streakDays || 0;
+    let greeting = `${timeGreeting}, ${driver.firstName}!`;
+    if (streakDays >= 30) greeting += ` Incredible ${streakDays}-day safe streak!`;
+    else if (streakDays >= 14) greeting += ` Amazing ${streakDays}-day safe streak going!`;
+    else if (streakDays >= 7) greeting += ` Nice ${streakDays}-day streak - keep it up!`;
+    else if (streakDays >= 3) greeting += ` ${streakDays} days safe and counting!`;
+    else greeting += ` Let's make today a safe one.`;
+
+    // Generate focus areas based on top event types
+    const focusAreaMap: Record<string, string> = {
+      harsh_braking: 'Watch following distance - ease off the gas 3-4 seconds earlier',
+      speeding: 'Mind your speed today - set cruise control on highways',
+      distracted_driving: 'Secure your phone before departure - stay focused',
+      drowsy_driving: 'Stay alert - take breaks every 2 hours, hydrate often',
+      lane_departure: 'Check your lane position regularly - adjust mirrors before departure',
+      tailgating: 'Maintain 4-second following distance at all speeds',
+      harsh_acceleration: 'Smooth acceleration from stops - anticipate traffic flow',
+      seatbelt: 'Buckle up before starting the engine',
+      rolling_stop: 'Full stops at all intersections - no rolling through',
+      idle_excessive: 'Minimize idling - turn off for stops longer than 2 minutes',
+    };
+
+    const focusAreas: string[] = [];
+    if (driverRisk?.topEventTypes) {
+      for (const evt of driverRisk.topEventTypes.slice(0, 3)) {
+        const tip = focusAreaMap[evt.type];
+        if (tip) focusAreas.push(tip);
+      }
+    }
+    if (focusAreas.length === 0) {
+      focusAreas.push('Maintain safe following distance', 'Stay within speed limits');
+    }
+
+    // Add wellness-based focus areas
+    if (wellness && wellness.burnoutRisk === 'high') {
+      focusAreas.push('Take extra rest breaks today - your fatigue indicators are elevated');
+    } else if (wellness && wellness.avgRestHours < 8) {
+      focusAreas.push('You had limited rest - stay extra alert today');
+    }
+
+    // Simulated weather (deterministic based on day of year)
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    const weatherConditions = [
+      { condition: 'Clear skies', temp: 45, advisory: undefined },
+      { condition: 'Partly cloudy', temp: 52, advisory: undefined },
+      { condition: 'Light rain', temp: 48, advisory: 'Wet roads - increase following distance' },
+      { condition: 'Overcast', temp: 42, advisory: undefined },
+      { condition: 'Light rain', temp: 38, advisory: 'Wet roads ahead - reduce speed in curves' },
+      { condition: 'Clear skies', temp: 55, advisory: undefined },
+      { condition: 'Fog', temp: 35, advisory: 'Low visibility - use fog lights, reduce speed' },
+      { condition: 'Snow flurries', temp: 28, advisory: 'Slippery conditions possible - extra caution on bridges' },
+      { condition: 'Partly cloudy', temp: 50, advisory: undefined },
+      { condition: 'Heavy rain', temp: 44, advisory: 'Heavy rain expected - reduce speed, increase following distance' },
+      { condition: 'Clear skies', temp: 58, advisory: undefined },
+      { condition: 'Thunderstorms', temp: 62, advisory: 'Thunderstorms forecast - pull over if visibility drops below 200ft' },
+      { condition: 'Overcast', temp: 40, advisory: undefined },
+      { condition: 'Clear skies', temp: 48, advisory: undefined },
+    ];
+    const weather = weatherConditions[dayOfYear % weatherConditions.length];
+
+    // Route hazards from dangerous zones
+    const routeHazards: string[] = [];
+    const topZones = dangerousZones.slice(0, 3);
+    for (const zone of topZones) {
+      routeHazards.push(`High ${zone.topEventType.replace(/_/g, ' ')} area near (${zone.latitude.toFixed(1)}°, ${zone.longitude.toFixed(1)}°) - ${zone.eventCount} recent events`);
+    }
+
+    // Motivational message based on context
+    let motivational: string;
+    if (riskLevel === 'critical' || riskLevel === 'high') {
+      motivational = 'Take it steady today. Your safety is the top priority. We believe in you.';
+    } else if (streakDays >= 30) {
+      motivational = `${streakDays} days of excellence! You're an inspiration to the entire fleet.`;
+    } else if (streakDays >= 14) {
+      motivational = 'Your consistency is paying off. Keep this momentum going!';
+    } else if (streakDays >= 7) {
+      motivational = 'One week strong! Every safe mile counts. You\'re building something great.';
+    } else {
+      motivational = 'Every journey starts with a single safe mile. Let\'s make today count!';
+    }
+
+    // Streak status
+    let streakStatus: string;
+    if (streakDays >= 30) {
+      streakStatus = `${streakDays} days strong! You've earned Monthly Master! Can you reach 60?`;
+    } else if (streakDays >= 14) {
+      streakStatus = `${streakDays} days! ${30 - streakDays} more for the Monthly Master badge!`;
+    } else if (streakDays >= 7) {
+      streakStatus = `${streakDays} days! ${14 - streakDays} more for the Fortnight Fighter badge!`;
+    } else {
+      streakStatus = `${streakDays} days. ${7 - streakDays} more for the Week Warrior badge!`;
+    }
+
+    const briefing = {
+      riskLevel,
+      riskScore,
+      greeting,
+      focusAreas,
+      weather: {
+        condition: weather.condition,
+        temp: weather.temp,
+        advisory: weather.advisory || null,
+      },
+      routeHazards,
+      motivational,
+      streakStatus,
+      safetyScore: session?.safetyScore || 0,
+      streakDays,
+      factors: preShift?.factors || [],
+    };
+
+    res.json(briefing);
+  } catch (error) {
+    console.error('[Pre-Shift Briefing] Error:', error);
+    res.status(500).json({ error: 'Failed to generate pre-shift briefing' });
+  }
+});
+
+// --- Gamification API ---
+app.get('/api/driver/:id/gamification', (req, res) => {
+  try {
+    const state = getGamificationState(req.params.id);
+    if (!state) return res.status(404).json({ error: 'Driver not found' });
+    res.json(state);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get gamification state' });
+  }
+});
+
+app.get('/api/driver/:id/points-history', (req, res) => {
+  try {
+    const history = getPointsHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get points history' });
+  }
+});
+
+app.get('/api/driver/:id/badges', (req, res) => {
+  try {
+    const badges = getDriverBadges(req.params.id);
+    res.json(badges);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get badges' });
+  }
+});
+
+app.get('/api/driver/:id/rewards', (req, res) => {
+  try {
+    const rewards = getRewardsCatalog(req.params.id);
+    res.json(rewards);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get rewards' });
+  }
+});
+
+app.post('/api/driver/:id/challenge/check', (req, res) => {
+  try {
+    const challenge = checkChallengeProgress(req.params.id);
+    if (!challenge) return res.json({ message: 'No active challenge' });
+    res.json(challenge);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check challenge progress' });
+  }
+});
+
+// --- Driver Action Items ---
+app.get('/api/driver/:id/actions', (req, res) => {
+  try {
+    const items = getDriverActionItems(req.params.id);
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get action items' });
+  }
+});
+
+app.post('/api/driver/:id/actions', (req, res) => {
+  try {
+    const { text, source } = req.body;
+    if (!text) return res.status(400).json({ error: 'text is required' });
+    const item = addDriverActionItem(req.params.id, text, source || 'system');
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add action item' });
+  }
+});
+
+app.post('/api/driver/:id/actions/:actionId/complete', (req, res) => {
+  try {
+    const item = completeDriverActionItem(req.params.id, req.params.actionId);
+    if (!item) return res.status(404).json({ error: 'Action item not found' });
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to complete action item' });
+  }
+});
+
+app.post('/api/driver/:id/actions/:actionId/dismiss', (req, res) => {
+  try {
+    const item = dismissDriverActionItem(req.params.id, req.params.actionId);
+    if (!item) return res.status(404).json({ error: 'Action item not found' });
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to dismiss action item' });
   }
 });
 

@@ -15,10 +15,10 @@ export default function ScoreCard({ score }: ScoreCardProps) {
                      score.overallScore >= 60 ? '#f59e0b' : '#ef4444';
 
   const components = [
-    { label: 'Safe Driving', data: score.components.safeDriving, weight: '35%' },
-    { label: 'Compliance', data: score.components.compliance, weight: '25%' },
-    { label: 'Maintenance', data: score.components.maintenance, weight: '20%' },
-    { label: 'Driver Quality', data: score.components.driverQuality, weight: '20%' },
+    { label: 'Safe Driving', data: score.components.safeDriving },
+    { label: 'Compliance', data: score.components.compliance },
+    { label: 'Maintenance', data: score.components.maintenance },
+    { label: 'Driver Quality', data: score.components.driverQuality },
   ];
 
   return (
@@ -96,7 +96,7 @@ export default function ScoreCard({ score }: ScoreCardProps) {
           return (
             <div key={comp.label} className="bg-white/[0.05] rounded-lg p-3">
               <div className="text-xs font-medium text-white/40 uppercase tracking-[0.3px] mb-1.5">
-                {comp.label} · {comp.weight}
+                {comp.label} · {Math.round(comp.data.weight * 100)}%
               </div>
               <div className="h-1 bg-white/[0.08] rounded-full mb-1.5 overflow-hidden">
                 <motion.div

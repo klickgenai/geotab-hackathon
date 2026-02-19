@@ -47,12 +47,23 @@ export interface DispatchMessage {
   read: boolean;
 }
 
+export interface ActionItem {
+  id: string;
+  text: string;
+  source: 'voice' | 'tool' | 'system';
+  status: 'pending' | 'completed' | 'dismissed';
+  createdAt: string;
+  completedAt?: string;
+}
+
 // ─── In-memory stores ───────────────────────────────────────
 
 const activeSessions = new Map<string, DriverSession>();
 const allLoads: LoadAssignment[] = [];
 const driverMessages = new Map<string, DispatchMessage[]>();
 let messageIdCounter = 1;
+const driverActionItems = new Map<string, ActionItem[]>();
+let actionIdCounter = 1;
 
 // ─── Seed Data: Realistic city pairs ────────────────────────
 
@@ -404,6 +415,23 @@ function buildLeaderboard(): DriverRanking[] {
 export function initDriverSessions(): void {
   generateLoads();
   generateDriverMessages();
+
+  // Generate initial action items for drivers
+  for (const driver of seedDrivers) {
+    const items: string[] = [];
+    if (driver.riskProfile === 'high' || driver.riskProfile === 'critical') {
+      items.push('Complete defensive driving refresher course');
+      items.push('Review safety event footage from this week');
+    }
+    items.push('Submit daily vehicle inspection report');
+    if (Math.random() > 0.5) {
+      items.push('Update emergency contact information');
+    }
+    for (const text of items) {
+      addDriverActionItem(driver.id, text, 'system');
+    }
+  }
+
   console.log(`[DriverSession] Initialized ${allLoads.length} loads, messages for ${driverMessages.size} drivers`);
 }
 
@@ -515,4 +543,41 @@ export function getDriverMessages(driverId: string): DispatchMessage[] {
 
 export function getDriverLeaderboard(): DriverRanking[] {
   return buildLeaderboard();
+}
+
+export function getDriverActionItems(driverId: string): ActionItem[] {
+  return (driverActionItems.get(driverId) || []).filter(a => a.status === 'pending');
+}
+
+export function addDriverActionItem(driverId: string, text: string, source: ActionItem['source'] = 'system'): ActionItem {
+  const item: ActionItem = {
+    id: `action-${actionIdCounter++}`,
+    text,
+    source,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+  const existing = driverActionItems.get(driverId) || [];
+  existing.unshift(item);
+  driverActionItems.set(driverId, existing);
+  return item;
+}
+
+export function completeDriverActionItem(driverId: string, actionId: string): ActionItem | null {
+  const items = driverActionItems.get(driverId);
+  if (!items) return null;
+  const item = items.find(a => a.id === actionId);
+  if (!item) return null;
+  item.status = 'completed';
+  item.completedAt = new Date().toISOString();
+  return item;
+}
+
+export function dismissDriverActionItem(driverId: string, actionId: string): ActionItem | null {
+  const items = driverActionItems.get(driverId);
+  if (!items) return null;
+  const item = items.find(a => a.id === actionId);
+  if (!item) return null;
+  item.status = 'dismissed';
+  return item;
 }

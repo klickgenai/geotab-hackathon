@@ -13,7 +13,7 @@ interface FinancialCardProps {
 
 export default function FinancialCard({ score, wellness, risks, onGenerateReport }: FinancialCardProps) {
   const insuranceSavings = score.premiumImpact.estimatedAnnualSavings;
-  const retentionSavings = Math.round(wellness.totalRetentionCostAtRisk * 0.6);
+  const retentionSavings = Math.round(wellness.totalRetentionCostAtRisk * 0.65);
   const totalRiskCost = risks.reduce((s, r) => s + r.annualizedCost, 0);
   const accidentSavings = Math.round(totalRiskCost * 0.4);
   const total = insuranceSavings + retentionSavings + accidentSavings;

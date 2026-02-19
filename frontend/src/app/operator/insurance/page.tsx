@@ -266,11 +266,43 @@ export default function InsurancePage() {
                       <motion.div className={clsx('h-full rounded-full bg-gradient-to-r', barColor)} initial={{ width: 0 }} animate={{ width: `${comp.score}%` }} transition={{ duration: 1, delay: 0.3 + i * 0.1 }} />
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {Object.entries(comp.details).slice(0, 4).map(([k, v]) => (
-                        <span key={k} className="text-xs px-2 py-0.5 bg-gray-50 rounded text-gray-500">
-                          {k.replace(/([A-Z])/g, ' $1').trim()}: <span className="font-semibold text-gray-700">{typeof v === 'number' ? v.toFixed(1) : v}</span>
-                        </span>
-                      ))}
+                      {Object.entries(comp.details).slice(0, 4).map(([k, v]) => {
+                        const detailLabels: Record<string, string> = {
+                          eventRate: 'Event Rate (per 1K mi)',
+                          totalEvents: 'Total Events',
+                          severityScore: 'Severity Score',
+                          trendDelta: 'Trend Change',
+                          seatbeltViolations: 'Seatbelt Violations',
+                          speedingEvents: 'Speeding Events',
+                          hosViolations: 'HOS Violations',
+                          avgDailyHours: 'Avg Daily Hours',
+                          avgVehicleAge: 'Avg Vehicle Age (yr)',
+                          avgOdometer: 'Avg Odometer (km)',
+                          totalFaults: 'Total Faults',
+                          activeFaults: 'Active Faults',
+                          faultsPerVehicle: 'Faults/Vehicle',
+                          fleetSize: 'Fleet Size',
+                          avgTenure: 'Avg Tenure (yr)',
+                          lowRiskPercent: 'Low Risk %',
+                          highRiskPercent: 'High Risk %',
+                          totalDrivers: 'Total Drivers',
+                        };
+                        const label = detailLabels[k] || k.replace(/([A-Z])/g, ' $1').trim();
+                        let formatted: string;
+                        if (typeof v === 'string') {
+                          formatted = v;
+                        } else if (typeof v === 'number') {
+                          if (v > 1000) formatted = v.toLocaleString();
+                          else formatted = v.toFixed(1);
+                        } else {
+                          formatted = String(v);
+                        }
+                        return (
+                          <span key={k} className="text-xs px-2 py-0.5 bg-gray-50 rounded text-gray-500">
+                            {label}: <span className="font-semibold text-gray-700">{formatted}</span>
+                          </span>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 );

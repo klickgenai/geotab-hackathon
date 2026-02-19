@@ -4,6 +4,8 @@ import type {
   DriverTrend, DangerousZone, TriagedAlert, AlertBriefing, LiveVehicle,
   GPSTrailPoint, SpeedingHotspot, FleetROI, BeforeAfterComparison,
   WhatIfScenario, WhatIfResult, DriverSession, DriverRanking,
+  GamificationState, Badge, PointTransaction, RewardItem, DailyChallenge,
+  PreShiftBriefing, ActionItem,
 } from '@/types/fleet';
 
 const API_BASE = '';
@@ -118,4 +120,19 @@ export const api = {
   driverMessages: (id: string) => fetchJSON<unknown[]>(`/api/driver/${id}/messages`),
   driverLeaderboard: () => fetchJSON<DriverRanking[]>('/api/driver/leaderboard'),
   dispatchCall: (id: string, intent: string) => postJSON<unknown>(`/api/driver/${id}/dispatch-call`, { intent }),
+
+  // Gamification
+  driverGamification: (id: string) => fetchJSON<GamificationState>(`/api/driver/${id}/gamification`),
+  driverBadges: (id: string) => fetchJSON<Badge[]>(`/api/driver/${id}/badges`),
+  driverPointsHistory: (id: string) => fetchJSON<PointTransaction[]>(`/api/driver/${id}/points-history`),
+  driverRewards: (id: string) => fetchJSON<RewardItem[]>(`/api/driver/${id}/rewards`),
+  checkChallenge: (id: string) => postJSON<DailyChallenge>(`/api/driver/${id}/challenge/check`, {}),
+
+  // Pre-Shift Briefing
+  preShiftBriefing: (id: string) => fetchJSON<PreShiftBriefing>(`/api/driver/${id}/pre-shift-briefing`),
+
+  // Action Items
+  driverActions: (id: string) => fetchJSON<ActionItem[]>(`/api/driver/${id}/actions`),
+  completeAction: (driverId: string, actionId: string) => postJSON<ActionItem>(`/api/driver/${driverId}/actions/${actionId}/complete`, {}),
+  dismissAction: (driverId: string, actionId: string) => postJSON<ActionItem>(`/api/driver/${driverId}/actions/${actionId}/dismiss`, {}),
 };

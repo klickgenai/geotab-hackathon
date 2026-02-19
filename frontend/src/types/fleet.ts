@@ -9,6 +9,7 @@ export interface FleetOverview {
   totalSafetyEvents: number;
   avgSafetyScore: number;
   eventsPerMile: number;
+  eventsPerThousandMiles: number;
   fuelConsumed: number;
   avgIdlingPercent: number;
   riskDistribution: {
@@ -347,4 +348,87 @@ export interface DriverRanking {
   score: number;
   rank: number;
   streak: number;
+}
+
+// --- Gamification ---
+export interface GamificationState {
+  driverId: string;
+  driverName: string;
+  totalPoints: number;
+  level: number;
+  levelTitle: string;
+  pointsToNextLevel: number;
+  levelProgress: number;
+  currentStreak: number;
+  streakMultiplier: number;
+  badges: Badge[];
+  recentPoints: PointTransaction[];
+  dailyChallenge: DailyChallenge | null;
+  weeklyStats: { pointsEarned: number; challengesCompleted: number; badgesEarned: number };
+  rewards: RewardItem[];
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+  earnedDate?: string;
+  progress: number;
+  requirement: string;
+}
+
+export interface PointTransaction {
+  id: string;
+  points: number;
+  reason: string;
+  timestamp: string;
+  type: 'earned' | 'bonus' | 'deduction' | 'challenge' | 'badge';
+}
+
+export interface DailyChallenge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  progress: number;
+  target: number;
+  current: number;
+  pointsReward: number;
+  completed: boolean;
+  expiresAt: string;
+}
+
+export interface RewardItem {
+  id: string;
+  name: string;
+  icon: string;
+  pointsCost: number;
+  category: string;
+  available: boolean;
+  levelRequired: number;
+}
+
+export interface PreShiftBriefing {
+  riskLevel: 'low' | 'elevated' | 'high' | 'critical';
+  riskScore: number;
+  greeting: string;
+  focusAreas: string[];
+  weather: { condition: string; temp: number; advisory: string | null };
+  routeHazards: string[];
+  motivational: string;
+  streakStatus: string;
+  safetyScore: number;
+  streakDays: number;
+  factors: { name: string; impact: number; description: string }[];
+}
+
+export interface ActionItem {
+  id: string;
+  text: string;
+  source: 'voice' | 'tool' | 'system';
+  status: 'pending' | 'completed' | 'dismissed';
+  createdAt: string;
+  completedAt?: string;
 }

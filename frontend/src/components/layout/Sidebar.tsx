@@ -49,12 +49,22 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
       {/* Brand */}
       <div className="px-5 py-5 border-b border-white/[0.08]">
         <Link href="/operator" className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center shadow-lg shadow-[#FBAF1A]/20">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" className="flex-shrink-0">
+            <path d="M24 4L6 12v12c0 11.1 7.7 21.5 18 24 10.3-2.5 18-12.9 18-24V12L24 4z" fill="url(#sGrad)" stroke="url(#sStroke)" strokeWidth="1" />
+            <path d="M24 8L10 14.5v9.5c0 9.2 6.3 17.8 14 19.8V8z" fill="rgba(255,255,255,0.06)" />
+            <g stroke="#FBAF1A" strokeWidth="2" strokeLinecap="round" opacity="0.9"><path d="M17 24h3l2-6 3 12 2.5-8 2.5 4h3" /></g>
+            <circle cx="24" cy="24" r="2" fill="#FBAF1A" />
+            <path d="M24 4L6 12v2l18-8 18 8v-2L24 4z" fill="rgba(251,175,26,0.3)" />
+            <defs>
+              <linearGradient id="sGrad" x1="6" y1="4" x2="42" y2="40"><stop offset="0%" stopColor="#1a2540" /><stop offset="100%" stopColor="#0f1729" /></linearGradient>
+              <linearGradient id="sStroke" x1="6" y1="4" x2="42" y2="40"><stop offset="0%" stopColor="#FBAF1A" stopOpacity="0.5" /><stop offset="50%" stopColor="#FBAF1A" stopOpacity="0.2" /><stop offset="100%" stopColor="#10B981" stopOpacity="0.3" /></linearGradient>
+            </defs>
+          </svg>
           <div>
-            <div className="font-bold text-base tracking-tight">FleetShield AI</div>
-            <div className="text-[10px] text-[#FBAF1A]/70 font-medium tracking-[2px] uppercase">Risk Intelligence</div>
+            <div className="font-extrabold text-base tracking-tight leading-none">
+              <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span>
+            </div>
+            <div className="text-[9px] text-white/30 font-bold tracking-[2.5px] uppercase mt-0.5">Intelligence</div>
           </div>
         </Link>
       </div>

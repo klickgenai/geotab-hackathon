@@ -62,14 +62,12 @@ export function calculateInsuranceScore(): InsuranceScoreResult {
   // === SAFE DRIVING (35%) ===
   const eventRate = totalDistanceMiles > 0 ? (events30.length / totalDistanceMiles) * 1000 : 0;
   const severityScore = computeSeverityScore(events30);
-  const trendDelta = events30.length - eventsPrev30.length;
-  const trendScore = trendDelta <= -5 ? 95 : trendDelta <= 0 ? 80 : trendDelta <= 5 ? 65 : 40;
+  // If previous period has no data, don't penalize -- treat as stable
+  const trendDelta = eventsPrev30.length > 0 ? events30.length - eventsPrev30.length : 0;
+  const trendScore = eventsPrev30.length === 0 ? 70 : (trendDelta <= -5 ? 95 : trendDelta <= 0 ? 80 : trendDelta <= 5 ? 65 : 40);
 
-  const safeDrivingRaw = Math.max(0, Math.min(100,
-    100 - eventRate * 15 // Lower rate = higher score
-    + severityScore * 0.3
-    + trendScore * 0.2
-  ));
+  const eventRateScore = clamp(100 - eventRate * 4, 0, 100); // 4 per 1000mi deduction
+  const safeDrivingRaw = eventRateScore * 0.5 + severityScore * 0.3 + trendScore * 0.2;
   const safeDrivingScore = clamp(safeDrivingRaw, 0, 100);
 
   // === COMPLIANCE (25%) ===
@@ -93,9 +91,14 @@ export function calculateInsuranceScore(): InsuranceScoreResult {
   // === MAINTENANCE (20%) ===
   const avgAge = seedVehicles.reduce((s, v) => s + (new Date().getFullYear() - v.year), 0) / seedVehicles.length;
   const avgOdometer = seedVehicles.reduce((s, v) => s + v.odometer, 0) / seedVehicles.length;
+  const totalFaults = seedVehicles.reduce((s, v) => s + (v.faultCount || 0), 0);
+  const totalActiveFaults = seedVehicles.reduce((s, v) => s + (v.activeFaultCount || 0), 0);
+  const faultsPerVehicle = totalFaults / Math.max(seedVehicles.length, 1);
+  const activeFaultsPerVehicle = totalActiveFaults / Math.max(seedVehicles.length, 1);
   const ageScore = Math.max(0, 100 - (avgAge - 1) * 12);
   const mileageScore = Math.max(0, 100 - (avgOdometer / 400000) * 50);
-  const maintenanceScore = clamp((ageScore * 0.5 + mileageScore * 0.5), 0, 100);
+  const faultScore = clamp(100 - faultsPerVehicle * 3 - activeFaultsPerVehicle * 5, 0, 100);
+  const maintenanceScore = clamp((ageScore * 0.3 + mileageScore * 0.3 + faultScore * 0.4), 0, 100);
 
   // === DRIVER QUALITY (20%) ===
   const avgTenure = seedDrivers.reduce((s, d) => s + d.tenureYears, 0) / seedDrivers.length;
@@ -123,7 +126,10 @@ export function calculateInsuranceScore(): InsuranceScoreResult {
   // Premium impact: each point above 50 saves 0.3% of benchmark premium
   const benchmarkPremium = seedVehicles.length * 14200; // $14,200/vehicle avg Class 8 commercial
   const percentChange = -((overallScore - 50) * 0.3);
-  const estimatedAnnualSavings = Math.round(benchmarkPremium * Math.abs(percentChange) / 100);
+  // Above 50 = savings (positive); below 50 = premium increase (negative)
+  const estimatedAnnualSavings = overallScore >= 50
+    ? Math.round(benchmarkPremium * Math.abs(percentChange) / 100)
+    : -Math.round(benchmarkPremium * Math.abs(percentChange) / 100);
 
   // Percentile (simulated based on score)
   const percentile = Math.min(99, Math.max(1, Math.round(overallScore * 1.1 - 10)));
@@ -139,6 +145,7 @@ export function calculateInsuranceScore(): InsuranceScoreResult {
   if (riskDist.critical > 0) recommendations.push('Create intervention plan for critical-risk drivers');
   if (riskDist.high > 0.1) recommendations.push('Implement targeted coaching for high-risk drivers');
   if (avgAge > 4) recommendations.push('Consider fleet renewal for vehicles over 4 years old');
+  if (totalActiveFaults > 5) recommendations.push(`Address ${totalActiveFaults} active fault codes across the fleet to improve maintenance score`);
   if (recommendations.length === 0) recommendations.push('Maintain current safety programs -- fleet performing well');
 
   return {
@@ -174,6 +181,9 @@ export function calculateInsuranceScore(): InsuranceScoreResult {
         details: {
           avgVehicleAge: Math.round(avgAge * 10) / 10,
           avgOdometer: Math.round(avgOdometer),
+          totalFaults,
+          activeFaults: totalActiveFaults,
+          faultsPerVehicle: Math.round(faultsPerVehicle * 10) / 10,
           fleetSize: seedVehicles.length,
         },
       },

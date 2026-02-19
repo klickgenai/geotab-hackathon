@@ -71,6 +71,13 @@ export default function MapPage() {
       maxZoom: 19,
     }).addTo(map);
     mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      markersRef.current = [];
+      hotspotLayersRef.current = [];
+    };
   }, [leafletReady]);
 
   // Update markers

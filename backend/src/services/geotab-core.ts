@@ -127,6 +127,17 @@ export class GeotabCore {
     });
   }
 
+  /** Fetch fault data across the entire fleet (no device filter) */
+  async getFaultDataFleet(
+    fromDate: string,
+    toDate: string,
+  ): Promise<GeotabFaultData[]> {
+    return this.call<GeotabFaultData[]>('Get', {
+      typeName: 'FaultData',
+      search: { fromDate, toDate },
+    });
+  }
+
   async getRules(): Promise<GeotabRule[]> {
     return this.call<GeotabRule[]>('Get', { typeName: 'Rule' });
   }
@@ -239,6 +250,7 @@ export interface GeotabDevice {
   groups?: { id: string }[];
   engineType?: { id: string };
   odometer?: number;
+  fuelTankCapacity?: number;
 }
 
 export interface GeotabUser {

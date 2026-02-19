@@ -35,6 +35,7 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -127,7 +128,7 @@ export default function AlertsPage() {
 
         {/* Alert Cards */}
         <div className="space-y-3">
-          {filtered.slice(0, 30).map((alert, i) => {
+          {(showAllAlerts ? filtered : filtered.slice(0, 30)).map((alert, i) => {
             const pc = priorityConfig[alert.priority];
             return (
               <motion.div key={alert.id}
@@ -175,6 +176,15 @@ export default function AlertsPage() {
             );
           })}
         </div>
+
+        {!showAllAlerts && filtered.length > 30 && (
+          <button
+            onClick={() => setShowAllAlerts(true)}
+            className="w-full py-3 text-sm font-medium text-[#BF7408] hover:bg-[#FFF8EB] rounded-lg transition-colors"
+          >
+            Show all {filtered.length} alerts ({filtered.length - 30} more)
+          </button>
+        )}
 
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
