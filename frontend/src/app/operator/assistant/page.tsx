@@ -73,27 +73,84 @@ export default function AssistantPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Speak a summary via browser TTS
-  const speak = useCallback((text: string) => {
+  // Audio context for playing TTS
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Clean markdown text for voice output
+  const cleanForVoice = useCallback((text: string): string => {
+    let clean = text
+      .replace(/#{1,6}\s*/g, '')               // ## headers
+      .replace(/\*\*(.*?)\*\*/g, '$1')         // **bold** → bold
+      .replace(/\*(.*?)\*/g, '$1')             // *italic* → italic
+      .replace(/`([^`]*)`/g, '$1')             // `code` → code
+      .replace(/\|[^\n]*\|/g, '')              // | table rows |
+      .replace(/[-─]{3,}/g, '')                // --- separators
+      .replace(/^\s*[-*•]\s+/gm, '')           // - bullet points
+      .replace(/^\s*\d+\.\s+/gm, '')           // 1. numbered lists
+      .replace(/[→⚠️✅]/g, '')                 // special chars/emoji
+      .replace(/<[^>]+>/g, '')                 // HTML tags
+      .replace(/\n{2,}/g, '. ')                // double newlines → sentence break
+      .replace(/\n/g, ' ')                     // single newlines → space
+      .replace(/\s{2,}/g, ' ')                 // collapse whitespace
+      .trim();
+
+    // Extract only the conversational intro (before any detailed breakdown)
+    const introEnd = clean.search(/Score Breakdown|Key Insights|Opportunities|Quick Wins|Component|Breakdown|Details|Here'?s (the|a) |The following/i);
+    if (introEnd > 30) {
+      clean = clean.slice(0, introEnd).trim();
+    }
+
+    // Take up to 3 natural sentences
+    const sentences = clean.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 5).slice(0, 3);
+    return sentences.join(' ');
+  }, []);
+
+  // Speak via Smallest AI lightning-v3.1 TTS, fallback to browser SpeechSynthesis
+  const speak = useCallback(async (text: string) => {
     if (!voiceEnabled || typeof window === 'undefined') return;
-    // Clean markdown
-    const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').replace(/<[^>]+>/g, '');
-    // Only speak first 2 sentences for brevity
-    const sentences = clean.split(/[.!?]+/).filter(s => s.trim().length > 3).slice(0, 2);
-    if (sentences.length === 0) return;
-    const utterance = new SpeechSynthesisUtterance(sentences.join('. ') + '.');
-    utterance.rate = 1.05;
-    utterance.pitch = 1.0;
+
+    const spokenText = cleanForVoice(text);
+    if (!spokenText) return;
+
+    // Try Smallest AI TTS first
+    try {
+      const res = await api.ttsSynthesize(spokenText);
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+        }
+        const ctx = audioContextRef.current;
+        if (ctx.state === 'suspended') await ctx.resume();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        source.start();
+        return;
+      }
+    } catch {
+      // Fall through to browser TTS
+    }
+
+    // Fallback: browser SpeechSynthesis
     window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
     window.speechSynthesis.speak(utterance);
-  }, [voiceEnabled]);
+  }, [voiceEnabled, cleanForVoice]);
 
   // Send message
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
 
-    // Cancel speech
+    // Cancel any playing speech
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
 
     const userMsg: ChatMessage = { id: genId(), role: 'user', parts: [{ type: 'text', content: text }], timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);

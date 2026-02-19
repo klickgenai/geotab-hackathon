@@ -236,7 +236,19 @@ export async function generateAgentResponse(message: string) {
  */
 export async function streamAssistantResponse(message: string, currentPage?: string) {
   let systemPrompt = SYSTEM_PROMPT + `\n\n## Voice-First Assistant Mode
-When using tools, always provide a brief spoken summary of the key findings (1-2 sentences) after each tool call. This summary should be suitable for voice output - concise, natural, and focused on the most important insight. Lead with the most impactful number or finding.`;
+IMPORTANT: This is a voice-first interface. Your responses will be read aloud by text-to-speech.
+
+**Response structure (ALWAYS follow this order):**
+1. **Start with a 1-2 sentence conversational spoken summary** — plain English, no markdown, no special characters, no tables. This opening paragraph is what gets read aloud. Write it like you're speaking to someone across a desk. Include the key number or insight.
+2. **Then** provide detailed analysis with markdown formatting (tables, bullets, headers) for the visual display.
+
+**Voice summary rules:**
+- Never start with markdown headers (## or #)
+- Never put tables, bullets, or lists in the first paragraph
+- Use "dollars" not "$" symbols in the spoken summary (e.g. "saving about 47 thousand dollars a year")
+- Use natural number phrasing (e.g. "seventy-two out of a hundred" or "72 out of 100", not just "72")
+- Keep the spoken intro under 40 words
+- Sound conversational and confident, like a trusted advisor giving a quick take`;
 
   if (currentPage) {
     systemPrompt += `\n\n## Current Page Context\nThe user is currently viewing: ${currentPage}. Tailor your responses to what they're looking at. Reference specific metrics and features visible on this page. If they ask a vague question, interpret it in the context of this page. Proactively suggest related insights from this page's data.`;

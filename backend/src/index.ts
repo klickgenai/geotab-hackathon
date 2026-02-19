@@ -270,6 +270,32 @@ app.post('/api/assistant/stream', async (req, res) => {
   }
 });
 
+// --- TTS Synthesis (Smallest AI lightning-v3.1) ---
+app.post('/api/tts/synthesize', async (req, res) => {
+  const { text, voiceId, speed } = req.body;
+  if (!text) return res.status(400).json({ error: 'text is required' });
+
+  const apiKey = process.env.SMALLEST_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'TTS not configured (SMALLEST_API_KEY missing)' });
+
+  try {
+    const { synthesizeSpeech } = await import('./voice/tts-synthesize.js');
+    const audioBuffer = await synthesizeSpeech(apiKey, {
+      text: text.slice(0, 500), // Limit to ~500 chars for quick synthesis
+      voiceId: voiceId || 'sophia',
+      sampleRate: 24000,
+      speed: speed || 1.0,
+      addWavHeader: true,
+    });
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Content-Length', audioBuffer.length);
+    res.send(audioBuffer);
+  } catch (error: any) {
+    console.error('[TTS] Synthesis error:', error?.message || error);
+    res.status(500).json({ error: 'TTS synthesis failed' });
+  }
+});
+
 // --- Live Fleet Map ---
 app.get('/api/fleet/map/live', async (_req, res) => {
   try {

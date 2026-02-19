@@ -79,6 +79,14 @@ export const api = {
       body: JSON.stringify({ message, currentPage }),
     }),
 
+  // TTS synthesis via Smallest AI lightning-v3.1
+  ttsSynthesize: (text: string) =>
+    fetch(`${API_BASE}/api/tts/synthesize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }),
+
   // Predictive Safety
   preShiftRisks: () => fetchJSON<PreShiftRisk[]>('/api/fleet/predictive/pre-shift'),
   preShiftRisk: (id: string) => fetchJSON<PreShiftRisk>(`/api/fleet/predictive/pre-shift/${id}`),
