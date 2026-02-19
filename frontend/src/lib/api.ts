@@ -92,9 +92,26 @@ export const api = {
   retentionSavings: () => fetchJSON<{ driversAtRisk: number; avgReplacementCost: number; totalRetentionCostAtRisk: number; interventionSuccessRate: number; projectedSavings: number; details: { driverId: string; driverName: string; burnoutRisk: string; retentionCost: number }[] }>('/api/fleet/roi/retention'),
   whatIfDefaults: () => fetchJSON<WhatIfScenario[]>('/api/fleet/what-if/defaults'),
   whatIfSimulate: (scenarios: WhatIfScenario[]) => postJSON<WhatIfResult[]>('/api/fleet/what-if', { scenarios }),
+  whatIfCustom: (adjustments: Record<string, number>) => postJSON<WhatIfResult>('/api/fleet/what-if/custom', { adjustments }),
+
+  // Geotab Ace (Natural Language Analytics)
+  aceQuery: (prompt: string) => postJSON<{ text: string; data: unknown; charts: unknown[]; status: string }>('/api/fleet/ace/query', { prompt }),
+
+  // Data Source
+  dataSource: () => fetchJSON<{ isLiveData: boolean; geotabConfigured: boolean; database: string | null }>('/api/fleet/data-source'),
 
   // Driver Portal
   driverLogin: (driverId: string) => postJSON<DriverSession>('/api/driver/login', { driverId }),
+  driverLoginWithPin: async (employeeNumber: string, pin: string): Promise<DriverSession> => {
+    const res = await fetch(`${API_BASE}/api/driver/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeNumber, pin }),
+    });
+    if (res.status === 401) throw new Error('Invalid employee number or PIN');
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  },
   driverDashboard: (id: string) => fetchJSON<DriverSession>(`/api/driver/${id}/dashboard`),
   driverLoad: (id: string) => fetchJSON<{ hasLoad: boolean; load?: unknown }>(`/api/driver/${id}/load`),
   updateLoadStatus: (id: string, status: string) => putJSON(`/api/driver/${id}/load/status`, { status }),

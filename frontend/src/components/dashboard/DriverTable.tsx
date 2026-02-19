@@ -24,21 +24,21 @@ export default function DriverTable({ risks, onDriverClick }: DriverTableProps) 
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.35, duration: 0.5 }}
-      className="bg-white rounded-xl border border-gray-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden"
+      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden"
     >
-      <div className="px-5 pt-5 pb-3 flex justify-between items-center">
-        <h2 className="text-[0.68rem] font-semibold text-gray-400 uppercase tracking-[0.5px]">
+      <div className="px-6 pt-6 pb-3 flex justify-between items-center">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.5px]">
           Driver Risk Analysis
         </h2>
-        <span className="text-[0.65rem] text-gray-400">{risks.length} drivers</span>
+        <span className="text-xs text-gray-400">{risks.length} drivers</span>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-y border-gray-100">
+            <tr className="border-y border-[#F0EDE7]">
               {['Driver', 'Risk Score', 'Tier', 'Annual Cost', 'Top Issue'].map((h) => (
-                <th key={h} className="text-left text-[0.62rem] font-semibold text-gray-400 uppercase tracking-[0.5px] px-4 py-2.5">
+                <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-[0.5px] px-4 py-2.5">
                   {h}
                 </th>
               ))}
@@ -55,14 +55,14 @@ export default function DriverTable({ risks, onDriverClick }: DriverTableProps) 
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + i * 0.04 }}
                   onClick={() => onDriverClick(r.driverId)}
-                  className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer transition-colors duration-150"
+                  className="border-b border-[#F0EDE7] hover:bg-[#FAF9F7] cursor-pointer transition-colors duration-150"
                 >
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2.5">
-                      <div className={clsx('w-7 h-7 rounded-full flex items-center justify-center text-[0.62rem] font-bold text-white', cfg.avatar)}>
+                      <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white', cfg.avatar)}>
                         {initials}
                       </div>
-                      <span className="text-[0.8rem] font-medium text-gray-800">{r.driverName}</span>
+                      <span className="text-sm font-medium text-gray-800">{r.driverName}</span>
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
@@ -73,22 +73,22 @@ export default function DriverTable({ risks, onDriverClick }: DriverTableProps) 
                           style={{ width: `${r.riskScore}%` }}
                         />
                       </div>
-                      <span className="text-[0.8rem] font-semibold text-gray-700 tabular-nums">{r.riskScore}</span>
+                      <span className="text-sm font-semibold text-gray-700 tabular-nums">{r.riskScore}</span>
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <span className={clsx(
-                      'inline-block px-2 py-0.5 rounded-full text-[0.65rem] font-semibold capitalize',
+                      'inline-block px-2 py-0.5 rounded-full text-xs font-semibold capitalize',
                       cfg.bg, cfg.text,
                       r.tier === 'critical' && 'animate-pulse'
                     )}>
                       {r.tier}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-[0.8rem] font-medium text-gray-600 tabular-nums">
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-600 tabular-nums">
                     ${r.annualizedCost.toLocaleString()}
                   </td>
-                  <td className="px-4 py-2.5 text-[0.75rem] text-gray-400 max-w-[200px] truncate">
+                  <td className="px-4 py-2.5 text-sm text-gray-400 max-w-[200px] truncate">
                     {r.recommendations?.[0] || '—'}
                   </td>
                 </motion.tr>

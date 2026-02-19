@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
 import { VoiceClient, type VoiceState } from '@/lib/voice-client';
-import type { DriverSession, DriverRanking, Driver } from '@/types/fleet';
+import type { DriverSession, DriverRanking } from '@/types/fleet';
 import {
   Shield, Mic, MicOff, Loader2, LogOut, Flame, Trophy, TrendingUp, Package,
   MapPin, Phone, ChevronRight, MessageCircle, Send, ArrowRight, Clock, User,
@@ -19,7 +19,7 @@ function ScoreGauge({ score, size = 140 }: { score: number; size?: number }) {
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1e293b" strokeWidth="8" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#18202F" strokeWidth="8" />
         <motion.circle
           cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="8"
           strokeLinecap="round" strokeDasharray={circumference}
@@ -37,18 +37,19 @@ function ScoreGauge({ score, size = 140 }: { score: number; size?: number }) {
         >
           {score}
         </motion.div>
-        <div className="text-[0.6rem] uppercase tracking-wider text-gray-400 font-medium">Safety Score</div>
+        <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">Safety Score</div>
       </div>
     </div>
   );
 }
 
 export default function DriverPortalPage() {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [session, setSession] = useState<DriverSession | null>(null);
   const [leaderboard, setLeaderboard] = useState<DriverRanking[]>([]);
-  const [loadingDrivers, setLoadingDrivers] = useState(true);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [employeeNumber, setEmployeeNumber] = useState('');
+  const [pinInput, setPinInput] = useState('');
 
   // Voice
   const [voiceState, setVoiceState] = useState<VoiceState>('disconnected');
@@ -68,19 +69,18 @@ export default function DriverPortalPage() {
 
   useEffect(() => { transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcripts]);
 
-  // Load drivers for selection
-  useEffect(() => {
-    api.drivers().then((d) => { setDrivers(d); setLoadingDrivers(false); }).catch(() => setLoadingDrivers(false));
-  }, []);
-
-  const login = async (driverId: string) => {
+  const login = async () => {
+    if (!employeeNumber.trim() || !pinInput.trim()) return;
     setLoggingIn(true);
+    setLoginError('');
     try {
-      const sess = await api.driverLogin(driverId);
+      const sess = await api.driverLoginWithPin(employeeNumber.trim(), pinInput.trim());
       setSession(sess);
       const lb = await api.driverLeaderboard();
       setLeaderboard(lb);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      setLoginError((err as Error).message || 'Login failed');
+    }
     setLoggingIn(false);
   };
 
@@ -92,6 +92,9 @@ export default function DriverPortalPage() {
     setSession(null);
     setTranscripts([]);
     setVoiceState('disconnected');
+    setEmployeeNumber('');
+    setPinInput('');
+    setLoginError('');
   };
 
   const toggleVoice = async () => {
@@ -113,7 +116,7 @@ export default function DriverPortalPage() {
         });
       },
       onError: (err) => console.error('[Voice]', err),
-    });
+    }, session?.driverId);
 
     voiceClientRef.current = client;
     await client.connect();
@@ -190,67 +193,71 @@ export default function DriverPortalPage() {
   // --- LOGIN SCREEN ---
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#0f1724]">
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          <div className="text-center mb-10">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0078D3] to-[#3b9aed] flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen bg-[#0F1520] flex items-center justify-center">
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          className="w-full max-w-sm mx-auto px-6">
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center mx-auto mb-4">
               <Shield className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">Driver Portal</h1>
-            <p className="text-gray-400 text-sm mt-1">Select your profile to begin</p>
+            <p className="text-gray-400 text-sm mt-1">Enter your credentials to sign in</p>
           </div>
 
-          {loadingDrivers ? (
-            <div className="flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-[#0078D3]" /></div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {drivers.slice(0, 12).map((d) => (
-                <motion.button
-                  key={d.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => login(d.id)}
-                  disabled={loggingIn}
-                  className="bg-[#1a2332] border border-white/10 rounded-xl p-4 text-left hover:border-[#0078D3]/50 transition-all disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#0078D3]/20 flex items-center justify-center text-[#0078D3] font-bold text-sm">
-                      {d.firstName[0]}{d.lastName[0]}
-                    </div>
-                    <div>
-                      <div className="text-white font-medium text-sm">{d.name}</div>
-                      <div className="text-gray-500 text-xs">{d.vehicleId} &middot; {d.tenureYears}yr</div>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      d.riskProfile === 'low' ? 'bg-emerald-500' :
-                      d.riskProfile === 'moderate' ? 'bg-amber-500' :
-                      d.riskProfile === 'high' ? 'bg-orange-500' : 'bg-red-500'
-                    }`} />
-                    <span className="text-gray-400 text-xs capitalize">{d.riskProfile} risk</span>
-                  </div>
-                </motion.button>
-              ))}
+          <form onSubmit={(e) => { e.preventDefault(); login(); }}
+            className="bg-[#18202F] border border-white/10 rounded-2xl p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Employee Number</label>
+              <input
+                type="text" inputMode="numeric" maxLength={3}
+                value={employeeNumber}
+                onChange={(e) => { setEmployeeNumber(e.target.value.replace(/\D/g, '').slice(0, 3)); setLoginError(''); }}
+                placeholder="e.g. 241"
+                autoFocus
+                className="w-full bg-[#0F1520] border border-white/10 rounded-xl px-4 py-3 text-white text-lg font-mono tracking-widest placeholder:text-gray-600 outline-none focus:border-[#FBAF1A] transition-colors"
+              />
             </div>
-          )}
-        </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">PIN</label>
+              <input
+                type="password" inputMode="numeric" maxLength={4}
+                value={pinInput}
+                onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setLoginError(''); }}
+                placeholder="4-digit PIN"
+                className="w-full bg-[#0F1520] border border-white/10 rounded-xl px-4 py-3 text-white text-lg font-mono tracking-widest placeholder:text-gray-600 outline-none focus:border-[#FBAF1A] transition-colors"
+              />
+            </div>
+
+            {loginError && (
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/20 rounded-xl py-2">
+                {loginError}
+              </motion.div>
+            )}
+
+            <button type="submit" disabled={loggingIn || employeeNumber.length < 3 || pinInput.length < 4}
+              className="w-full py-3 rounded-xl bg-[#FBAF1A] text-[#18202F] font-semibold text-sm hover:bg-[#BF7408] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {loggingIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
+              {loggingIn ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+        </motion.div>
       </div>
     );
   }
 
   // --- DASHBOARD ---
   return (
-    <div className="min-h-screen bg-[#0f1724] text-white">
+    <div className="min-h-screen bg-[#0F1520] text-white">
       {/* Top Bar */}
-      <div className="bg-[#1a2332] border-b border-white/10 px-6 py-3 flex items-center justify-between">
+      <div className="bg-[#18202F] border-b border-white/10 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0078D3] to-[#3b9aed] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
             <Shield className="w-4 h-4 text-white" />
           </div>
           <div>
             <div className="font-semibold text-sm">{session.driverName}</div>
-            <div className="text-gray-400 text-xs">{session.vehicleName}</div>
+            <div className="text-gray-400 text-xs">#{session.employeeNumber} &middot; {session.vehicleName}</div>
           </div>
         </div>
         <button onClick={logout} className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors">
@@ -263,7 +270,7 @@ export default function DriverPortalPage() {
         {/* Score + Stats Row */}
         <div className="grid grid-cols-12 gap-5">
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="col-span-4 bg-[#1a2332] rounded-xl border border-white/10 p-6 flex flex-col items-center">
+            className="col-span-4 bg-[#18202F] rounded-2xl border border-white/10 p-6 flex flex-col items-center">
             <ScoreGauge score={session.safetyScore} />
             <div className="flex items-center gap-6 mt-4">
               <div className="text-center">
@@ -271,46 +278,46 @@ export default function DriverPortalPage() {
                   <Flame className="w-4 h-4 text-orange-400" />
                   <span className="text-lg font-bold">{session.streakDays}</span>
                 </div>
-                <div className="text-[0.6rem] text-gray-500 uppercase">Day Streak</div>
+                <div className="text-xs text-gray-500 uppercase">Day Streak</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center gap-1 justify-center">
                   <Trophy className="w-4 h-4 text-amber-400" />
                   <span className="text-lg font-bold">#{session.weeklyRank}</span>
                 </div>
-                <div className="text-[0.6rem] text-gray-500 uppercase">Weekly Rank</div>
+                <div className="text-xs text-gray-500 uppercase">Weekly Rank</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-emerald-400">{session.todayEvents}</div>
-                <div className="text-[0.6rem] text-gray-500 uppercase">Events Today</div>
+                <div className="text-xs text-gray-500 uppercase">Events Today</div>
               </div>
             </div>
           </motion.div>
 
           {/* Load Card */}
           <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-            className="col-span-8 bg-[#1a2332] rounded-xl border border-white/10 p-5">
+            className="col-span-8 bg-[#18202F] rounded-2xl border border-white/10 p-5">
             {session.currentLoad ? (
               <>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-[#0078D3]" />
+                    <Package className="w-4 h-4 text-[#FBAF1A]" />
                     <span className="text-sm font-semibold">{session.currentLoad.id}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[0.6rem] font-medium bg-[#0078D3]/20 text-[#0078D3] capitalize">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#FBAF1A]/20 text-[#FBAF1A] capitalize">
                       {session.currentLoad.status.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <span className="text-xs text-gray-500">{session.currentLoad.commodity} &middot; {session.currentLoad.weight.toLocaleString()} lbs</span>
                 </div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 bg-[#0f1724] rounded-lg p-3">
-                    <div className="text-[0.6rem] text-gray-500 uppercase">Pickup</div>
+                  <div className="flex-1 bg-[#0F1520] rounded-xl p-3">
+                    <div className="text-xs text-gray-500 uppercase">Pickup</div>
                     <div className="text-sm font-medium">{session.currentLoad.origin.city}, {session.currentLoad.origin.state}</div>
                     <div className="text-xs text-gray-500">{new Date(session.currentLoad.pickupTime).toLocaleTimeString()}</div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                  <div className="flex-1 bg-[#0f1724] rounded-lg p-3">
-                    <div className="text-[0.6rem] text-gray-500 uppercase">Delivery</div>
+                  <div className="flex-1 bg-[#0F1520] rounded-xl p-3">
+                    <div className="text-xs text-gray-500 uppercase">Delivery</div>
                     <div className="text-sm font-medium">{session.currentLoad.destination.city}, {session.currentLoad.destination.state}</div>
                     <div className="text-xs text-gray-500">{new Date(session.currentLoad.deliveryTime).toLocaleTimeString()}</div>
                   </div>
@@ -323,10 +330,10 @@ export default function DriverPortalPage() {
                         const sess = await api.driverDashboard(session.driverId);
                         setSession(sess);
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-[0.65rem] font-medium transition-all ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                         session.currentLoad?.status === status
-                          ? 'bg-[#0078D3] text-white'
-                          : 'bg-[#0f1724] text-gray-400 hover:bg-[#0078D3]/20 hover:text-white'
+                          ? 'bg-[#FBAF1A] text-[#18202F]'
+                          : 'bg-[#0F1520] text-gray-400 hover:bg-[#FBAF1A]/20 hover:text-white'
                       }`}>
                       {status.replace(/_/g, ' ')}
                     </button>
@@ -346,10 +353,10 @@ export default function DriverPortalPage() {
         <div className="grid grid-cols-12 gap-5">
           {/* Voice / Chat Panel */}
           <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-            className="col-span-5 bg-[#1a2332] rounded-xl border border-white/10 flex flex-col" style={{ height: 420 }}>
+            className="col-span-5 bg-[#18202F] rounded-2xl border border-white/10 flex flex-col" style={{ height: 420 }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#0078D3] to-[#3b9aed] flex items-center justify-center">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
                   <Shield className="w-3 h-3 text-white" />
                 </div>
                 <span className="text-sm font-semibold">Ava</span>
@@ -359,7 +366,7 @@ export default function DriverPortalPage() {
                   voiceState === 'speaking' ? 'bg-blue-400 animate-pulse' :
                   'bg-gray-500'
                 }`} />
-                <span className="text-[0.6rem] text-gray-500 capitalize">{voiceState}</span>
+                <span className="text-xs text-gray-500 capitalize">{voiceState}</span>
               </div>
             </div>
 
@@ -373,10 +380,10 @@ export default function DriverPortalPage() {
               )}
               {transcripts.map((t, i) => (
                 <div key={i} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] px-3 py-2 rounded-xl text-[0.78rem] leading-relaxed ${
+                  <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
                     t.role === 'user'
-                      ? 'bg-[#0078D3] text-white rounded-br-sm'
-                      : 'bg-[#0f1724] text-gray-300 border border-white/5 rounded-bl-sm'
+                      ? 'bg-[#FBAF1A] text-[#18202F] rounded-br-sm'
+                      : 'bg-[#0F1520] text-gray-300 border border-white/5 rounded-bl-sm'
                   }`}>
                     {t.text || <span className="text-gray-500 animate-pulse">Thinking...</span>}
                   </div>
@@ -390,7 +397,7 @@ export default function DriverPortalPage() {
               <div className="flex flex-wrap gap-1.5 px-4 pb-2">
                 {quickActions.map((q) => (
                   <button key={q.label} onClick={q.action}
-                    className="px-2.5 py-1 rounded-full text-[0.6rem] font-medium border border-white/10 text-gray-400 hover:border-[#0078D3]/50 hover:text-[#0078D3] transition-all">
+                    className="px-2.5 py-1 rounded-full text-xs font-medium border border-white/10 text-gray-400 hover:border-[#FBAF1A]/50 hover:text-[#FBAF1A] transition-all">
                     {q.label}
                   </button>
                 ))}
@@ -400,10 +407,10 @@ export default function DriverPortalPage() {
             {/* Input Bar */}
             <div className="flex items-center gap-1.5 px-3 py-2.5 border-t border-white/10">
               <button onClick={toggleVoice}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
                   voiceState !== 'disconnected'
                     ? 'bg-red-500 text-white animate-pulse'
-                    : 'bg-[#0f1724] border border-white/10 text-gray-400 hover:border-[#0078D3] hover:text-[#0078D3]'
+                    : 'bg-[#0F1520] border border-white/10 text-gray-400 hover:border-[#FBAF1A] hover:text-[#FBAF1A]'
                 }`}>
                 {voiceState !== 'disconnected' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
@@ -412,11 +419,11 @@ export default function DriverPortalPage() {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') sendChat(chatInput); }}
                 placeholder="Ask Ava..."
-                className="flex-1 bg-[#0f1724] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 outline-none focus:border-[#0078D3]"
+                className="flex-1 bg-[#0F1520] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-gray-600 outline-none focus:border-[#FBAF1A]"
                 disabled={chatStreaming}
               />
               <button onClick={() => sendChat(chatInput)} disabled={chatStreaming || !chatInput.trim()}
-                className="w-9 h-9 rounded-lg bg-[#0078D3] text-white flex items-center justify-center disabled:opacity-40">
+                className="w-9 h-9 rounded-xl bg-[#FBAF1A] text-[#18202F] flex items-center justify-center disabled:opacity-40">
                 <Send className="w-4 h-4" />
               </button>
             </div>
@@ -424,7 +431,7 @@ export default function DriverPortalPage() {
 
           {/* Leaderboard */}
           <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-            className="col-span-4 bg-[#1a2332] rounded-xl border border-white/10 p-4" style={{ height: 420 }}>
+            className="col-span-4 bg-[#18202F] rounded-2xl border border-white/10 p-4" style={{ height: 420 }}>
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="w-4 h-4 text-amber-400" />
               <span className="text-sm font-semibold">Safety Leaderboard</span>
@@ -434,14 +441,14 @@ export default function DriverPortalPage() {
                 const isMe = r.driverId === session.driverId;
                 return (
                   <div key={r.driverId}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm ${
-                      isMe ? 'bg-[#0078D3]/15 border border-[#0078D3]/30' : 'hover:bg-white/5'
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${
+                      isMe ? 'bg-[#FBAF1A]/15 border border-[#FBAF1A]/30' : 'hover:bg-white/5'
                     }`}>
                     <span className={`w-6 text-center font-bold text-xs ${
                       r.rank <= 3 ? 'text-amber-400' : 'text-gray-500'
                     }`}>#{r.rank}</span>
                     <span className={`flex-1 truncate ${isMe ? 'text-white font-semibold' : 'text-gray-300'}`}>
-                      {r.name} {isMe && <span className="text-[0.6rem] text-[#0078D3]">(You)</span>}
+                      {r.name} <span className="text-gray-500 text-xs">#{r.employeeNumber}</span> {isMe && <span className="text-xs text-[#FBAF1A]">(You)</span>}
                     </span>
                     <span className="text-xs font-medium text-gray-400">{r.score}</span>
                     <div className="flex items-center gap-0.5 text-xs text-gray-500">
@@ -456,31 +463,31 @@ export default function DriverPortalPage() {
 
           {/* Messages */}
           <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}
-            className="col-span-3 bg-[#1a2332] rounded-xl border border-white/10 p-4" style={{ height: 420 }}>
+            className="col-span-3 bg-[#18202F] rounded-2xl border border-white/10 p-4" style={{ height: 420 }}>
             <div className="flex items-center gap-2 mb-3">
-              <MessageCircle className="w-4 h-4 text-[#0078D3]" />
+              <MessageCircle className="w-4 h-4 text-[#FBAF1A]" />
               <span className="text-sm font-semibold">Messages</span>
               {session.recentMessages.filter((m) => !m.read).length > 0 && (
-                <span className="ml-auto px-1.5 py-0.5 rounded-full bg-red-500 text-[0.55rem] font-bold text-white">
+                <span className="ml-auto px-1.5 py-0.5 rounded-full bg-red-500 text-xs font-bold text-white">
                   {session.recentMessages.filter((m) => !m.read).length}
                 </span>
               )}
             </div>
             <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 360 }}>
               {session.recentMessages.map((msg) => (
-                <div key={msg.id} className={`p-2.5 rounded-lg border ${
-                  !msg.read ? 'bg-[#0078D3]/10 border-[#0078D3]/20' : 'bg-[#0f1724] border-white/5'
+                <div key={msg.id} className={`p-2.5 rounded-xl border ${
+                  !msg.read ? 'bg-[#FBAF1A]/10 border-[#FBAF1A]/20' : 'bg-[#0F1520] border-white/5'
                 }`}>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <span className={`text-[0.6rem] font-semibold uppercase ${
-                      msg.from === 'dispatch' ? 'text-[#0078D3]' : msg.from === 'system' ? 'text-amber-500' : 'text-gray-400'
+                    <span className={`text-xs font-semibold uppercase ${
+                      msg.from === 'dispatch' ? 'text-[#FBAF1A]' : msg.from === 'system' ? 'text-amber-500' : 'text-gray-400'
                     }`}>{msg.from}</span>
-                    <span className="text-[0.55rem] text-gray-600">
+                    <span className="text-xs text-gray-600">
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    {!msg.read && <div className="w-1.5 h-1.5 rounded-full bg-[#0078D3] ml-auto" />}
+                    {!msg.read && <div className="w-1.5 h-1.5 rounded-full bg-[#FBAF1A] ml-auto" />}
                   </div>
-                  <div className="text-[0.7rem] text-gray-400 leading-relaxed">{msg.text}</div>
+                  <div className="text-sm text-gray-400 leading-relaxed">{msg.text}</div>
                 </div>
               ))}
             </div>
@@ -503,15 +510,15 @@ export default function DriverPortalPage() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a2332] rounded-2xl border border-white/10 w-[400px] max-h-[500px] overflow-hidden"
+              className="bg-[#18202F] rounded-2xl border border-white/10 w-[400px] max-h-[500px] overflow-hidden"
             >
-              <div className="bg-[#0078D3] px-5 py-4 flex items-center gap-3">
+              <div className="bg-[#FBAF1A] px-5 py-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-white" />
+                  <Phone className="w-5 h-5 text-[#18202F]" />
                 </div>
                 <div>
-                  <div className="text-white font-semibold">Dispatch - Mike</div>
-                  <div className="text-blue-200 text-xs">
+                  <div className="text-[#18202F] font-semibold">Dispatch - Mike</div>
+                  <div className="text-[#18202F]/70 text-xs">
                     {dispatchSummary ? 'Call ended' : 'Calling...'}
                   </div>
                 </div>
@@ -520,22 +527,22 @@ export default function DriverPortalPage() {
                 {dispatchMessages.map((m, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                     className={`flex ${m.role === 'driver' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] px-3 py-2 rounded-xl text-[0.78rem] ${
+                    <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
                       m.role === 'driver'
-                        ? 'bg-[#0078D3] text-white rounded-br-sm'
-                        : 'bg-[#0f1724] text-gray-300 rounded-bl-sm'
+                        ? 'bg-[#FBAF1A] text-[#18202F] rounded-br-sm'
+                        : 'bg-[#0F1520] text-gray-300 rounded-bl-sm'
                     }`}>{m.text}</div>
                   </motion.div>
                 ))}
                 {!dispatchSummary && dispatchMessages.length === 0 && (
                   <div className="text-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-[#0078D3] mx-auto" />
+                    <Loader2 className="w-5 h-5 animate-spin text-[#FBAF1A] mx-auto" />
                     <div className="text-gray-500 text-xs mt-2">Connecting to dispatch...</div>
                   </div>
                 )}
                 {dispatchSummary && (
-                  <div className="bg-[#0078D3]/10 border border-[#0078D3]/20 rounded-lg p-3 text-[0.75rem] text-gray-300">
-                    <div className="text-[0.6rem] font-semibold text-[#0078D3] uppercase mb-1">Summary</div>
+                  <div className="bg-[#FBAF1A]/10 border border-[#FBAF1A]/20 rounded-xl p-3 text-sm text-gray-300">
+                    <div className="text-xs font-semibold text-[#FBAF1A] uppercase mb-1">Summary</div>
                     {dispatchSummary}
                   </div>
                 )}
@@ -543,7 +550,7 @@ export default function DriverPortalPage() {
               {dispatchSummary && (
                 <div className="px-5 pb-4">
                   <button onClick={() => setDispatchCallActive(false)}
-                    className="w-full py-2 rounded-lg bg-[#0078D3] text-white text-sm font-medium hover:bg-[#2d5a9e] transition-colors">
+                    className="w-full py-2 rounded-xl bg-[#FBAF1A] text-[#18202F] text-sm font-medium hover:bg-[#BF7408] transition-colors">
                     Close
                   </button>
                 </div>

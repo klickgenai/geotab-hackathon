@@ -1,7 +1,36 @@
 # CLAUDE.md - FleetShield AI Development Guide
 
+## !!! COMPETITION RULES - MANDATORY FOR ALL AGENTS !!!
+This project is for the **Geotab Vibe Coding Hackathon** ($25K prize pool).
+Full details in `COMPETITION.md` - read it for deep context on judging, demo tips, pitfalls.
+
+### Non-Negotiable Requirements
+- **OUR Deadline**: February 25, 2026 (official: March 2, but owner traveling)
+- **DUAL-API Integration (judging criterion!)**: Must use BOTH:
+  - **MyGeotab API** (`my.geotab.com`) - vehicles, trips, diagnostics, GPS, safety events
+  - **Geotab Ace API** - conversational AI queries about fleet data
+- **Submission**: 3-min demo video + public GitHub repo (with prompts) + story
+
+### Judging Criteria (all 6 matter)
+1. **Working Demo** - Must function live, not just mockups
+2. **Problem-Solution Fit** - Solves real fleet management pain points
+3. **Dual-API Integration** - Uses both MyGeotab API AND Geotab Ace
+4. **User Experience** - Polished, intuitive UI
+5. **Innovation** - Unique/creative approach
+6. **Vibe Factor** - Shows effective AI-assisted development
+
+### Target: The Vibe Master ($10,000) - Best overall solution
+
+### Rules for Every Agent/Session
+- Do NOT break existing working features
+- Do NOT remove Geotab API integration code
+- Every feature must work with real Geotab demo database data (not just seed)
+- Keep UI polished - judges score UX
+- Keep code clean - production readiness is a tiebreaker
+- Reference `COMPETITION.md` for full competition context when making design decisions
+
 ## Project Overview
-FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform built for the Geotab Hackathon. It combines real-time telematics data with AI-powered analytics to optimize fleet safety, reduce insurance premiums, and prevent incidents.
+FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform built for the Geotab Vibe Coding Hackathon (Feb 12 - Mar 2, 2026). It combines real-time telematics data with AI-powered analytics to optimize fleet safety, reduce insurance premiums, and prevent incidents.
 
 ## Architecture
 
@@ -84,6 +113,14 @@ Each page follows the same structure:
 All scoring engines in `backend/src/scoring/` are pure functions that operate on seed data.
 They return typed objects and don't have side effects.
 
+## Geotab API Integration (CRITICAL for Competition)
+The project MUST demonstrate real Geotab API integration for the submission:
+- **MyGeotab API**: Vehicle data, trips, diagnostics, GPS, safety events via `my.geotab.com`
+- **Geotab Ace API**: Conversational AI queries about fleet data
+- Integration code is in `backend/src/services/`
+- Demo database credentials go in `backend/.env`
+- The app falls back to seed data when credentials are missing
+
 ## Environment Variables
 See `backend/.env.example` for required variables:
 - `GEOTAB_DATABASE`, `GEOTAB_USERNAME`, `GEOTAB_PASSWORD` - Geotab API credentials
@@ -116,3 +153,12 @@ cd frontend && npm run build   # Next.js production build
 - Leaflet is loaded via CDN (not npm) to avoid SSR issues
 - The frontend proxies all `/api/*` requests to the backend
 - The MyGeotab add-in is in `backend/addin/` (iframe bridge pattern)
+
+## Geotab Vibe Guide Reference
+The official competition guide repo: https://github.com/fhoffa/geotab-vibe-guide
+Key resources for AI agents:
+- `AGENT_SUMMARY.md` - Repo orientation
+- `skills/geotab/SKILL.md` - Complete Geotab development skill
+- `skills/geotab/references/ACE_API.md` - Ace API guide
+- `skills/geotab/references/API_QUICKSTART.md` - MyGeotab API quickstart
+- `guides/HACKATHON_IDEAS.md` - Project ideas and judging criteria

@@ -11,16 +11,16 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, onRefresh, actions }: PageHeaderProps) {
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-7 sticky top-0 z-40">
+    <header className="h-[80px] bg-white/80 backdrop-blur-lg border-b border-[#E5E2DC] flex items-center justify-between px-8 sticky top-0 z-40">
       <div>
-        <h1 className="text-[1.05rem] font-bold text-gray-900">{title}</h1>
-        {subtitle && <p className="text-[0.7rem] text-gray-400">{subtitle}</p>}
+        <h1 className="text-2xl font-extrabold text-[#18202F] tracking-tight">{title}</h1>
+        {subtitle && <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-2.5">
         {onRefresh && (
           <button
             onClick={onRefresh}
-            className="flex items-center gap-1.5 px-3 py-[7px] rounded-md text-[0.78rem] font-medium border border-gray-200 text-gray-600 hover:border-[#0078D3] hover:text-[#0078D3] transition-all duration-200 bg-white"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border border-[#E5E2DC] text-gray-600 hover:border-[#FBAF1A] hover:text-[#BF7408] transition-all duration-200 bg-white"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh

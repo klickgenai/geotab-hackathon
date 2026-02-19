@@ -265,11 +265,18 @@ function mapDrivers(
     const tenureYears = 3;
     const hireDate = new Date(Date.now() - tenureYears * 365.25 * 86400000).toISOString().split('T')[0];
 
+    // Deterministic employeeNumber and pin from index
+    const idx = users.indexOf(u);
+    const employeeNumber = String(100 + ((idx * 137 + 41) % 900));
+    const pin = String(1000 + ((idx * 251 + 73) % 9000));
+
     return {
       id: seedId,
       firstName,
       lastName,
       name,
+      employeeNumber,
+      pin,
       hireDate,
       vehicleId: getMostUsedDevice(u.id),
       riskProfile,

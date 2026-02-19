@@ -11,6 +11,7 @@ import { seedDrivers, seedVehicles, seedSafetyEvents, seedTripDays } from './see
 export interface DriverSession {
   driverId: string;
   driverName: string;
+  employeeNumber: string;
   vehicleId: string;
   vehicleName: string;
   loginTime: string;
@@ -363,6 +364,7 @@ function calculateTodayEvents(driverId: string): number {
 interface DriverRanking {
   driverId: string;
   name: string;
+  employeeNumber: string;
   score: number;
   rank: number;
   streak: number;
@@ -382,6 +384,7 @@ function buildLeaderboard(): DriverRanking[] {
   const rankings: DriverRanking[] = drivers.map((d) => ({
     driverId: d.id,
     name: d.name,
+    employeeNumber: d.employeeNumber,
     score: calculateSafetyScore(d.id),
     rank: 0,
     streak: calculateStreakDays(d.id),
@@ -417,6 +420,7 @@ export function loginDriver(driverId: string): DriverSession | null {
   const session: DriverSession = {
     driverId: driver.id,
     driverName: driver.name,
+    employeeNumber: driver.employeeNumber,
     vehicleId: driver.vehicleId,
     vehicleName: vehicle?.name || driver.vehicleId,
     loginTime: new Date().toISOString(),
@@ -430,6 +434,12 @@ export function loginDriver(driverId: string): DriverSession | null {
 
   activeSessions.set(driverId, session);
   return session;
+}
+
+export function loginDriverWithPin(employeeNumber: string, pin: string): DriverSession | null {
+  const driver = seedDrivers.find((d) => d.employeeNumber === employeeNumber);
+  if (!driver || driver.pin !== pin) return null;
+  return loginDriver(driver.id);
 }
 
 export function getDriverSession(driverId: string): DriverSession | null {

@@ -136,6 +136,8 @@ export interface Driver {
   firstName: string;
   lastName: string;
   name: string;
+  employeeNumber: string;
+  pin: string;
   hireDate: string;
   vehicleId: string;
   riskProfile: string;
@@ -302,6 +304,7 @@ export interface WhatIfResult {
 export interface DriverSession {
   driverId: string;
   driverName: string;
+  employeeNumber: string;
   vehicleId: string;
   vehicleName: string;
   loginTime: string;
@@ -340,6 +343,7 @@ export interface DispatchMessage {
 export interface DriverRanking {
   driverId: string;
   name: string;
+  employeeNumber: string;
   score: number;
   rank: number;
   streak: number;

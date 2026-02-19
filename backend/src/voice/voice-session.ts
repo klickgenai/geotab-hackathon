@@ -8,6 +8,32 @@ import { streamAgentResponseWithHistory } from "../agents/fleetshield-agent.js";
 
 export type SessionState = "idle" | "listening" | "thinking" | "speaking";
 
+export interface DriverVoiceContext {
+  firstName: string;
+  name: string;
+  safetyScore: number;
+  streakDays: number;
+  weeklyRank: number;
+  totalDrivers: number;
+  vehicleName: string;
+  currentLoad: {
+    id: string;
+    status: string;
+    origin: string;
+    destination: string;
+    commodity: string;
+  } | null;
+  riskProfile: string;
+  burnoutRisk: string;
+  riskScore: number;
+  burnoutProbability: number;
+  todayEvents: number;
+  avgDailyHours: number;
+  avgRestHours: number;
+  totalDrivingHours: number;
+  daysWorked: number;
+}
+
 interface TranscriptEntry {
   role: "user" | "assistant";
   text: string;
@@ -51,14 +77,16 @@ export class VoiceSession {
   private abortController: AbortController | null = null;
   private startedAt: number;
   private preFetchedContext: PreFetchedContext = {};
+  private driverContext: DriverVoiceContext | undefined;
   private audioBuffer: Buffer[] = [];         // Buffer audio while STT connects
   private sttConnecting = false;              // True while awaiting STT connection
   private consecutiveEmptySpeech = 0;         // Tracks consecutive speech attempts with no transcript
   private micSuppressedNotified = false;      // True after we've notified client of mic suppression
 
-  constructor(callbacks: VoiceSessionCallbacks) {
+  constructor(callbacks: VoiceSessionCallbacks, driverContext?: DriverVoiceContext) {
     this.sessionId = randomUUID();
     this.callbacks = callbacks;
+    this.driverContext = driverContext;
     this.startedAt = Date.now();
   }
 
@@ -430,8 +458,48 @@ export class VoiceSession {
   private buildMessages(): Array<{ role: "user" | "assistant" | "system"; content: string }> {
     const messages: Array<{ role: "user" | "assistant" | "system"; content: string }> = [];
 
-    // Inject pre-fetched context if available
-    if (this.preFetchedContext.fleetOverview) {
+    // Inject personalized driver context as system message
+    if (this.driverContext) {
+      const dc = this.driverContext;
+      const isHighRisk = dc.riskProfile === 'high' || dc.riskProfile === 'critical';
+      const isBurnout = dc.burnoutRisk === 'high';
+      const isTopPerformer = dc.weeklyRank <= 5 && dc.safetyScore >= 85;
+
+      let tone = '';
+      if (isHighRisk || isBurnout) {
+        tone = 'Be empathetic and supportive. Acknowledge challenges without being preachy. Focus on small, actionable steps.';
+      } else if (isTopPerformer) {
+        tone = 'Be encouraging and celebratory. Recognize their achievements. Motivate them to keep up the great work.';
+      } else {
+        tone = 'Be friendly and conversational. Give practical advice. Be encouraging about their progress.';
+      }
+
+      const loadInfo = dc.currentLoad
+        ? `Current load: ${dc.currentLoad.id} (${dc.currentLoad.status.replace(/_/g, ' ')}) — ${dc.currentLoad.commodity} from ${dc.currentLoad.origin} to ${dc.currentLoad.destination}.`
+        : 'No active load assigned right now.';
+
+      messages.push({
+        role: "system",
+        content: `You are Ava, a friendly AI co-driver for FleetShield AI. You are speaking with ${dc.firstName} (full name: ${dc.name}), driving ${dc.vehicleName}.
+
+Driver profile:
+- Safety score: ${dc.safetyScore}/100
+- Safe driving streak: ${dc.streakDays} days without a high/critical event
+- Weekly rank: #${dc.weeklyRank} out of ${dc.totalDrivers} drivers
+- Risk profile: ${dc.riskProfile}, Burnout risk: ${dc.burnoutRisk}
+- Today's events: ${dc.todayEvents}
+- Average daily hours: ${dc.avgDailyHours}h, Average rest: ${dc.avgRestHours}h
+- Days worked (last 30): ${dc.daysWorked}, Total driving hours: ${dc.totalDrivingHours}h
+${loadInfo}
+
+${tone}
+
+IMPORTANT: You are speaking out loud via voice. Do NOT use markdown formatting — no headers, bold, bullets, numbered lists, or code blocks. Speak naturally in conversational sentences. Keep responses concise (2-4 sentences unless asked for detail). Address the driver by their first name.`,
+      });
+    }
+
+    // Inject pre-fetched fleet context if available and no driver context
+    if (!this.driverContext && this.preFetchedContext.fleetOverview) {
       const overview = this.preFetchedContext.fleetOverview;
       const contextParts: string[] = [];
 

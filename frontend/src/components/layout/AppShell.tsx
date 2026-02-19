@@ -14,15 +14,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     api.health().then((h) => setGeotabConfigured(h.geotabConfigured)).catch(() => {});
   }, []);
 
-  // Driver portal has its own layout (no sidebar)
-  if (pathname.startsWith('/driver-portal')) {
+  // Landing page and driver portal have no sidebar
+  if (pathname === '/' || pathname.startsWith('/driver-portal')) {
     return <>{children}</>;
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-[#F5F3EF]">
       <Sidebar geotabConfigured={geotabConfigured} />
-      <main className="ml-[240px] flex-1 min-h-screen">
+      <main className="ml-[260px] flex-1 min-h-screen">
         {children}
       </main>
       <ChatPanel />

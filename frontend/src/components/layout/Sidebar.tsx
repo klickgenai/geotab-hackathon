@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Shield, LayoutDashboard, Users, AlertTriangle, Heart, FileText, Truck,
-  Brain, Bell, MapPin, DollarSign, UserCircle,
+  Shield, LayoutDashboard, Users, AlertTriangle, Heart, Truck,
+  Brain, Bell, MapPin, DollarSign, UserCircle, Award,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -16,21 +16,21 @@ const sections = [
   {
     title: 'Analytics',
     items: [
-      { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/drivers', label: 'Drivers', icon: Users },
-      { href: '/safety', label: 'Safety Events', icon: AlertTriangle },
-      { href: '/wellness', label: 'Wellness', icon: Heart },
-      { href: '/vehicles', label: 'Vehicles', icon: Truck },
-      { href: '/reports', label: 'Reports', icon: FileText },
+      { href: '/operator', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/operator/insurance', label: 'Insurance Score', icon: Award },
+      { href: '/operator/drivers', label: 'Drivers', icon: Users },
+      { href: '/operator/safety', label: 'Safety Events', icon: AlertTriangle },
+      { href: '/operator/wellness', label: 'Wellness', icon: Heart },
+      { href: '/operator/vehicles', label: 'Vehicles', icon: Truck },
     ],
   },
   {
     title: 'Intelligence',
     items: [
-      { href: '/predictive', label: 'Predictive Safety', icon: Brain },
-      { href: '/alerts', label: 'Alert Triage', icon: Bell },
-      { href: '/map', label: 'Live Map', icon: MapPin },
-      { href: '/roi', label: 'ROI Dashboard', icon: DollarSign },
+      { href: '/operator/predictive', label: 'Predictive Safety', icon: Brain },
+      { href: '/operator/alerts', label: 'Alert Triage', icon: Bell },
+      { href: '/operator/map', label: 'Live Map', icon: MapPin },
+      { href: '/operator/roi', label: 'ROI Dashboard', icon: DollarSign },
     ],
   },
   {
@@ -45,16 +45,16 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#1a2332] text-white flex flex-col z-50">
+    <aside className="fixed left-0 top-0 bottom-0 w-[260px] bg-[#18202F] text-white flex flex-col z-50">
       {/* Brand */}
       <div className="px-5 py-5 border-b border-white/[0.08]">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0078D3] to-[#3b9aed] flex items-center justify-center">
+        <Link href="/operator" className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center shadow-lg shadow-[#FBAF1A]/20">
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="font-bold text-[0.95rem] tracking-tight">FleetShield AI</div>
-            <div className="text-[0.6rem] text-blue-300 font-medium tracking-widest uppercase">Risk Intelligence</div>
+            <div className="font-bold text-base tracking-tight">FleetShield AI</div>
+            <div className="text-[10px] text-[#FBAF1A]/70 font-medium tracking-[2px] uppercase">Risk Intelligence</div>
           </div>
         </Link>
       </div>
@@ -63,25 +63,26 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
       <nav className="flex-1 px-2.5 py-3 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.title}>
-            <div className="text-[0.58rem] font-semibold text-blue-300/70 uppercase tracking-[1px] px-3 pt-3 pb-1.5">
+            <div className="text-[10px] font-semibold text-white/25 uppercase tracking-[1.5px] px-3 pt-4 pb-1.5">
               {section.title}
             </div>
             {section.items.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+              const isActive = pathname === item.href || (item.href !== '/operator' && pathname.startsWith(item.href));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    'flex items-center gap-2.5 w-full px-3 py-[9px] rounded-md text-[0.8rem] font-medium transition-all duration-200',
+                    'flex items-center gap-2.5 w-full px-3 py-[10px] rounded-xl text-[13px] font-medium transition-all duration-200 my-0.5',
                     isActive
-                      ? 'bg-[#0078D3] text-white'
-                      : 'text-white/60 hover:bg-white/[0.06] hover:text-white'
+                      ? 'bg-[#FBAF1A]/15 text-[#FBAF1A]'
+                      : 'text-white/50 hover:bg-white/[0.06] hover:text-white/80'
                   )}
                 >
-                  <Icon className="w-[18px] h-[18px]" />
+                  <Icon className={clsx('w-[18px] h-[18px]', isActive && 'text-[#FBAF1A]')} />
                   <span>{item.label}</span>
+                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FBAF1A]" />}
                 </Link>
               );
             })}
@@ -90,16 +91,23 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-3.5 py-3 border-t border-white/[0.08]">
-        <div className="flex items-center gap-2 text-[0.68rem] text-blue-300/70">
+      <div className="px-4 py-4 border-t border-white/[0.08]">
+        <div className={clsx(
+          'flex items-center gap-2.5 px-3 py-2.5 rounded-xl',
+          geotabConfigured ? 'bg-emerald-500/10' : 'bg-[#FBAF1A]/10'
+        )}>
           <div className={clsx(
-            'w-[7px] h-[7px] rounded-full',
-            geotabConfigured ? 'bg-emerald-400' : 'bg-amber-400'
+            'w-2 h-2 rounded-full',
+            geotabConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-[#FBAF1A]'
           )} />
-          <span>{geotabConfigured ? 'Geotab Connected' : 'Seed Data Mode'}</span>
-        </div>
-        <div className="text-[0.55rem] text-blue-300/40 mt-1">
-          Powered by Geotab Telematics
+          <div>
+            <div className={clsx('text-xs font-semibold', geotabConfigured ? 'text-emerald-400' : 'text-[#FBAF1A]')}>
+              {geotabConfigured ? 'Geotab Connected' : 'Seed Data Mode'}
+            </div>
+            <div className="text-[10px] text-white/20">
+              {geotabConfigured ? 'MyGeotab + Ace APIs' : 'Using demo data'}
+            </div>
+          </div>
         </div>
       </div>
     </aside>

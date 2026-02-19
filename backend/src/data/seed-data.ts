@@ -22,6 +22,8 @@ export interface SeedDriver {
   firstName: string;
   lastName: string;
   name: string;
+  employeeNumber: string;
+  pin: string;
   hireDate: string;
   vehicleId: string;
   riskProfile: 'low' | 'moderate' | 'high' | 'critical';
@@ -129,36 +131,36 @@ export const seedDrivers: SeedDriver[] = [];
 
 export function generateStaticDrivers(): SeedDriver[] {
   return [
-    { id: 'd1', firstName: 'James', lastName: 'Wilson', name: 'James Wilson', hireDate: '2019-03-15', vehicleId: 'v1', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 7 },
-    { id: 'd2', firstName: 'Sarah', lastName: 'Chen', name: 'Sarah Chen', hireDate: '2020-08-20', vehicleId: 'v2', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
-    { id: 'd3', firstName: 'Marcus', lastName: 'Rivera', name: 'Marcus Rivera', hireDate: '2023-11-01', vehicleId: 'v3', riskProfile: 'critical', burnoutRisk: 'high', tenureYears: 1 },
-    { id: 'd4', firstName: 'Emily', lastName: 'Davis', name: 'Emily Davis', hireDate: '2021-02-10', vehicleId: 'v4', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
-    { id: 'd5', firstName: 'Robert', lastName: 'Kim', name: 'Robert Kim', hireDate: '2018-06-05', vehicleId: 'v5', riskProfile: 'low', burnoutRisk: 'moderate', tenureYears: 8 },
-    { id: 'd6', firstName: 'Lisa', lastName: 'Martinez', name: 'Lisa Martinez', hireDate: '2022-04-12', vehicleId: 'v6', riskProfile: 'moderate', burnoutRisk: 'low', tenureYears: 4 },
-    { id: 'd7', firstName: 'Jake', lastName: 'Thompson', name: 'Jake Thompson', hireDate: '2024-02-15', vehicleId: 'v7', riskProfile: 'high', burnoutRisk: 'high', tenureYears: 1 },
-    { id: 'd8', firstName: 'Maria', lastName: 'Gonzalez', name: 'Maria Gonzalez', hireDate: '2020-11-20', vehicleId: 'v8', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
-    { id: 'd9', firstName: 'David', lastName: 'Lee', name: 'David Lee', hireDate: '2019-07-30', vehicleId: 'v9', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 6 },
-    { id: 'd10', firstName: 'Amanda', lastName: 'Brown', name: 'Amanda Brown', hireDate: '2021-09-15', vehicleId: 'v10', riskProfile: 'moderate', burnoutRisk: 'moderate', tenureYears: 4 },
-    { id: 'd11', firstName: 'Michael', lastName: 'Taylor', name: 'Michael Taylor', hireDate: '2022-01-08', vehicleId: 'v11', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
-    { id: 'd12', firstName: 'Derek', lastName: 'Shaw', name: 'Derek Shaw', hireDate: '2024-06-01', vehicleId: 'v12', riskProfile: 'high', burnoutRisk: 'high', tenureYears: 0.5 },
-    { id: 'd13', firstName: 'Rachel', lastName: 'White', name: 'Rachel White', hireDate: '2020-03-22', vehicleId: 'v13', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 6 },
-    { id: 'd14', firstName: 'Carlos', lastName: 'Hernandez', name: 'Carlos Hernandez', hireDate: '2021-12-05', vehicleId: 'v14', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
-    { id: 'd15', firstName: 'Jennifer', lastName: 'Clark', name: 'Jennifer Clark', hireDate: '2019-10-18', vehicleId: 'v15', riskProfile: 'moderate', burnoutRisk: 'moderate', tenureYears: 6 },
-    { id: 'd16', firstName: 'Thomas', lastName: 'Wright', name: 'Thomas Wright', hireDate: '2023-03-20', vehicleId: 'v16', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 3 },
-    { id: 'd17', firstName: 'Nicole', lastName: 'Adams', name: 'Nicole Adams', hireDate: '2022-07-14', vehicleId: 'v17', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
-    { id: 'd18', firstName: 'Brian', lastName: 'Hall', name: 'Brian Hall', hireDate: '2020-05-28', vehicleId: 'v18', riskProfile: 'moderate', burnoutRisk: 'low', tenureYears: 6 },
-    { id: 'd19', firstName: 'Stephanie', lastName: 'Young', name: 'Stephanie Young', hireDate: '2021-08-10', vehicleId: 'v19', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
-    { id: 'd20', firstName: 'Kevin', lastName: 'King', name: 'Kevin King', hireDate: '2023-01-15', vehicleId: 'v20', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 3 },
-    { id: 'd21', firstName: 'Laura', lastName: 'Scott', name: 'Laura Scott', hireDate: '2022-10-05', vehicleId: 'v21', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 3 },
-    { id: 'd22', firstName: 'Andrew', lastName: 'Green', name: 'Andrew Green', hireDate: '2019-04-22', vehicleId: 'v22', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 7 },
-    { id: 'd23', firstName: 'Michelle', lastName: 'Baker', name: 'Michelle Baker', hireDate: '2024-01-10', vehicleId: 'v23', riskProfile: 'moderate', burnoutRisk: 'low', tenureYears: 2 },
-    { id: 'd24', firstName: 'Daniel', lastName: 'Nelson', name: 'Daniel Nelson', hireDate: '2021-06-18', vehicleId: 'v24', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
-    { id: 'd25', firstName: 'Angela', lastName: 'Carter', name: 'Angela Carter', hireDate: '2020-12-01', vehicleId: 'v25', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
-    { id: 'd26', firstName: 'Ryan', lastName: 'Mitchell', name: 'Ryan Mitchell', hireDate: '2023-09-15', vehicleId: 'v1', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 2 },
-    { id: 'd27', firstName: 'Patricia', lastName: 'Roberts', name: 'Patricia Roberts', hireDate: '2022-03-28', vehicleId: 'v5', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
-    { id: 'd28', firstName: 'Eric', lastName: 'Turner', name: 'Eric Turner', hireDate: '2024-04-05', vehicleId: 'v10', riskProfile: 'moderate', burnoutRisk: 'moderate', tenureYears: 1 },
-    { id: 'd29', firstName: 'Diana', lastName: 'Phillips', name: 'Diana Phillips', hireDate: '2021-11-12', vehicleId: 'v15', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
-    { id: 'd30', firstName: 'Samuel', lastName: 'Campbell', name: 'Samuel Campbell', hireDate: '2023-07-22', vehicleId: 'v20', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 2 },
+    { id: 'd1', firstName: 'James', lastName: 'Wilson', name: 'James Wilson', employeeNumber: '241', pin: '1847', hireDate: '2019-03-15', vehicleId: 'v1', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 7 },
+    { id: 'd2', firstName: 'Sarah', lastName: 'Chen', name: 'Sarah Chen', employeeNumber: '318', pin: '2956', hireDate: '2020-08-20', vehicleId: 'v2', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
+    { id: 'd3', firstName: 'Marcus', lastName: 'Rivera', name: 'Marcus Rivera', employeeNumber: '405', pin: '7234', hireDate: '2023-11-01', vehicleId: 'v3', riskProfile: 'critical', burnoutRisk: 'high', tenureYears: 1 },
+    { id: 'd4', firstName: 'Emily', lastName: 'Davis', name: 'Emily Davis', employeeNumber: '127', pin: '4081', hireDate: '2021-02-10', vehicleId: 'v4', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
+    { id: 'd5', firstName: 'Robert', lastName: 'Kim', name: 'Robert Kim', employeeNumber: '562', pin: '3619', hireDate: '2018-06-05', vehicleId: 'v5', riskProfile: 'low', burnoutRisk: 'moderate', tenureYears: 8 },
+    { id: 'd6', firstName: 'Lisa', lastName: 'Martinez', name: 'Lisa Martinez', employeeNumber: '293', pin: '8472', hireDate: '2022-04-12', vehicleId: 'v6', riskProfile: 'moderate', burnoutRisk: 'low', tenureYears: 4 },
+    { id: 'd7', firstName: 'Jake', lastName: 'Thompson', name: 'Jake Thompson', employeeNumber: '714', pin: '5190', hireDate: '2024-02-15', vehicleId: 'v7', riskProfile: 'high', burnoutRisk: 'high', tenureYears: 1 },
+    { id: 'd8', firstName: 'Maria', lastName: 'Gonzalez', name: 'Maria Gonzalez', employeeNumber: '186', pin: '6328', hireDate: '2020-11-20', vehicleId: 'v8', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
+    { id: 'd9', firstName: 'David', lastName: 'Lee', name: 'David Lee', employeeNumber: '439', pin: '2745', hireDate: '2019-07-30', vehicleId: 'v9', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 6 },
+    { id: 'd10', firstName: 'Amanda', lastName: 'Brown', name: 'Amanda Brown', employeeNumber: '651', pin: '9013', hireDate: '2021-09-15', vehicleId: 'v10', riskProfile: 'moderate', burnoutRisk: 'moderate', tenureYears: 4 },
+    { id: 'd11', firstName: 'Michael', lastName: 'Taylor', name: 'Michael Taylor', employeeNumber: '378', pin: '4567', hireDate: '2022-01-08', vehicleId: 'v11', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
+    { id: 'd12', firstName: 'Derek', lastName: 'Shaw', name: 'Derek Shaw', employeeNumber: '802', pin: '1382', hireDate: '2024-06-01', vehicleId: 'v12', riskProfile: 'high', burnoutRisk: 'high', tenureYears: 0.5 },
+    { id: 'd13', firstName: 'Rachel', lastName: 'White', name: 'Rachel White', employeeNumber: '215', pin: '7896', hireDate: '2020-03-22', vehicleId: 'v13', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 6 },
+    { id: 'd14', firstName: 'Carlos', lastName: 'Hernandez', name: 'Carlos Hernandez', employeeNumber: '547', pin: '3041', hireDate: '2021-12-05', vehicleId: 'v14', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
+    { id: 'd15', firstName: 'Jennifer', lastName: 'Clark', name: 'Jennifer Clark', employeeNumber: '163', pin: '6754', hireDate: '2019-10-18', vehicleId: 'v15', riskProfile: 'moderate', burnoutRisk: 'moderate', tenureYears: 6 },
+    { id: 'd16', firstName: 'Thomas', lastName: 'Wright', name: 'Thomas Wright', employeeNumber: '429', pin: '8215', hireDate: '2023-03-20', vehicleId: 'v16', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 3 },
+    { id: 'd17', firstName: 'Nicole', lastName: 'Adams', name: 'Nicole Adams', employeeNumber: '681', pin: '5937', hireDate: '2022-07-14', vehicleId: 'v17', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
+    { id: 'd18', firstName: 'Brian', lastName: 'Hall', name: 'Brian Hall', employeeNumber: '356', pin: '2468', hireDate: '2020-05-28', vehicleId: 'v18', riskProfile: 'moderate', burnoutRisk: 'low', tenureYears: 6 },
+    { id: 'd19', firstName: 'Stephanie', lastName: 'Young', name: 'Stephanie Young', employeeNumber: '194', pin: '7103', hireDate: '2021-08-10', vehicleId: 'v19', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
+    { id: 'd20', firstName: 'Kevin', lastName: 'King', name: 'Kevin King', employeeNumber: '723', pin: '4826', hireDate: '2023-01-15', vehicleId: 'v20', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 3 },
+    { id: 'd21', firstName: 'Laura', lastName: 'Scott', name: 'Laura Scott', employeeNumber: '467', pin: '9351', hireDate: '2022-10-05', vehicleId: 'v21', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 3 },
+    { id: 'd22', firstName: 'Andrew', lastName: 'Green', name: 'Andrew Green', employeeNumber: '582', pin: '1679', hireDate: '2019-04-22', vehicleId: 'v22', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 7 },
+    { id: 'd23', firstName: 'Michelle', lastName: 'Baker', name: 'Michelle Baker', employeeNumber: '839', pin: '5204', hireDate: '2024-01-10', vehicleId: 'v23', riskProfile: 'moderate', burnoutRisk: 'low', tenureYears: 2 },
+    { id: 'd24', firstName: 'Daniel', lastName: 'Nelson', name: 'Daniel Nelson', employeeNumber: '310', pin: '8647', hireDate: '2021-06-18', vehicleId: 'v24', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
+    { id: 'd25', firstName: 'Angela', lastName: 'Carter', name: 'Angela Carter', employeeNumber: '745', pin: '3982', hireDate: '2020-12-01', vehicleId: 'v25', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 5 },
+    { id: 'd26', firstName: 'Ryan', lastName: 'Mitchell', name: 'Ryan Mitchell', employeeNumber: '158', pin: '6215', hireDate: '2023-09-15', vehicleId: 'v1', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 2 },
+    { id: 'd27', firstName: 'Patricia', lastName: 'Roberts', name: 'Patricia Roberts', employeeNumber: '624', pin: '4738', hireDate: '2022-03-28', vehicleId: 'v5', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
+    { id: 'd28', firstName: 'Eric', lastName: 'Turner', name: 'Eric Turner', employeeNumber: '491', pin: '1053', hireDate: '2024-04-05', vehicleId: 'v10', riskProfile: 'moderate', burnoutRisk: 'moderate', tenureYears: 1 },
+    { id: 'd29', firstName: 'Diana', lastName: 'Phillips', name: 'Diana Phillips', employeeNumber: '276', pin: '8491', hireDate: '2021-11-12', vehicleId: 'v15', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 4 },
+    { id: 'd30', firstName: 'Samuel', lastName: 'Campbell', name: 'Samuel Campbell', employeeNumber: '853', pin: '2176', hireDate: '2023-07-22', vehicleId: 'v20', riskProfile: 'low', burnoutRisk: 'low', tenureYears: 2 },
   ];
 }
 

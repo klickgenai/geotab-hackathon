@@ -12,6 +12,43 @@ const MIN_SENTENCE_LENGTH = 12;
 // Merge short sentences into one TTS request to avoid inter-sentence gaps
 const MERGE_TARGET_LENGTH = 80;
 
+/**
+ * Strip markdown artifacts so TTS reads natural sentences.
+ * Removes: ## headers, **bold**, *italic*, `code`, bullets, numbered lists,
+ * [links](url), blockquotes, horizontal rules, etc.
+ */
+function cleanTextForTTS(text: string): string {
+  let cleaned = text;
+  // Remove headers (## Header)
+  cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+  // Remove bold (**text** or __text__)
+  cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '$1');
+  cleaned = cleaned.replace(/__(.+?)__/g, '$1');
+  // Remove italic (*text* or _text_) — careful not to match already-cleaned bold
+  cleaned = cleaned.replace(/\*(.+?)\*/g, '$1');
+  cleaned = cleaned.replace(/(?<!\w)_(.+?)_(?!\w)/g, '$1');
+  // Remove inline code (`code`)
+  cleaned = cleaned.replace(/`(.+?)`/g, '$1');
+  // Remove links [text](url) -> text
+  cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  // Remove blockquotes
+  cleaned = cleaned.replace(/^>\s?/gm, '');
+  // Remove horizontal rules
+  cleaned = cleaned.replace(/^[-*_]{3,}\s*$/gm, '');
+  // Remove bullet points (- item, * item)
+  cleaned = cleaned.replace(/^[\s]*[-*]\s+/gm, '');
+  // Remove numbered lists (1. item)
+  cleaned = cleaned.replace(/^[\s]*\d+\.\s+/gm, '');
+  // Collapse multiple newlines into sentence breaks
+  cleaned = cleaned.replace(/\n{2,}/g, '. ');
+  cleaned = cleaned.replace(/\n/g, ' ');
+  // Clean up multiple spaces
+  cleaned = cleaned.replace(/\s{2,}/g, ' ');
+  // Clean up double periods
+  cleaned = cleaned.replace(/\.{2,}/g, '.');
+  return cleaned.trim();
+}
+
 // Batch N PCM chunks from Waves into one WAV before sending to browser.
 // Each Waves chunk = 7680 bytes = ~160ms at 24kHz 16-bit mono.
 // Batch of 3 = ~480ms — good balance between latency and smooth playback.
@@ -184,7 +221,9 @@ export class TTSSentencePipeline {
    * to the browser as they arrive (batched for smooth playback).
    */
   private async synthesizeSentenceStreaming(text: string): Promise<void> {
-    const chunks = this.chunkText(text, 120);
+    const cleaned = cleanTextForTTS(text);
+    if (!cleaned) return;
+    const chunks = this.chunkText(cleaned, 120);
 
     await this.ensureConnected();
 

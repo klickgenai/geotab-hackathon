@@ -61,8 +61,8 @@ function generateSimulatedFleet(): LiveVehicle[] {
   const vehicles: LiveVehicle[] = [];
   const now = Date.now();
 
-  // Use up to 50 vehicles; pad beyond seed data if needed
-  const vehicleCount = 50;
+  // Use actual seed vehicle count so all vehicles have real driver names
+  const vehicleCount = seedVehicles.length;
 
   for (let i = 0; i < vehicleCount; i++) {
     const seedVehicle = seedVehicles[i % seedVehicles.length];

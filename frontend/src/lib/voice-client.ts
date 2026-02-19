@@ -22,6 +22,7 @@ export class VoiceClient {
   private isPlaying = false;
   private state: VoiceState = 'disconnected';
   private callbacks: VoiceCallbacks;
+  private driverId: string | undefined;
   private isSpeaking = false;
   private silenceFrames = 0;
   private speechFrames = 0;
@@ -29,8 +30,9 @@ export class VoiceClient {
   private readonly SPEECH_START_FRAMES = 3;
   private readonly SILENCE_END_FRAMES = 20;
 
-  constructor(callbacks: VoiceCallbacks) {
+  constructor(callbacks: VoiceCallbacks, driverId?: string) {
     this.callbacks = callbacks;
+    this.driverId = driverId;
   }
 
   async connect(): Promise<void> {
@@ -47,7 +49,7 @@ export class VoiceClient {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        this.ws!.send(JSON.stringify({ type: 'start_session' }));
+        this.ws!.send(JSON.stringify({ type: 'start_session', ...(this.driverId ? { driverId: this.driverId } : {}) }));
       };
 
       this.ws.onmessage = (event) => {

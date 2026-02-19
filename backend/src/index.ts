@@ -19,12 +19,13 @@ import { predictWellness, predictAllWellness, getFleetWellnessSummary } from './
 import { calculateAllPreShiftRisks, calculatePreShiftRisk, getFleetRiskForecast, detectDeteriorating, detectDangerousZones } from './scoring/predictive-safety.js';
 import { getTriagedAlerts, getDailyBriefing } from './scoring/alert-triage.js';
 import { streamAgentResponse, generateAgentResponse } from './agents/fleetshield-agent.js';
-import { VoiceSession } from './voice/voice-session.js';
+import { VoiceSession, type DriverVoiceContext } from './voice/voice-session.js';
 import { fillerCache } from './voice/filler-cache.js';
 import { getLiveFleet, getGPSTrail, getSpeedingHotspots } from './services/live-fleet.js';
 import {
   initDriverSessions,
   loginDriver,
+  loginDriverWithPin,
   getDriverSession,
   getDriverLoad,
   updateLoadStatus,
@@ -34,6 +35,8 @@ import {
 import { simulateDispatcherCall } from './data/dispatcher-ai.js';
 import { calculateFleetROI, calculateBeforeAfter, calculateRetentionSavings } from './scoring/roi-engine.js';
 import { simulateWhatIf, getDefaultScenarios } from './scoring/what-if-simulator.js';
+import { geotabAce } from './services/geotab-ace.js';
+import { isUsingLiveData } from './data/fleet-data-provider.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -309,8 +312,17 @@ app.get('/api/fleet/alerts/briefing', (_req, res) => {
 // --- Driver Dashboard APIs ---
 app.post('/api/driver/login', (req, res) => {
   try {
-    const { driverId } = req.body;
-    if (!driverId) return res.status(400).json({ error: 'driverId is required' });
+    const { driverId, employeeNumber, pin } = req.body;
+
+    // PIN-based login
+    if (employeeNumber && pin) {
+      const session = loginDriverWithPin(employeeNumber, pin);
+      if (!session) return res.status(401).json({ error: 'Invalid employee number or PIN' });
+      return res.json(session);
+    }
+
+    // Legacy driverId login
+    if (!driverId) return res.status(400).json({ error: 'employeeNumber and pin are required' });
     const session = loginDriver(driverId);
     if (!session) return res.status(404).json({ error: 'Driver not found' });
     res.json(session);
@@ -423,6 +435,62 @@ app.get('/api/fleet/what-if/defaults', (_req, res) => {
   }
 });
 
+// --- Geotab Ace API (Natural Language Analytics) ---
+app.post('/api/fleet/ace/query', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'prompt is required' });
+
+  if (!geotabAuth.isConfigured()) {
+    return res.json({
+      text: 'Geotab Ace is not available in seed data mode. Connect to a Geotab database to use natural language analytics.',
+      data: null,
+      charts: [],
+      status: 'unavailable',
+    });
+  }
+
+  try {
+    const result = await geotabAce.query(prompt);
+    res.json(result);
+  } catch (error) {
+    console.error('[Ace] Query error:', error);
+    res.json({
+      text: `Ace query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null,
+      charts: [],
+      status: 'failed',
+    });
+  }
+});
+
+// --- Custom What-If Simulator (slider-based) ---
+app.post('/api/fleet/what-if/custom', (req, res) => {
+  try {
+    const { adjustments } = req.body;
+    if (!adjustments) return res.status(400).json({ error: 'adjustments object required' });
+
+    const scenario = {
+      id: 'custom',
+      name: 'Custom Scenario',
+      description: 'Custom parameter adjustments',
+      adjustments,
+    };
+    const results = simulateWhatIf([scenario]);
+    res.json(results[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to run custom simulation' });
+  }
+});
+
+// --- Data Source Info ---
+app.get('/api/fleet/data-source', (_req, res) => {
+  res.json({
+    isLiveData: isUsingLiveData(),
+    geotabConfigured: geotabAuth.isConfigured(),
+    database: geotabAuth.isConfigured() ? process.env.GEOTAB_DATABASE : null,
+  });
+});
+
 // --- Dispatcher Call ---
 app.post('/api/driver/:id/dispatch-call', async (req, res) => {
   try {
@@ -480,6 +548,45 @@ wss.on('connection', (ws) => {
         if (session) {
           session.end();
         }
+
+        // Build driver voice context if driverId is provided
+        let driverContext: DriverVoiceContext | undefined;
+        const voiceDriverId = msg.driverId as string | undefined;
+        if (voiceDriverId) {
+          const driverData = seedDrivers.find((d) => d.id === voiceDriverId);
+          const driverSession = getDriverSession(voiceDriverId);
+          const driverRisk = calculateDriverRisk(voiceDriverId);
+          const driverWellness = predictWellness(voiceDriverId);
+          const driverStats = getDriverStats(voiceDriverId);
+          if (driverData && driverSession) {
+            driverContext = {
+              firstName: driverData.firstName,
+              name: driverData.name,
+              safetyScore: driverSession.safetyScore,
+              streakDays: driverSession.streakDays,
+              weeklyRank: driverSession.weeklyRank,
+              totalDrivers: seedDrivers.length,
+              vehicleName: driverSession.vehicleName,
+              currentLoad: driverSession.currentLoad ? {
+                id: driverSession.currentLoad.id,
+                status: driverSession.currentLoad.status,
+                origin: `${driverSession.currentLoad.origin.city}, ${driverSession.currentLoad.origin.state}`,
+                destination: `${driverSession.currentLoad.destination.city}, ${driverSession.currentLoad.destination.state}`,
+                commodity: driverSession.currentLoad.commodity,
+              } : null,
+              riskProfile: driverData.riskProfile,
+              burnoutRisk: driverData.burnoutRisk,
+              riskScore: driverRisk?.riskScore ?? 0,
+              burnoutProbability: driverWellness?.burnoutProbability ?? 0,
+              todayEvents: driverSession.todayEvents,
+              avgDailyHours: driverStats?.avgDailyHours ?? 0,
+              avgRestHours: driverStats?.avgRestHours ?? 0,
+              totalDrivingHours: driverStats?.totalDrivingHours ?? 0,
+              daysWorked: driverStats?.daysWorked ?? 0,
+            };
+          }
+        }
+
         session = new VoiceSession({
           onStateChange: (state) => {
             sendJson({ type: 'state_change', state });
@@ -506,10 +613,10 @@ wss.on('connection', (ws) => {
           onMicStatus: (status) => {
             sendJson({ type: 'mic_status', status });
           },
-        });
+        }, driverContext);
         try {
           await session.startListening();
-          console.log(`[WS] Voice session started: ${session.sessionId}`);
+          console.log(`[WS] Voice session started: ${session.sessionId}${voiceDriverId ? ` for driver ${voiceDriverId}` : ''}`);
         } catch (err) {
           console.error('[WS] Failed to start voice session:', (err as Error).message);
           sendJson({ type: 'error', message: (err as Error).message });
