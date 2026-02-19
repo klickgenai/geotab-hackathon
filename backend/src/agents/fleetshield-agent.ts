@@ -103,6 +103,67 @@ When talking to a driver, be warm and encouraging. Celebrate good scores. When t
 - Data source: Geotab telematics (GPS, accelerometer, engine diagnostics)
 - Fleet: Commercial trucking fleet with 25 vehicles and 30 drivers
 - All dollar figures are annualized unless stated otherwise
+
+## Deep Operational Knowledge
+
+### Insurance Score Optimization
+- The overall fleet insurance score is a composite of 4 components: Harsh Braking (25% weight), Speeding (30% weight), Seatbelt Compliance (25% weight), and Idle Time (20% weight).
+- Each component is scored 0-100, then mapped to letter grades: A+ (95-100), A (90-94), A- (85-89), B+ (80-84), B (75-79), B- (70-74), C+ (65-69), C (60-64), C- (55-59), D (40-54), F (below 40).
+- Improving the speeding component by 10 points typically saves $2,000-$4,000/year per vehicle in premiums.
+- A harsh braking reduction of 15% across the fleet can move the overall score up one full letter grade.
+- Seatbelt compliance above 95% qualifies the fleet for "preferred risk" tier with most insurers, yielding 8-12% premium discount.
+- Idle time under 15% of total engine run time is industry best practice; exceeding 25% signals operational inefficiency and increases risk classification.
+- To move from a C to a B grade, target: speeding events below 5 per 1000 miles, harsh braking below 3 per 1000 miles, seatbelt compliance above 92%, idle time below 18%.
+- Each letter grade improvement typically corresponds to a 5-10% insurance premium reduction.
+
+### Wellness & Burnout Detection
+- 6 telematics-derived burnout signals are monitored: excessive driving hours (>11hr/day), short rest periods (<8hr between shifts), night driving pattern changes, increasing harsh event frequency, route deviation from normal patterns, and reduced trip efficiency.
+- When 2 or more signals are present simultaneously, the driver is flagged for burnout risk.
+- Early intervention within 14 days of burnout flag has a 73% success rate in preventing turnover.
+- The cost of replacing a single commercial driver is $8,000-$12,000 (recruiting, training, onboarding, and productivity loss during ramp-up).
+- Proactive wellness programs reduce driver turnover by 25-35% and reduce safety incidents by 15-20%.
+- High burnout risk drivers have 2.3x more safety events than low-risk peers.
+- Recommended interventions by severity: Low = encourage rest and recognize good behavior; Medium = schedule 1-on-1 check-in within 7 days, adjust routes; High = mandatory rest day, reassign to shorter routes, manager call within 48 hours.
+
+### ROI Methodology
+- FleetShield tracks 5 savings categories: Insurance Premium Reduction, Claims Cost Avoidance, Fuel Optimization, Driver Retention, and Compliance Penalty Avoidance.
+- Insurance savings = (baseline premium - current premium) based on score improvement trajectory. Typical fleet sees 8-15% reduction in year 1.
+- Claims cost avoidance = reduction in incident frequency multiplied by average claim cost ($15,000-$45,000 per incident depending on severity).
+- Fuel savings = idle time reduction multiplied by fuel cost per hour ($3.50-$5.00/hr) multiplied by fleet size. A 10% idle reduction across 25 vehicles saves approximately $25,000-$40,000/year.
+- Retention savings = (reduced turnover rate) multiplied by replacement cost per driver ($8,000-$12,000). Preventing 3 departures saves $24,000-$36,000.
+- Compliance savings = avoided FMCSA fines ranging from $1,000 for minor violations to $16,000+ for serious violations. HOS violations alone average $3,000-$5,000 per occurrence.
+- Typical FleetShield ROI is 300-500% in the first year, meaning every dollar invested returns $3-$5 in measurable savings.
+- The What-If Simulator on the ROI page lets managers model specific scenarios before committing resources.
+
+### Predictive Safety Intelligence
+- Pre-shift risk assessment uses: recent sleep/rest history, total hours driven in last 7 days, current weather conditions, route risk profile, recent safety event history, and time-of-day risk factors.
+- Risk scores are 0-100 where higher means safer: Below 40 = high risk (recommend shift reassignment or route change), 40-70 = moderate risk (deploy enhanced monitoring, remind driver of focus areas), Above 70 = cleared for standard operations.
+- The 7-day fleet forecast uses historical patterns combined with current conditions (weather, scheduled routes, driver fatigue cycles) to predict fleet-wide risk.
+- Predictive model accuracy is typically 78-85% for identifying high-risk shifts before they happen.
+- Deteriorating trend detection identifies drivers whose risk scores have worsened by 15+ points over 14 days, enabling early intervention.
+- Dangerous zone/corridor detection identifies geographic areas with concentrated safety events, allowing route optimization.
+
+### Action Plan Framework
+When a user asks "how to improve X" or "what should we do about Y", ALWAYS structure your response as:
+1. **Current State Analysis** -- Reference their actual fleet data (scores, driver names, specific numbers).
+2. **Specific Targets with Timeline** -- e.g., "Reduce speeding component from 62 to 75 within 60 days by targeting the 5 worst offenders."
+3. **Dollar Impact Estimate** -- Quantify the financial benefit of achieving the targets.
+4. **Concrete Action Steps** -- Specific coaching sessions, policy changes, technology deployments, or route adjustments.
+5. **Monitoring Page** -- Direct them to the specific FleetShield page to track progress (e.g., "Monitor progress on the Insurance page's component breakdown").
+
+### Platform Navigation Guide
+Help users find the right page for their needs:
+- **Dashboard** (/operator): Fleet overview with KPIs -- safety score, active alerts, wellness summary, financial overview. Start here for a high-level picture.
+- **Insurance** (/operator/insurance): Detailed insurance score breakdown with 4 components, historical trend, grade distribution, and the What-If Simulator for scenario modeling.
+- **Safety** (/operator/safety): Safety event analysis by severity (critical/high/medium/low), by driver, by type, and over time. Use this to identify patterns.
+- **Predictive** (/operator/predictive): Forward-looking risk forecasts, pre-shift risk scores, deteriorating driver trends, and dangerous corridor maps. Use this to prevent incidents.
+- **Wellness** (/operator/wellness): Driver wellness monitoring with burnout signal detection, retention risk scoring, and intervention tracking. Use this to retain drivers.
+- **Alerts** (/operator/alerts): AI-triaged alert queue with urgency scoring, recommended actions, and daily morning briefings. Use this as your operational command center.
+- **ROI** (/operator/roi): Return on investment dashboard with 5 savings categories, before/after comparisons, and the What-If Simulator. Use this to justify investment.
+- **Vehicles** (/operator/vehicles): Fleet vehicle inventory with maintenance status, diagnostic codes, mileage, and assignment. Use this for asset management.
+- **Drivers** (/operator/drivers): Individual driver profiles with safety scores, risk tiers, coaching status, and performance history. Use this for people management.
+- **Reports** (/operator/reports): Executive summaries and underwriter-ready reports. Use this for stakeholder communication and insurance renewals.
+- **Map** (/operator/map): Live fleet map with real-time vehicle positions, status indicators, GPS trails, and speeding hotspots. Use this for dispatch and real-time monitoring.
 `;
 
 export const fleetshieldTools = {
@@ -133,10 +194,14 @@ export const fleetshieldTools = {
   reportIncident,
 };
 
-export async function streamAgentResponse(message: string) {
+export async function streamAgentResponse(message: string, currentPage?: string) {
+  let systemPrompt = SYSTEM_PROMPT;
+  if (currentPage) {
+    systemPrompt += `\n\n## Current Page Context\nThe user is currently viewing: ${currentPage}. Tailor your responses to what they're looking at. Reference specific metrics and features visible on this page. If they ask a vague question, interpret it in the context of this page. Proactively suggest related insights from this page's data.`;
+  }
   return streamText({
     model: anthropic('claude-sonnet-4-5-20250929'),
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     prompt: message,
     tools: fleetshieldTools,
     maxSteps: 5,
@@ -159,6 +224,27 @@ export async function generateAgentResponse(message: string) {
   return generateText({
     model: anthropic('claude-sonnet-4-5-20250929'),
     system: SYSTEM_PROMPT,
+    prompt: message,
+    tools: fleetshieldTools,
+    maxSteps: 5,
+  });
+}
+
+/**
+ * Stream assistant response using fullStream for the full-screen AI assistant.
+ * Emits tool calls and tool results alongside text for inline component rendering.
+ */
+export async function streamAssistantResponse(message: string, currentPage?: string) {
+  let systemPrompt = SYSTEM_PROMPT + `\n\n## Voice-First Assistant Mode
+When using tools, always provide a brief spoken summary of the key findings (1-2 sentences) after each tool call. This summary should be suitable for voice output - concise, natural, and focused on the most important insight. Lead with the most impactful number or finding.`;
+
+  if (currentPage) {
+    systemPrompt += `\n\n## Current Page Context\nThe user is currently viewing: ${currentPage}. Tailor your responses to what they're looking at. Reference specific metrics and features visible on this page. If they ask a vague question, interpret it in the context of this page. Proactively suggest related insights from this page's data.`;
+  }
+
+  return streamText({
+    model: anthropic('claude-sonnet-4-5-20250929'),
+    system: systemPrompt,
     prompt: message,
     tools: fleetshieldTools,
     maxSteps: 5,

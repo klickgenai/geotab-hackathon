@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Shield, LayoutDashboard, Users, AlertTriangle, Heart, Truck,
-  Brain, Bell, MapPin, DollarSign, UserCircle, Award,
+  Brain, Bell, MapPin, DollarSign, UserCircle, Award, Bot,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -31,6 +31,7 @@ const sections = [
       { href: '/operator/alerts', label: 'Alert Triage', icon: Bell },
       { href: '/operator/map', label: 'Live Map', icon: MapPin },
       { href: '/operator/roi', label: 'ROI Dashboard', icon: DollarSign },
+      { href: '/operator/assistant', label: 'AI Assistant', icon: Bot },
     ],
   },
   {

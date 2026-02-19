@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import PageHeader from '@/components/layout/PageHeader';
 import type { TriagedAlert, AlertBriefing } from '@/types/fleet';
 import { Bell, AlertTriangle, Shield, Wrench, Activity, Loader2 } from 'lucide-react';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 
 const priorityConfig = {
   critical: { color: 'border-l-red-500 bg-red-50/30', badge: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
@@ -99,7 +100,7 @@ export default function AlertsPage() {
         {/* Filters */}
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-gray-500 mr-1">Priority:</span>
+            <span className="text-xs font-semibold text-gray-500 mr-1 flex items-center gap-1">Priority: <InsightTooltip metricKey="alerts.priorityLevel" /></span>
             {['all', 'critical', 'high', 'medium', 'low'].map((p) => (
               <button key={p} onClick={() => setPriorityFilter(p)}
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
@@ -112,7 +113,7 @@ export default function AlertsPage() {
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-gray-500 mr-1">Category:</span>
+            <span className="text-xs font-semibold text-gray-500 mr-1 flex items-center gap-1">Category: <InsightTooltip metricKey="alerts.category" /></span>
             {['all', 'behavioral', 'compliance', 'mechanical', 'pattern'].map((c) => (
               <button key={c} onClick={() => setCategoryFilter(c)}
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
@@ -161,7 +162,7 @@ export default function AlertsPage() {
                     </div>
                   </div>
                   <div className="ml-4 text-center flex-shrink-0">
-                    <div className="text-xs text-gray-400 uppercase font-medium">Urgency</div>
+                    <div className="text-xs text-gray-400 uppercase font-medium flex items-center gap-1">Urgency <InsightTooltip metricKey="alerts.urgencyScore" /></div>
                     <div className={`text-lg font-bold ${
                       alert.urgencyScore >= 75 ? 'text-red-600' : alert.urgencyScore >= 50 ? 'text-orange-600' : alert.urgencyScore >= 25 ? 'text-amber-600' : 'text-emerald-600'
                     }`}>{alert.urgencyScore}</div>

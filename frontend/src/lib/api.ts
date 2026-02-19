@@ -64,11 +64,19 @@ export const api = {
     const data = await postJSON<{ response: string }>('/api/chat', { message });
     return data.response;
   },
-  chatStream: (message: string) =>
+  chatStream: (message: string, currentPage?: string) =>
     fetch(`${API_BASE}/api/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, currentPage }),
+    }),
+
+  // Full-screen assistant stream (includes tool results for inline component rendering)
+  assistantStream: (message: string, currentPage?: string) =>
+    fetch(`${API_BASE}/api/assistant/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, currentPage }),
     }),
 
   // Predictive Safety

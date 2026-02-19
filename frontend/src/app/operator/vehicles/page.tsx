@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Truck, Search, Calendar, Gauge } from 'lucide-react';
 import clsx from 'clsx';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import PageHeader from '@/components/layout/PageHeader';
 import { api } from '@/lib/api';
 import type { Vehicle } from '@/types/fleet';
@@ -59,10 +60,10 @@ export default function VehiclesPage() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-6">
           {[
-            { label: 'Total Vehicles', value: stats.total, icon: Truck, iconBg: 'bg-[#FFF8EB]', iconColor: 'text-[#BF7408]' },
-            { label: 'Total Odometer', value: `${(stats.totalOdometer / 1000000).toFixed(1)}M km`, icon: Gauge, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-500' },
-            { label: 'Avg Vehicle Age', value: `${stats.avgAge} yrs`, icon: Calendar, iconBg: 'bg-amber-50', iconColor: 'text-amber-500' },
-            { label: 'Makes', value: stats.makes, icon: Truck, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-500' },
+            { label: 'Total Vehicles', value: stats.total, icon: Truck, iconBg: 'bg-[#FFF8EB]', iconColor: 'text-[#BF7408]', tooltipKey: '' },
+            { label: 'Total Odometer', value: `${(stats.totalOdometer / 1000000).toFixed(1)}M km`, icon: Gauge, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-500', tooltipKey: 'vehicles.odometer' },
+            { label: 'Avg Vehicle Age', value: `${stats.avgAge} yrs`, icon: Calendar, iconBg: 'bg-amber-50', iconColor: 'text-amber-500', tooltipKey: 'vehicles.age' },
+            { label: 'Makes', value: stats.makes, icon: Truck, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-500', tooltipKey: '' },
           ].map((card, i) => {
             const Icon = card.icon;
             return (
@@ -74,7 +75,7 @@ export default function VehiclesPage() {
                 className="bg-white rounded-2xl border border-[#E5E2DC] px-5 py-4"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{card.label}</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">{card.label} {card.tooltipKey && <InsightTooltip metricKey={card.tooltipKey} />}</span>
                   <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center', card.iconBg)}>
                     <Icon className={clsx('w-4 h-4', card.iconColor)} />
                   </div>
@@ -120,14 +121,14 @@ export default function VehiclesPage() {
               </div>
               <div className="space-y-2">
                 {[
-                  { label: 'Make/Model', value: `${v.year} ${v.make} ${v.model}` },
-                  { label: 'Type', value: v.type },
-                  { label: 'VIN', value: v.vin.slice(0, 11) + '...' },
-                  { label: 'Odometer', value: `${v.odometer.toLocaleString()} km` },
-                  { label: 'Active Since', value: new Date(v.activeFrom).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) },
+                  { label: 'Make/Model', value: `${v.year} ${v.make} ${v.model}`, tooltipKey: '' },
+                  { label: 'Type', value: v.type, tooltipKey: '' },
+                  { label: 'VIN', value: v.vin.slice(0, 11) + '...', tooltipKey: '' },
+                  { label: 'Odometer', value: `${v.odometer.toLocaleString()} km`, tooltipKey: 'vehicles.odometer' },
+                  { label: 'Active Since', value: new Date(v.activeFrom).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), tooltipKey: 'vehicles.age' },
                 ].map((row) => (
                   <div key={row.label} className="flex justify-between text-xs">
-                    <span className="text-gray-400">{row.label}</span>
+                    <span className="text-gray-400 flex items-center gap-0.5">{row.label} {row.tooltipKey && <InsightTooltip metricKey={row.tooltipKey} />}</span>
                     <span className="font-medium text-gray-700">{row.value}</span>
                   </div>
                 ))}

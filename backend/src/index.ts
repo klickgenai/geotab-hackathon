@@ -18,7 +18,7 @@ import { calculateDriverRisk, calculateAllDriverRisks } from './scoring/driver-r
 import { predictWellness, predictAllWellness, getFleetWellnessSummary } from './scoring/wellness-predictor.js';
 import { calculateAllPreShiftRisks, calculatePreShiftRisk, getFleetRiskForecast, detectDeteriorating, detectDangerousZones } from './scoring/predictive-safety.js';
 import { getTriagedAlerts, getDailyBriefing } from './scoring/alert-triage.js';
-import { streamAgentResponse, generateAgentResponse } from './agents/fleetshield-agent.js';
+import { streamAgentResponse, generateAgentResponse, streamAssistantResponse } from './agents/fleetshield-agent.js';
 import { VoiceSession, type DriverVoiceContext } from './voice/voice-session.js';
 import { fillerCache } from './voice/filler-cache.js';
 import { getLiveFleet, getGPSTrail, getSpeedingHotspots } from './services/live-fleet.js';
@@ -203,7 +203,7 @@ app.post('/api/chat', async (req, res) => {
 
 // --- SSE Chat Stream ---
 app.post('/api/chat/stream', async (req, res) => {
-  const { message } = req.body;
+  const { message, currentPage } = req.body;
   if (!message) return res.status(400).json({ error: 'Message required' });
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -211,7 +211,7 @@ app.post('/api/chat/stream', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    const result = await streamAgentResponse(message);
+    const result = await streamAgentResponse(message, currentPage);
 
     for await (const chunk of result.textStream) {
       res.write(`data: ${JSON.stringify({ type: 'text', content: chunk })}\n\n`);
@@ -222,6 +222,50 @@ app.post('/api/chat/stream', async (req, res) => {
   } catch (error) {
     console.error('[Chat Stream] Error:', error);
     res.write(`data: ${JSON.stringify({ type: 'error', content: 'Agent error' })}\n\n`);
+    res.end();
+  }
+});
+
+// --- Assistant SSE Stream (full-screen assistant with tool results) ---
+app.post('/api/assistant/stream', async (req, res) => {
+  const { message, currentPage } = req.body;
+  if (!message) return res.status(400).json({ error: 'Message required' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  try {
+    console.log('[Assistant Stream] Starting for message:', message.slice(0, 80));
+    const result = await streamAssistantResponse(message, currentPage);
+
+    for await (const part of result.fullStream) {
+      switch (part.type) {
+        case 'text-delta':
+          res.write(`data: ${JSON.stringify({ type: 'text', content: part.textDelta })}\n\n`);
+          break;
+        case 'tool-call':
+          console.log('[Assistant Stream] Tool call:', part.toolName);
+          res.write(`data: ${JSON.stringify({ type: 'tool_call', toolName: part.toolName, args: part.args })}\n\n`);
+          break;
+        case 'tool-result':
+          console.log('[Assistant Stream] Tool result:', part.toolName);
+          res.write(`data: ${JSON.stringify({ type: 'tool_result', toolName: part.toolName, result: part.result })}\n\n`);
+          break;
+        case 'error':
+          console.error('[Assistant Stream] Stream error event:', part.error);
+          res.write(`data: ${JSON.stringify({ type: 'error', content: String(part.error) })}\n\n`);
+          break;
+      }
+    }
+
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    res.end();
+  } catch (error: any) {
+    console.error('[Assistant Stream] Error:', error?.message || error);
+    if (error?.cause) console.error('[Assistant Stream] Cause:', error.cause);
+    const errorMsg = error?.message?.includes('rate') ? 'Rate limited — please wait a moment and try again.' : 'Agent error — check backend logs.';
+    res.write(`data: ${JSON.stringify({ type: 'error', content: errorMsg })}\n\n`);
     res.end();
   }
 });

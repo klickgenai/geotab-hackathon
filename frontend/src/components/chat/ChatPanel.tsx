@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Mic, Send, Shield } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -11,16 +12,81 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const quickActions = [
-  'Show fleet overview',
-  'Who is the riskiest driver?',
-  'Show insurance score',
-  'Who might quit?',
-  'How much can we save?',
-  'Generate a report',
-];
+function getQuickActions(pathname: string): { label: string; text: string }[] {
+  const actions: Record<string, { label: string; text: string }[]> = {
+    '/operator': [
+      { label: '\ud83d\udcca Improve Score', text: 'How can we improve our fleet safety score?' },
+      { label: '\u26a0\ufe0f Risky Driver', text: 'Who is the riskiest driver and what should we do?' },
+      { label: '\ud83d\udcb0 Savings Plan', text: 'Give me a detailed savings action plan' },
+      { label: '\ud83d\udd04 Retention', text: 'Which drivers are at risk of leaving?' },
+      { label: '\ud83d\udccb Overview', text: 'Give me a complete fleet overview' },
+      { label: '\ud83d\udcc4 Report', text: 'Generate an executive summary report' },
+    ],
+    '/operator/insurance': [
+      { label: '\ud83d\udcc8 Improve Score', text: 'How can we improve our insurance score?' },
+      { label: '\ud83d\udcb0 Speeding Impact', text: 'What would reducing speeding by 20% save us?' },
+      { label: '\ud83d\udd0d Weakest Area', text: 'Which insurance component is our weakest and how do we fix it?' },
+      { label: '\ud83c\udfaf Reach Grade B', text: 'Give me a detailed plan to reach insurance grade B' },
+    ],
+    '/operator/safety': [
+      { label: '\ud83d\udcca Common Events', text: 'What are the most common safety events?' },
+      { label: '\u26a0\ufe0f Critical Drivers', text: 'Which drivers have the most critical safety events?' },
+      { label: '\ud83d\udcc8 Safety Trend', text: 'How is our safety trend looking?' },
+    ],
+    '/operator/wellness': [
+      { label: '\ud83d\udd25 Burnout Risk', text: 'Who has the highest burnout risk right now?' },
+      { label: '\ud83d\udcb0 Retention Cost', text: 'How much are we spending on driver retention risk?' },
+      { label: '\ud83c\udfe5 Wellness Plan', text: 'Give me a wellness intervention plan for at-risk drivers' },
+    ],
+    '/operator/predictive': [
+      { label: '\u26a0\ufe0f High Risk', text: 'Who is the highest risk driver today?' },
+      { label: '\ud83d\udcc5 Weekly Forecast', text: 'What does the weekly safety forecast look like?' },
+      { label: '\ud83d\udcc8 Risk Trends', text: 'Which risk factors are trending up?' },
+    ],
+    '/operator/alerts': [
+      { label: '\ud83c\udf05 Morning Brief', text: 'Give me a morning alert briefing' },
+      { label: '\ud83d\udea8 Immediate Action', text: 'Which alerts need immediate action?' },
+      { label: '\ud83d\udcca Alert Patterns', text: 'Summarize the alert patterns this week' },
+    ],
+    '/operator/roi': [
+      { label: '\ud83d\udcb0 Annual Savings', text: 'How much are we saving annually with FleetShield?' },
+      { label: '\ud83d\udcca Biggest Savings', text: 'Where are the biggest savings opportunities?' },
+      { label: '\ud83d\udd04 Retention ROI', text: 'How can we improve our retention savings?' },
+    ],
+    '/operator/vehicles': [
+      { label: '\ud83d\udd27 Maintenance', text: 'Which vehicles need maintenance soon?' },
+      { label: '\ud83d\udcca Fleet Age', text: "What's our average fleet age and condition?" },
+    ],
+    '/operator/drivers': [
+      { label: '\ud83c\udfaf Coach First', text: 'Who needs coaching first and why?' },
+      { label: '\u26a0\ufe0f Critical Tier', text: 'Show me all critical-tier drivers' },
+      { label: '\ud83d\udcca Risk Causes', text: "What's causing the highest risk scores?" },
+    ],
+    '/operator/reports': [
+      { label: '\ud83d\udcc4 Insurance Report', text: 'Generate a comprehensive insurance report' },
+      { label: '\ud83d\udccb Underwriter Brief', text: 'What should I highlight for insurance underwriters?' },
+    ],
+    '/operator/map': [
+      { label: '\ud83c\udd7f\ufe0f Idle Vehicles', text: 'Which vehicles are idle right now?' },
+      { label: '\u26a0\ufe0f Risk Zones', text: 'Show me vehicles in high-risk zones' },
+    ],
+  };
+
+  // Exact match first
+  const exactMatch = actions[pathname];
+  if (exactMatch) return exactMatch;
+
+  // Try prefix match for nested routes (longest prefix wins)
+  const keys = Object.keys(actions).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (pathname.startsWith(key) && key !== '/operator') return actions[key];
+  }
+
+  return actions['/operator'] || [];
+}
 
 export default function ChatPanel() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -53,7 +119,7 @@ export default function ChatPanel() {
     setMessages(prev => [...prev, botMsg]);
 
     try {
-      const res = await api.chatStream(text);
+      const res = await api.chatStream(text, pathname);
       if (!res.body) throw new Error('No response body');
 
       const reader = res.body.getReader();
@@ -101,7 +167,7 @@ export default function ChatPanel() {
     } finally {
       setStreaming(false);
     }
-  }, [streaming]);
+  }, [streaming, pathname]);
 
   const toggleVoice = () => {
     if (isListening) {
@@ -207,15 +273,15 @@ export default function ChatPanel() {
             </div>
 
             {/* Quick actions */}
-            {messages.length <= 2 && (
+            {messages.length <= 4 && (
               <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-                {quickActions.map((q) => (
+                {getQuickActions(pathname).map((q) => (
                   <button
-                    key={q}
-                    onClick={() => sendMessage(q)}
+                    key={q.text}
+                    onClick={() => sendMessage(q.text)}
                     className="px-2.5 py-1 rounded-full text-xs font-medium border border-[#E5E2DC] text-gray-500 hover:border-[#FBAF1A] hover:text-[#BF7408] hover:bg-[#FFF8EB] transition-all duration-200"
                   >
-                    {q}
+                    {q.label}
                   </button>
                 ))}
               </div>

@@ -14,8 +14,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     api.health().then((h) => setGeotabConfigured(h.geotabConfigured)).catch(() => {});
   }, []);
 
-  // Landing page and driver portal have no sidebar
-  if (pathname === '/' || pathname.startsWith('/driver-portal')) {
+  // Landing page, driver portal, and full-screen assistant have no sidebar
+  if (pathname === '/' || pathname.startsWith('/driver-portal') || pathname.startsWith('/operator/assistant')) {
     return <>{children}</>;
   }
 

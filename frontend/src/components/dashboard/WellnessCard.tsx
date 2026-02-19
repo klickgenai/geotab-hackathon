@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Heart, AlertCircle } from 'lucide-react';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import type { WellnessSummary } from '@/types/fleet';
 
 interface WellnessCardProps {
@@ -32,19 +33,28 @@ export default function WellnessCard({ wellness, onDriverClick }: WellnessCardPr
           <div className={`text-2xl font-mono-kpi font-extrabold leading-none ${wellness.highBurnoutRisk > 0 ? 'text-red-500' : 'text-gray-800'}`}>
             {wellness.highBurnoutRisk}
           </div>
-          <div className="text-xs text-gray-400 font-medium mt-1">High Burnout</div>
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-400 font-medium mt-1">
+            High Burnout
+            <InsightTooltip metricKey="dashboard.burnoutSignals" position="bottom" />
+          </div>
         </div>
         <div className="text-center py-3 bg-[#FAF9F7] rounded-lg">
           <div className="text-2xl font-mono-kpi font-extrabold leading-none text-emerald-600">
             {wellness.avgWellnessScore}
           </div>
-          <div className="text-xs text-gray-400 font-medium mt-1">Avg Wellness</div>
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-400 font-medium mt-1">
+            Avg Wellness
+            <InsightTooltip metricKey="dashboard.wellnessScore" position="bottom" />
+          </div>
         </div>
         <div className="text-center py-3 bg-[#FAF9F7] rounded-lg">
           <div className="text-2xl font-mono-kpi font-extrabold leading-none text-red-500">
             ${(wellness.totalRetentionCostAtRisk / 1000).toFixed(0)}K
           </div>
-          <div className="text-xs text-gray-400 font-medium mt-1">Cost at Risk</div>
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-400 font-medium mt-1">
+            Cost at Risk
+            <InsightTooltip metricKey="wellness.retentionCost" position="bottom" />
+          </div>
         </div>
       </div>
 

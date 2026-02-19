@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import type { InsuranceScore } from '@/types/fleet';
 
 interface ScoreCardProps {
@@ -15,10 +16,10 @@ export default function ScoreCard({ score }: ScoreCardProps) {
                      score.overallScore >= 60 ? '#f59e0b' : '#ef4444';
 
   const components = [
-    { label: 'Safe Driving', data: score.components.safeDriving },
-    { label: 'Compliance', data: score.components.compliance },
-    { label: 'Maintenance', data: score.components.maintenance },
-    { label: 'Driver Quality', data: score.components.driverQuality },
+    { label: 'Safe Driving', data: score.components.safeDriving, tooltipKey: 'insurance.harshBraking' },
+    { label: 'Compliance', data: score.components.compliance, tooltipKey: 'insurance.seatbelt' },
+    { label: 'Maintenance', data: score.components.maintenance, tooltipKey: 'insurance.idleTime' },
+    { label: 'Driver Quality', data: score.components.driverQuality, tooltipKey: 'insurance.speeding' },
   ];
 
   return (
@@ -32,8 +33,9 @@ export default function ScoreCard({ score }: ScoreCardProps) {
       <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/[0.03]" />
       <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-white/[0.02]" />
 
-      <h2 className="text-xs font-semibold text-white/50 uppercase tracking-[0.5px] mb-5 relative">
+      <h2 className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-[0.5px] mb-5 relative">
         Fleet Insurability Score
+        <InsightTooltip metricKey="dashboard.scoreGauge" variant="dark" />
       </h2>
 
       {/* Score ring + metadata */}
@@ -75,13 +77,16 @@ export default function ScoreCard({ score }: ScoreCardProps) {
         {/* Meta */}
         <div className="flex-1 space-y-0">
           {[
-            { label: 'Percentile', value: `Top ${100 - score.percentile}%` },
-            { label: 'Trend', value: score.trend.charAt(0).toUpperCase() + score.trend.slice(1) },
-            { label: 'Premium Impact', value: `${score.premiumImpact.percentChange > 0 ? '+' : ''}${score.premiumImpact.percentChange}%` },
-            { label: 'Annual Savings', value: `$${score.premiumImpact.estimatedAnnualSavings.toLocaleString()}` },
+            { label: 'Percentile', value: `Top ${100 - score.percentile}%`, tooltipKey: 'dashboard.percentile' },
+            { label: 'Trend', value: score.trend.charAt(0).toUpperCase() + score.trend.slice(1), tooltipKey: 'dashboard.trend' },
+            { label: 'Premium Impact', value: `${score.premiumImpact.percentChange > 0 ? '+' : ''}${score.premiumImpact.percentChange}%`, tooltipKey: 'dashboard.premiumImpact' },
+            { label: 'Annual Savings', value: `$${score.premiumImpact.estimatedAnnualSavings.toLocaleString()}`, tooltipKey: 'dashboard.annualSavings' },
           ].map((row) => (
             <div key={row.label} className="flex justify-between items-center py-[7px] border-b border-white/[0.06] last:border-0 text-sm">
-              <span className="text-white/45">{row.label}</span>
+              <span className="flex items-center gap-1 text-white/45">
+                {row.label}
+                <InsightTooltip metricKey={row.tooltipKey} variant="dark" />
+              </span>
               <span className="font-semibold">{row.value}</span>
             </div>
           ))}
@@ -95,8 +100,9 @@ export default function ScoreCard({ score }: ScoreCardProps) {
                           comp.data.score >= 60 ? '#f59e0b' : '#ef4444';
           return (
             <div key={comp.label} className="bg-white/[0.05] rounded-lg p-3">
-              <div className="text-xs font-medium text-white/40 uppercase tracking-[0.3px] mb-1.5">
+              <div className="flex items-center gap-1 text-xs font-medium text-white/40 uppercase tracking-[0.3px] mb-1.5">
                 {comp.label} · {Math.round(comp.data.weight * 100)}%
+                <InsightTooltip metricKey={comp.tooltipKey} variant="dark" position="bottom" />
               </div>
               <div className="h-1 bg-white/[0.08] rounded-full mb-1.5 overflow-hidden">
                 <motion.div

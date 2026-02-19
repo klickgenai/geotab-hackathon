@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Filter, Search, MapPin } from 'lucide-react';
 import clsx from 'clsx';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import PageHeader from '@/components/layout/PageHeader';
 import { api } from '@/lib/api';
 import type { SafetyEvent, Driver } from '@/types/fleet';
 
 const severityConfig = {
-  low: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400', label: 'Low' },
-  medium: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500', label: 'Medium' },
-  high: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500', label: 'High' },
-  critical: { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-700', label: 'Critical' },
+  low: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400', label: 'Low', tooltipKey: 'safety.low' },
+  medium: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500', label: 'Medium', tooltipKey: 'safety.medium' },
+  high: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500', label: 'High', tooltipKey: 'safety.high' },
+  critical: { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-700', label: 'Critical', tooltipKey: 'safety.critical' },
 };
 
 export default function SafetyEventsPage() {
@@ -110,6 +111,7 @@ export default function SafetyEventsPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <div className={clsx('w-2.5 h-2.5 rounded-full', cfg.dot)} />
                   <span className="text-xs font-semibold text-gray-400 uppercase">{cfg.label}</span>
+                  <InsightTooltip metricKey={cfg.tooltipKey} />
                 </div>
                 <div className="text-3xl font-extrabold text-gray-900">{severityCounts[sev]}</div>
                 <div className="text-xs text-gray-400">events</div>

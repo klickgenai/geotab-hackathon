@@ -9,6 +9,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Shield, Fuel, Users, Zap, Calculator,
   Loader2, ArrowRight, ChevronDown,
 } from 'lucide-react';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 
 function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -79,11 +80,11 @@ export default function ROIPage() {
 
   const selectedResult = whatIfResults.find((r) => r.scenarioId === selectedScenario);
   const savingsBreakdown = [
-    { key: 'insurance', label: 'Insurance Premium', value: roi.insurancePremiumSavings },
-    { key: 'accident', label: 'Accident Prevention', value: roi.accidentPreventionSavings },
-    { key: 'fuel', label: 'Fuel Savings', value: roi.fuelSavings },
-    { key: 'retention', label: 'Driver Retention', value: roi.retentionSavings },
-    { key: 'productivity', label: 'Productivity', value: roi.productivityGains },
+    { key: 'insurance', label: 'Insurance Premium', value: roi.insurancePremiumSavings, tooltipKey: 'roi.insuranceSavings' },
+    { key: 'accident', label: 'Accident Prevention', value: roi.accidentPreventionSavings, tooltipKey: 'roi.claimsSavings' },
+    { key: 'fuel', label: 'Fuel Savings', value: roi.fuelSavings, tooltipKey: 'roi.fuelSavings' },
+    { key: 'retention', label: 'Driver Retention', value: roi.retentionSavings, tooltipKey: 'roi.retentionSavings' },
+    { key: 'productivity', label: 'Productivity', value: roi.productivityGains, tooltipKey: 'roi.complianceSavings' },
   ];
   const maxSaving = Math.max(...savingsBreakdown.map((s) => s.value));
 
@@ -97,24 +98,24 @@ export default function ROIPage() {
           className="bg-gradient-to-r from-[#18202F] to-[#2D3748] rounded-2xl p-6 text-white">
           <div className="grid grid-cols-4 gap-6 items-center">
             <div className="col-span-1">
-              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium">Total Annual Savings</div>
+              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium flex items-center gap-1">Total Annual Savings <InsightTooltip metricKey="roi.annualSavings" variant="dark" position="bottom" /></div>
               <div className="text-4xl font-extrabold mt-1 text-emerald-300">
                 <AnimatedNumber value={roi.totalAnnualSavings} prefix="$" />
               </div>
               <div className="text-white/50 text-xs mt-1">vs. investment of ${roi.investmentCost.toLocaleString()}</div>
             </div>
             <div className="text-center">
-              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium">ROI</div>
+              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium flex items-center gap-1 justify-center">ROI <InsightTooltip metricKey="roi.roiPercent" variant="dark" position="bottom" /></div>
               <div className="text-3xl font-bold mt-1">{roi.roiPercent}%</div>
               <div className="text-white/50 text-xs">return on investment</div>
             </div>
             <div className="text-center">
-              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium">Payback Period</div>
+              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium flex items-center gap-1 justify-center">Payback Period <InsightTooltip metricKey="roi.paybackMonths" variant="dark" position="bottom" /></div>
               <div className="text-3xl font-bold mt-1">{roi.paybackMonths}<span className="text-lg"> mo</span></div>
               <div className="text-white/50 text-xs">to break even</div>
             </div>
             <div className="text-center">
-              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium">3-Year Value</div>
+              <div className="text-[#FBAF1A]/70 text-xs uppercase tracking-wider font-medium flex items-center gap-1 justify-center">3-Year Value <InsightTooltip metricKey="roi.costPerDriver" variant="dark" position="bottom" /></div>
               <div className="text-3xl font-bold mt-1 text-emerald-300">${Math.round(roi.projectedThreeYearValue / 1000)}K</div>
               <div className="text-white/50 text-xs">projected net value</div>
             </div>
@@ -132,7 +133,7 @@ export default function ROIPage() {
               <motion.div key={item.key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
                 className="flex items-center gap-3">
                 <div className="w-8">{savingsIcons[item.key]}</div>
-                <div className="w-36 text-sm font-medium text-gray-700">{item.label}</div>
+                <div className="w-36 text-sm font-medium text-gray-700 flex items-center gap-1">{item.label} <InsightTooltip metricKey={item.tooltipKey} /></div>
                 <div className="flex-1 flex items-center gap-2">
                   <div className="flex-1 bg-gray-100 rounded-full h-6">
                     <motion.div
@@ -156,6 +157,7 @@ export default function ROIPage() {
               <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-[#BF7408]" />
                 Before / After Comparison
+                <InsightTooltip metricKey="roi.beforeAfter" />
               </h2>
               <div className="text-xs text-gray-400 mb-3">
                 {beforeAfter.periods[0].label} vs {beforeAfter.periods[1].label}

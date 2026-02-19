@@ -8,6 +8,7 @@ import type { PreShiftRisk, FleetForecast, DriverTrend, DangerousZone } from '@/
 import {
   Brain, AlertTriangle, TrendingUp, TrendingDown, Minus, MapPin, Users, Loader2, ChevronDown, ChevronUp,
 } from 'lucide-react';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 
 const riskColors = {
   low: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -84,22 +85,22 @@ export default function PredictivePage() {
           >
             <div className="grid grid-cols-4 gap-6">
               <div>
-                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider">High Risk Today</div>
+                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider flex items-center gap-1">High Risk Today <InsightTooltip metricKey="predictive.highRiskDrivers" variant="dark" position="bottom" /></div>
                 <div className="text-3xl font-bold mt-1">{forecast.highRiskDrivers}</div>
                 <div className="text-white/50 text-xs">drivers need attention</div>
               </div>
               <div>
-                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider">Predicted Events</div>
+                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider flex items-center gap-1">Predicted Events <InsightTooltip metricKey="predictive.forecastAccuracy" variant="dark" position="bottom" /></div>
                 <div className="text-3xl font-bold mt-1">{forecast.predictedEventsThisWeek}</div>
                 <div className="text-white/50 text-xs">this week forecast</div>
               </div>
               <div>
-                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider">Top Risk Factor</div>
+                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider flex items-center gap-1">Top Risk Factor <InsightTooltip metricKey="predictive.riskFactors" variant="dark" position="bottom" /></div>
                 <div className="text-lg font-bold mt-2">{forecast.topRiskFactors[0] || 'None'}</div>
                 <div className="text-white/50 text-xs">fleet-wide</div>
               </div>
               <div>
-                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider">Fleet Status</div>
+                <div className="text-[#FBAF1A]/70 text-xs font-medium uppercase tracking-wider flex items-center gap-1">Fleet Status <InsightTooltip metricKey="predictive.riskTrend" variant="dark" position="bottom" /></div>
                 <div className={`text-lg font-bold mt-2 ${criticalRisks.length === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
                   {criticalRisks.length === 0 ? 'All Clear' : `${criticalRisks.length} At Risk`}
                 </div>
@@ -117,7 +118,7 @@ export default function PredictivePage() {
             <div className="bg-white rounded-2xl border border-[#E5E2DC] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="w-4 h-4 text-[#BF7408]" />
-                <h2 className="text-lg font-bold text-gray-900">Pre-Shift Risk Scores</h2>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-1">Pre-Shift Risk Scores <InsightTooltip metricKey="predictive.preShiftScore" /></h2>
                 <span className="ml-auto text-xs text-gray-400">{risks.length} drivers</span>
               </div>
               <div className="grid grid-cols-2 gap-3">

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { DollarSign, TrendingUp } from 'lucide-react';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import type { InsuranceScore, WellnessSummary, DriverRisk } from '@/types/fleet';
 
 interface FinancialCardProps {
@@ -19,9 +20,9 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
   const total = insuranceSavings + retentionSavings + accidentSavings;
 
   const bars = [
-    { label: 'Insurance', value: insuranceSavings, color: 'bg-emerald-500', pct: (insuranceSavings / total) * 100 },
-    { label: 'Retention', value: retentionSavings, color: 'bg-indigo-500', pct: (retentionSavings / total) * 100 },
-    { label: 'Accident Avoidance', value: accidentSavings, color: 'bg-amber-500', pct: (accidentSavings / total) * 100 },
+    { label: 'Insurance', value: insuranceSavings, color: 'bg-emerald-500', pct: (insuranceSavings / total) * 100, tooltipKey: 'roi.insuranceSavings' },
+    { label: 'Retention', value: retentionSavings, color: 'bg-indigo-500', pct: (retentionSavings / total) * 100, tooltipKey: 'roi.retentionSavings' },
+    { label: 'Accident Avoidance', value: accidentSavings, color: 'bg-amber-500', pct: (accidentSavings / total) * 100, tooltipKey: 'roi.claimsSavings' },
   ];
 
   return (
@@ -53,6 +54,7 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
         <div className="text-xs text-emerald-600 font-medium mt-1 flex items-center justify-center gap-1">
           <TrendingUp className="w-3.5 h-3.5" />
           Total Annual Savings Potential
+          <InsightTooltip metricKey="dashboard.financialSavings" />
         </div>
       </div>
 
@@ -60,7 +62,10 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
       <div className="space-y-3 mb-4">
         {bars.map((bar, i) => (
           <div key={bar.label} className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-500 w-[110px] shrink-0">{bar.label}</span>
+            <span className="flex items-center gap-1 text-sm font-medium text-gray-500 w-[130px] shrink-0">
+              {bar.label}
+              <InsightTooltip metricKey={bar.tooltipKey} />
+            </span>
             <div className="flex-1 h-7 bg-gray-100 rounded-md overflow-hidden relative">
               <motion.div
                 className={`h-full rounded-md flex items-center px-2.5 ${bar.color}`}

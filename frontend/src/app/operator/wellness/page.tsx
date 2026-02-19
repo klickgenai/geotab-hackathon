@@ -8,6 +8,7 @@ import {
   ChevronRight, Users, Shield, DollarSign, AlertTriangle, Brain,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import PageHeader from '@/components/layout/PageHeader';
 import { api } from '@/lib/api';
 import type { WellnessResult, WellnessSummary } from '@/types/fleet';
@@ -144,7 +145,7 @@ export default function WellnessPage() {
             <div className="relative">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign className="w-5 h-5 text-red-400" />
-                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Total Retention Cost at Risk</span>
+                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1">Total Retention Cost at Risk <InsightTooltip metricKey="wellness.retentionCost" variant="dark" /></span>
               </div>
               <div className="text-5xl font-extrabold text-red-400 mt-3 font-mono-kpi">
                 ${(summary.totalRetentionCostAtRisk / 1000).toFixed(0)}K
@@ -179,7 +180,7 @@ export default function WellnessPage() {
           >
             <div className="flex items-center gap-2 mb-5">
               <Brain className="w-5 h-5 text-purple-500" />
-              <h2 className="text-lg font-bold text-gray-900">Burnout Signal Detection</h2>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-1">Burnout Signal Detection <InsightTooltip metricKey="wellness.burnoutSignals" /></h2>
               <span className="text-xs text-gray-400 ml-auto">6 telematics-based signals monitored</span>
             </div>
             <div className="grid grid-cols-3 gap-4">
@@ -280,7 +281,7 @@ export default function WellnessPage() {
             )}
           </div>
           <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-gray-400">Average Wellness Score: <span className="font-bold text-gray-700">{summary.avgWellnessScore}/100</span></span>
+            <span className="text-xs text-gray-400">Average Wellness Score: <span className="font-bold text-gray-700">{summary.avgWellnessScore}/100</span> <InsightTooltip metricKey="wellness.hoursCompliance" /></span>
             <span className="text-xs text-gray-400">{summary.totalDrivers} total drivers</span>
           </div>
         </motion.div>
@@ -353,7 +354,7 @@ export default function WellnessPage() {
                   <div className="grid grid-cols-4 gap-3 mb-4">
                     <div className="bg-[#F5F3EF] rounded-xl p-2.5 text-center">
                       <div className="text-lg font-extrabold text-gray-800">{w.overallWellnessScore}</div>
-                      <div className="text-[10px] text-gray-400 font-medium">Wellness</div>
+                      <div className="text-[10px] text-gray-400 font-medium flex items-center gap-0.5 justify-center">Wellness <InsightTooltip metricKey="wellness.fatigueScore" /></div>
                     </div>
                     <div className="bg-[#F5F3EF] rounded-xl p-2.5 text-center">
                       <div className={clsx('text-lg font-extrabold', w.avgRestHours < 8 ? 'text-red-500' : 'text-gray-800')}>{w.avgRestHours}h</div>
@@ -455,7 +456,7 @@ export default function WellnessPage() {
               <Shield className="w-6 h-6 text-[#FBAF1A]" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Reduce burnout risk to save on retention costs</h3>
+              <h3 className="text-base font-bold text-white flex items-center gap-1">Reduce burnout risk to save on retention costs <InsightTooltip metricKey="wellness.interventionSuccess" variant="dark" /></h3>
               <p className="text-sm text-white/40 mt-0.5">
                 Use the What-If Simulator to model wellness interventions and see projected savings
               </p>

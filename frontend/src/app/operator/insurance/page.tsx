@@ -11,6 +11,7 @@ import {
   Sliders, CheckCircle2,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 
 function AnimatedNumber({ value, duration = 1500 }: { value: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
@@ -70,11 +71,11 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   );
 }
 
-const componentConfig: Record<string, { icon: typeof Shield; color: string; label: string }> = {
-  safeDriving: { icon: Shield, color: 'text-blue-400', label: 'Safe Driving' },
-  compliance: { icon: CheckCircle2, color: 'text-emerald-400', label: 'Compliance' },
-  maintenance: { icon: Zap, color: 'text-amber-400', label: 'Maintenance' },
-  driverQuality: { icon: Award, color: 'text-purple-400', label: 'Driver Quality' },
+const componentConfig: Record<string, { icon: typeof Shield; color: string; label: string; tooltipKey?: string }> = {
+  safeDriving: { icon: Shield, color: 'text-blue-400', label: 'Safe Driving', tooltipKey: 'insurance.harshBraking' },
+  compliance: { icon: CheckCircle2, color: 'text-emerald-400', label: 'Compliance', tooltipKey: 'insurance.seatbelt' },
+  maintenance: { icon: Zap, color: 'text-amber-400', label: 'Maintenance', tooltipKey: 'insurance.idleTime' },
+  driverQuality: { icon: Award, color: 'text-purple-400', label: 'Driver Quality', tooltipKey: 'insurance.speeding' },
 };
 
 interface SliderParam {
@@ -194,20 +195,24 @@ export default function InsurancePage() {
             <div className="absolute top-0 right-0 w-40 h-40 bg-[#FBAF1A]/[0.04] rounded-full blur-[60px]" />
             <div className="relative">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-bold text-white">Fleet Insurance Score</h2>
+                <span className="flex items-center gap-1">
+                  <h2 className="text-lg font-bold text-white">Fleet Insurance Score</h2>
+                  <InsightTooltip metricKey="insurance.overallScore" variant="dark" position="bottom" />
+                </span>
                 <div className={clsx('flex items-center gap-1 text-sm font-semibold', trendColor)}>
                   <TrendIcon className="w-4 h-4" />
                   <span className="capitalize">{score.trend}</span>
                 </div>
               </div>
-              <div className="text-xs text-white/40 mb-6">
+              <div className="text-xs text-white/40 mb-6 flex items-center gap-1">
                 Percentile: Top {100 - score.percentile}% of fleets
+                <InsightTooltip metricKey="insurance.percentile" variant="dark" />
               </div>
               <ScoreGauge score={score.overallScore} grade={score.grade} />
               <div className="mt-6 bg-white/[0.05] rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider">Annual Premium Impact</div>
+                    <div className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-1">Annual Premium Impact <InsightTooltip metricKey="insurance.premiumEstimate" variant="dark" /></div>
                     <div className="text-3xl font-extrabold text-emerald-400 mt-1">
                       ${score.premiumImpact.estimatedAnnualSavings.toLocaleString()}
                     </div>
@@ -253,7 +258,7 @@ export default function InsurancePage() {
                           <Icon className={clsx('w-5 h-5', config.color)} />
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-gray-800">{config.label}</div>
+                          <div className="text-sm font-semibold text-gray-800 flex items-center gap-1">{config.label} {config.tooltipKey && <InsightTooltip metricKey={config.tooltipKey} />}</div>
                           <div className="text-xs text-gray-400">Weight: {(comp.weight * 100).toFixed(0)}%</div>
                         </div>
                       </div>
@@ -316,7 +321,7 @@ export default function InsurancePage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="col-span-7 bg-white rounded-3xl border border-[#E5E2DC] p-8">
             <div className="flex items-center gap-2 mb-4">
               <Sliders className="w-5 h-5 text-[#BF7408]" />
-              <h2 className="text-lg font-bold text-gray-900">What-If Simulator</h2>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-1">What-If Simulator <InsightTooltip metricKey="insurance.whatIf" /></h2>
             </div>
 
             {/* Mode Toggle */}

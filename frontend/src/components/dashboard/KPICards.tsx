@@ -2,6 +2,7 @@
 
 import { Truck, Users, AlertTriangle, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
 import type { FleetOverview, InsuranceScore } from '@/types/fleet';
 
 interface KPICardsProps {
@@ -19,6 +20,7 @@ export default function KPICards({ overview, score }: KPICardsProps) {
       iconBg: 'bg-[#FFF8EB]',
       iconColor: 'text-[#BF7408]',
       trend: null,
+      tooltipKey: 'dashboard.activeTrucks',
     },
     {
       label: 'Active Drivers',
@@ -28,6 +30,7 @@ export default function KPICards({ overview, score }: KPICardsProps) {
       iconBg: 'bg-[#FFF8EB]',
       iconColor: 'text-[#BF7408]',
       trend: null,
+      tooltipKey: 'dashboard.activeDrivers',
     },
     {
       label: 'Safety Events',
@@ -37,6 +40,7 @@ export default function KPICards({ overview, score }: KPICardsProps) {
       iconBg: 'bg-amber-50',
       iconColor: 'text-amber-500',
       trend: { direction: 'down' as const, label: score.trend === 'improving' ? '↓ Improving' : score.trend === 'declining' ? '↑ Worsening' : '→ Stable' },
+      tooltipKey: 'dashboard.safetyEvents',
     },
     {
       label: 'Fleet Score',
@@ -47,6 +51,7 @@ export default function KPICards({ overview, score }: KPICardsProps) {
       iconColor: 'text-emerald-600',
       trend: { direction: score.trend === 'improving' ? 'up' as const : score.trend === 'declining' ? 'down' as const : 'neutral' as const, label: score.trend },
       highlight: true,
+      tooltipKey: 'dashboard.fleetScore',
     },
   ];
 
@@ -65,8 +70,9 @@ export default function KPICards({ overview, score }: KPICardsProps) {
             }`}
           >
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.5px]">
+              <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 uppercase tracking-[0.5px]">
                 {card.label}
+                <InsightTooltip metricKey={card.tooltipKey} />
               </span>
               <div className={`w-8 h-8 rounded-lg ${card.iconBg} flex items-center justify-center`}>
                 <Icon className={`w-4 h-4 ${card.iconColor}`} />
