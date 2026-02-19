@@ -38,13 +38,103 @@ const quickActions = [
 let msgCounter = 0;
 function genId() { return `msg-${++msgCounter}-${Date.now()}`; }
 
-function renderMarkdown(text: string) {
+function renderMarkdown(text: string): string {
+  const lines = text.split('\n');
+  const html: string[] = [];
+  let inTable = false;
+  let inList = false;
+  let listType: 'ul' | 'ol' = 'ul';
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Skip table separator rows (|---|---|)
+    if (/^\s*\|[\s-:|]+\|\s*$/.test(line)) continue;
+
+    // Table rows
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      if (!inTable) { html.push('<table class="w-full text-xs my-2 border-collapse">'); inTable = true; }
+      if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const cells = line.split('|').filter(c => c.trim());
+      // First table row after header = check if previous was header
+      const isHeader = i > 0 && /^\s*\|[\s-:|]+\|\s*$/.test(lines[i + 1] || '');
+      const tag = isHeader ? 'th' : 'td';
+      const cellClass = isHeader
+        ? 'px-3 py-1.5 text-left font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200'
+        : 'px-3 py-1.5 border-b border-gray-100 text-gray-700';
+      html.push(`<tr>${cells.map(c => `<${tag} class="${cellClass}">${inlineFormat(c.trim())}</${tag}>`).join('')}</tr>`);
+      continue;
+    }
+
+    if (inTable) { html.push('</table>'); inTable = false; }
+
+    // Headers
+    if (/^#{1,3}\s/.test(line)) {
+      if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const level = (line.match(/^#+/) as RegExpMatchArray)[0].length;
+      const content = line.replace(/^#+\s*/, '');
+      const cls = level === 1
+        ? 'text-sm font-bold text-gray-800 mt-3 mb-1'
+        : level === 2
+        ? 'text-xs font-bold text-gray-700 mt-3 mb-1 uppercase tracking-wider'
+        : 'text-xs font-semibold text-gray-600 mt-2 mb-0.5';
+      html.push(`<div class="${cls}">${inlineFormat(content)}</div>`);
+      continue;
+    }
+
+    // Bullet lists (- or * )
+    if (/^\s*[-*•]\s+/.test(line)) {
+      if (!inList || listType !== 'ul') {
+        if (inList) html.push('</ol>');
+        html.push('<ul class="space-y-0.5 my-1">');
+        inList = true; listType = 'ul';
+      }
+      const content = line.replace(/^\s*[-*•]\s+/, '');
+      html.push(`<li class="flex gap-1.5 text-xs text-gray-700"><span class="text-amber-500 mt-0.5 shrink-0">•</span><span>${inlineFormat(content)}</span></li>`);
+      continue;
+    }
+
+    // Numbered lists
+    if (/^\s*\d+\.\s+/.test(line)) {
+      if (!inList || listType !== 'ol') {
+        if (inList) html.push('</ul>');
+        html.push('<ol class="space-y-0.5 my-1">');
+        inList = true; listType = 'ol';
+      }
+      const num = line.match(/^\s*(\d+)\./)?.[1] || '1';
+      const content = line.replace(/^\s*\d+\.\s+/, '');
+      html.push(`<li class="flex gap-1.5 text-xs text-gray-700"><span class="text-amber-600 font-bold shrink-0">${num}.</span><span>${inlineFormat(content)}</span></li>`);
+      continue;
+    }
+
+    if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+
+    // Empty line
+    if (!line.trim()) {
+      html.push('<div class="h-1.5"></div>');
+      continue;
+    }
+
+    // Regular paragraph
+    html.push(`<p class="text-sm text-gray-800 leading-relaxed">${inlineFormat(line)}</p>`);
+  }
+
+  if (inTable) html.push('</table>');
+  if (inList) html.push(listType === 'ul' ? '</ul>' : '</ol>');
+
+  return html.join('');
+}
+
+/** Format inline markdown: bold, italic, code, dollar amounts, emoji */
+function inlineFormat(text: string): string {
   return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code class="bg-black/10 px-1 py-0.5 rounded text-xs font-mono">$1</code>')
-    .replace(/\n/g, '<br/>')
-    .replace(/\$([0-9,]+)/g, '<span class="text-emerald-500 font-semibold">$$$1</span>');
+    .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-700">$1</code>')
+    .replace(/\$([0-9,]+)/g, '<span class="text-emerald-600 font-semibold">$$$1</span>')
+    .replace(/→/g, '<span class="text-amber-500">→</span>')
+    .replace(/⚠️/g, '<span class="text-amber-500">⚠</span>')
+    .replace(/✅/g, '<span class="text-emerald-500">✓</span>');
 }
 
 /* ---------- Component ---------- */
