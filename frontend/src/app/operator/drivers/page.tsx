@@ -22,6 +22,7 @@ export default function DriversPage() {
   const router = useRouter();
   const [risks, setRisks] = useState<DriverRisk[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('riskScore');
@@ -29,7 +30,10 @@ export default function DriversPage() {
 
   const loadData = () => {
     setLoading(true);
-    api.driverRisks().then(setRisks).finally(() => setLoading(false));
+    setError(null);
+    api.driverRisks().then(setRisks).catch(() => {
+      setError('Failed to load driver data. Please check that the backend is running.');
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => { loadData(); }, []);
@@ -76,6 +80,18 @@ export default function DriversPage() {
         <PageHeader title="Driver Risk Analysis" subtitle="Individual driver risk profiles and scoring" />
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FBAF1A]" />
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Driver Risk Analysis" subtitle="Error loading data" />
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-4">{error}</div>
+          <button onClick={loadData} className="text-sm text-[#FBAF1A] hover:underline">Retry</button>
         </div>
       </>
     );

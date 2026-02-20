@@ -143,14 +143,10 @@ class FillerCache {
   async initialize(): Promise<void> {
     const apiKey = process.env.SMALLEST_API_KEY;
     if (!apiKey) {
-      console.warn("[FillerCache] No SMALLEST_API_KEY — fillers will be text-only");
       this.fillers = FILLER_PHRASES.map((p) => ({ ...p, audio: null }));
       this.ready = true;
       return;
     }
-
-    console.log(`[FillerCache] Pre-generating ${FILLER_PHRASES.length} filler phrases...`);
-    const startTime = Date.now();
 
     // Generate fillers in small batches to avoid rate limits
     const BATCH_SIZE = 3;
@@ -175,7 +171,6 @@ class FillerCache {
         if (r.status === "fulfilled") {
           this.fillers.push(r.value);
         } else {
-          console.warn(`[FillerCache] Failed: "${phrase.text}"`);
           this.fillers.push({ ...phrase, audio: null });
         }
       }
@@ -186,10 +181,6 @@ class FillerCache {
       }
     }
 
-    const successCount = this.fillers.filter((f) => f.audio !== null).length;
-    console.log(
-      `[FillerCache] Ready: ${successCount}/${FILLER_PHRASES.length} cached in ${Date.now() - startTime}ms`
-    );
     this.ready = true;
   }
 

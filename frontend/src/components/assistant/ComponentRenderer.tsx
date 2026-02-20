@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { ForecastMini, AlertMini, RiskDriverMini, ROIMini } from './MiniCards';
+import type { InsuranceScore } from '@/types/fleet';
+import type { WellnessSummary } from '@/types/fleet';
 
 // Lazy-load the dashboard components
 const ScoreCard = dynamic(() => import('@/components/dashboard/ScoreCard'), { ssr: false });
@@ -14,7 +16,8 @@ const FinancialCard = dynamic(() => import('@/components/dashboard/FinancialCard
  * Maps tool names to a renderer function.
  * Each renderer receives the raw tool result and returns a React element.
  */
-const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
+/* eslint-disable @typescript-eslint/no-explicit-any -- tool results are dynamic JSON from the AI agent */
+const toolRenderers: Record<string, (result: Record<string, any>) => React.ReactNode> = {
   getFleetInsuranceScore: (result) => {
     // The tool result may have full InsuranceScore shape or a partial one
     if (!result.overallScore && !result.grade) return null;
@@ -38,7 +41,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
         </div>
       );
     }
-    return <ScoreCard score={result} />;
+    return <ScoreCard score={result as unknown as InsuranceScore} />;
   },
 
   getFleetOverview: (result) => {
@@ -70,7 +73,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
   getDriverWellness: (result) => {
     // Fleet-wide summary
     if (result.totalDrivers !== undefined && result.highBurnoutRisk !== undefined) {
-      return <WellnessCard wellness={result} onDriverClick={() => {}} />;
+      return <WellnessCard wellness={result as unknown as WellnessSummary} onDriverClick={() => {}} />;
     }
     // Individual driver wellness
     if (result.driverName) {
@@ -90,7 +93,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
           </div>
           {result.signals && result.signals.length > 0 && (
             <div className="space-y-1">
-              {result.signals.filter((s: any) => s.severity !== 'normal').slice(0, 3).map((sig: any, i: number) => (
+              {result.signals.filter((s: { severity: string; description: string }) => s.severity !== 'normal').slice(0, 3).map((sig: { severity: string; description: string }, i: number) => (
                 <div key={i} className={`px-2.5 py-1.5 rounded-lg text-xs ${
                   sig.severity === 'critical' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300'
                 }`}>
@@ -108,7 +111,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
         <motion.div {...{ initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
           <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Driver Wellness ({result.totalDrivers} drivers)</div>
           <div className="space-y-1.5 max-h-60 overflow-y-auto">
-            {result.drivers.slice(0, 8).map((d: any, i: number) => (
+            {result.drivers.slice(0, 8).map((d: { driverName: string; burnoutRisk: string }, i: number) => (
               <div key={i} className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.05] rounded-lg">
                 <span className="text-sm">{d.driverName}</span>
                 <span className={`text-xs font-bold ${
@@ -147,7 +150,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
         <motion.div {...{ initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
           <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Driver Risk Scores</div>
           <div className="space-y-1.5 max-h-60 overflow-y-auto">
-            {result.drivers.slice(0, 8).map((d: any, i: number) => (
+            {result.drivers.slice(0, 8).map((d: { driverName: string; tier: string; riskScore: number }, i: number) => (
               <div key={i} className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.05] rounded-lg">
                 <span className="text-sm">{d.driverName}</span>
                 <div className="flex items-center gap-2">
@@ -173,9 +176,9 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
       <motion.div {...{ initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
         <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Coaching Recommendations</div>
         <div className="space-y-2 max-h-60 overflow-y-auto">
-          {items.slice(0, 5).map((rec: any, i: number) => (
+          {items.slice(0, 5).map((rec: { title?: string; action?: string; expectedImpact?: string; driver?: string }, i: number) => (
             <div key={i} className="px-3 py-2 bg-white/[0.05] rounded-lg">
-              <div className="text-sm font-semibold">{rec.title || rec.action || rec}</div>
+              <div className="text-sm font-semibold">{rec.title || rec.action || String(rec)}</div>
               {rec.expectedImpact && <div className="text-xs text-emerald-400 mt-0.5">{rec.expectedImpact}</div>}
               {rec.driver && <div className="text-xs text-white/40 mt-0.5">Driver: {rec.driver}</div>}
             </div>
@@ -211,7 +214,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
         <motion.div {...{ initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
           <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Pre-Shift Risk ({result.highRiskCount} high risk)</div>
           <div className="space-y-1.5 max-h-60 overflow-y-auto">
-            {result.drivers.slice(0, 8).map((d: any, i: number) => (
+            {result.drivers.slice(0, 8).map((d: { driverName: string; riskLevel: string; riskScore: number }, i: number) => (
               <div key={i} className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.05] rounded-lg">
                 <span className="text-sm">{d.driverName}</span>
                 <div className="flex items-center gap-2">
@@ -235,7 +238,7 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
       <motion.div {...{ initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
         <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Fleet Comparison</div>
         <div className="space-y-2">
-          {Object.entries(result).slice(0, 6).map(([key, val]: [string, any]) => (
+          {Object.entries(result).slice(0, 6).map(([key, val]) => (
             <div key={key} className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.05] rounded-lg">
               <span className="text-xs text-white/60">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
               <span className="text-sm font-mono font-bold">{typeof val === 'number' ? val.toLocaleString() : String(val)}</span>
@@ -278,8 +281,9 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
 
 interface ComponentRendererProps {
   toolName: string;
-  result: any;
+  result: Record<string, any>;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export default function ComponentRenderer({ toolName, result }: ComponentRendererProps) {
   const renderer = toolRenderers[toolName];

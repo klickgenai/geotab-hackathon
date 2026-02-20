@@ -34,16 +34,18 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<TriagedAlert[]>([]);
   const [briefing, setBriefing] = useState<AlertBriefing | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [a, b] = await Promise.all([api.alerts(), api.alertBriefing()]);
       setAlerts(a); setBriefing(b);
-    } catch (err) { console.error(err); }
+    } catch { setError('Failed to load alerts. Please check that the backend is running.'); }
     setLoading(false);
   };
 
@@ -53,6 +55,15 @@ export default function AlertsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-6 h-6 animate-spin text-[#FBAF1A]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-4">{error}</div>
+        <button onClick={load} className="text-sm text-[#FBAF1A] hover:underline">Retry</button>
       </div>
     );
   }

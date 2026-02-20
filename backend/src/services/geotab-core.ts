@@ -25,7 +25,7 @@ export class GeotabCore {
     });
 
     if (!res.ok) throw new Error(`Geotab API ${method} failed: ${res.status}`);
-    const data: any = await res.json();
+    const data = await res.json() as { result: T; error?: { message: string } };
     if (data.error) throw new Error(`Geotab ${method}: ${data.error.message}`);
     return data.result as T;
   }
@@ -50,7 +50,7 @@ export class GeotabCore {
     });
 
     if (!res.ok) throw new Error(`Geotab MultiCall failed: ${res.status}`);
-    const data: any = await res.json();
+    const data = await res.json() as { result: unknown[]; error?: { message: string } };
     if (data.error) throw new Error(`Geotab MultiCall: ${data.error.message}`);
     return data.result;
   }

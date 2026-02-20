@@ -1,7 +1,17 @@
 node_modules/
 dist/
+.next/
 .env
+.env.*
+!.env.example
 *.log
 .DS_Store
 reports/
 .claude/
+
+# Media files (don't commit screenshots/videos)
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.zip

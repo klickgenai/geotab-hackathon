@@ -3,7 +3,7 @@ import './globals.css';
 import AppShell from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
-  title: 'FleetShield AI — Fleet Risk Intelligence',
+  title: 'FleetShield AI | Fleet Risk Intelligence',
   description: 'Translate Geotab telematics data into insurance-ready scores, predict driver burnout, and quantify everything in dollars.',
 };
 

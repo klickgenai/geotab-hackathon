@@ -1,6 +1,6 @@
 /**
  * Dispatch Bridge - Per-session EventEmitter connecting tool execution to WebSocket.
- * When Ava's initiateDispatcherCall tool fires, the dispatch bridge streams
+ * When Tasha's initiateDispatcherCall tool fires, the dispatch bridge streams
  * real-time progress events to the driver's UI via WebSocket.
  */
 

@@ -50,21 +50,22 @@ export default function ROIPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [retention, setRetention] = useState<{ driversAtRisk: number; totalRetentionCostAtRisk: number; projectedSavings: number; details: { driverId: string; driverName: string; burnoutRisk: string; retentionCost: number }[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [r, ba, sc, ret] = await Promise.all([
         api.fleetROI(), api.beforeAfter(), api.whatIfDefaults(), api.retentionSavings(),
       ]);
       setROI(r); setBeforeAfter(ba); setScenarios(sc); setRetention(ret);
-      // Run all scenarios
       if (sc.length > 0) {
         const results = await api.whatIfSimulate(sc);
         setWhatIfResults(results);
         setSelectedScenario(sc[0].id);
       }
-    } catch (err) { console.error(err); }
+    } catch { setError('Failed to load ROI data. Please check that the backend is running.'); }
     setLoading(false);
   };
 
@@ -74,6 +75,15 @@ export default function ROIPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-6 h-6 animate-spin text-[#FBAF1A]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-4">{error}</div>
+        <button onClick={load} className="text-sm text-[#FBAF1A] hover:underline">Retry</button>
       </div>
     );
   }

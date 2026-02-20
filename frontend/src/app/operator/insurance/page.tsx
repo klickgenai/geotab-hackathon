@@ -108,10 +108,12 @@ export default function InsurancePage() {
   const [sliders, setSliders] = useState<Record<string, number>>({});
   const [customResult, setCustomResult] = useState<WhatIfResult | null>(null);
   const [customLoading, setCustomLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [s, sc] = await Promise.all([
         api.insuranceScore(),
@@ -124,8 +126,8 @@ export default function InsurancePage() {
         setWhatIfResults(results);
         setSelectedScenario(sc[0].id);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setError('Failed to load insurance data. Please check that the backend is running.');
     }
     setLoading(false);
   };
@@ -170,6 +172,15 @@ export default function InsurancePage() {
           <Loader2 className="w-8 h-8 animate-spin text-[#FBAF1A] mx-auto mb-3" />
           <span className="text-sm text-gray-500 font-medium">Calculating insurance score...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-4">{error}</div>
+        <button onClick={load} className="text-sm text-[#FBAF1A] hover:underline">Retry</button>
       </div>
     );
   }

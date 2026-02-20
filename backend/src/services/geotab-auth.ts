@@ -74,7 +74,7 @@ class GeotabAuth {
     });
 
     if (!res.ok) throw new Error(`Geotab auth failed: ${res.status}`);
-    const data: any = await res.json();
+    const data = await res.json() as { result: { credentials: { sessionId: string }; path?: string }; error?: { message: string } };
     if (data.error) throw new Error(`Geotab auth error: ${data.error.message}`);
 
     const result = data.result;

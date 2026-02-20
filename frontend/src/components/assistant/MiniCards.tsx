@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- tool results are dynamic JSON from the AI agent */
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, AlertTriangle, Shield, Activity, Users, DollarSign } from 'lucide-react';
 
@@ -10,7 +11,7 @@ const cardAnimation = {
 };
 
 /* ---------- Forecast Mini ---------- */
-export function ForecastMini({ data }: { data: any }) {
+export function ForecastMini({ data }: { data: Record<string, any> }) {
   const forecast = data;
   const riskLevel = forecast.highRiskDrivers > 5 ? 'High' : forecast.highRiskDrivers > 2 ? 'Moderate' : 'Low';
   const riskColor = riskLevel === 'High' ? 'text-red-400' : riskLevel === 'Moderate' ? 'text-amber-400' : 'text-emerald-400';
@@ -49,7 +50,7 @@ export function ForecastMini({ data }: { data: any }) {
 }
 
 /* ---------- Alert Mini ---------- */
-export function AlertMini({ data }: { data: any }) {
+export function AlertMini({ data }: { data: Record<string, any> }) {
   const briefing = data;
   return (
     <motion.div {...cardAnimation} className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
@@ -71,7 +72,7 @@ export function AlertMini({ data }: { data: any }) {
       </div>
       {briefing.topAlerts && briefing.topAlerts.length > 0 && (
         <div className="space-y-1.5">
-          {briefing.topAlerts.slice(0, 3).map((alert: any, i: number) => (
+          {briefing.topAlerts.slice(0, 3).map((alert: { priority: string; title: string }, i: number) => (
             <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-white/[0.05] rounded-lg">
               <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                 alert.priority === 'critical' ? 'bg-red-400' : alert.priority === 'high' ? 'bg-amber-400' : 'bg-blue-400'
@@ -89,7 +90,7 @@ export function AlertMini({ data }: { data: any }) {
 }
 
 /* ---------- Risk Driver Mini ---------- */
-export function RiskDriverMini({ data }: { data: any }) {
+export function RiskDriverMini({ data }: { data: Record<string, any> }) {
   const driver = data;
   const tierColor = driver.tier === 'critical' ? 'text-red-400' : driver.tier === 'high' ? 'text-amber-400' : driver.tier === 'moderate' ? 'text-yellow-400' : 'text-emerald-400';
   const tierBg = driver.tier === 'critical' ? 'bg-red-500/10' : driver.tier === 'high' ? 'bg-amber-500/10' : driver.tier === 'moderate' ? 'bg-yellow-500/10' : 'bg-emerald-500/10';
@@ -122,7 +123,7 @@ export function RiskDriverMini({ data }: { data: any }) {
       )}
       {driver.topEventTypes && driver.topEventTypes.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {driver.topEventTypes.slice(0, 3).map((evt: any, i: number) => (
+          {driver.topEventTypes.slice(0, 3).map((evt: { type?: string; count: number }, i: number) => (
             <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.08] text-white/60">
               {evt.type?.replace(/_/g, ' ')} ({evt.count})
             </span>
@@ -134,7 +135,7 @@ export function RiskDriverMini({ data }: { data: any }) {
 }
 
 /* ---------- ROI Mini ---------- */
-export function ROIMini({ data }: { data: any }) {
+export function ROIMini({ data }: { data: Record<string, any> }) {
   const roi = data;
   const totalSavings = roi.totalAnnualSavings || roi.total?.annualSavings || 0;
   const roiPercent = roi.roiPercent || roi.roi?.percent || 0;

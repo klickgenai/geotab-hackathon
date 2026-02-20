@@ -24,3 +24,4 @@ export {
   reportIncident,
 } from './driver-intelligence.js';
 export { generateContextReport } from './context-report.js';
+export { getGreenFleetMetrics } from './sustainability.js';

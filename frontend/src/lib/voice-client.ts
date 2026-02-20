@@ -190,7 +190,6 @@ export class VoiceClient {
         // Auto-reconnect if unexpected close while active
         if (this.state !== 'disconnected' && this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
           this.reconnectAttempts++;
-          console.log(`[VoiceClient] Connection lost, reconnecting (attempt ${this.reconnectAttempts})...`);
           setTimeout(() => {
             this.connectWebSocket().catch(() => {
               this.callbacks.onError('Failed to reconnect');

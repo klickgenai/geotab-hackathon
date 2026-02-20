@@ -197,7 +197,7 @@ export default function DriverPortalPage() {
           return [...prev, { role, text }];
         });
       },
-      onError: (err) => console.error('[Voice]', err),
+      onError: () => { /* error handled by voice client */ },
       onDispatchProgress: (event: DispatchProgressEvent) => {
         if (event.type === 'dispatch_status' && event.phase) {
           setDispatchPhase(event.phase);
@@ -414,7 +414,7 @@ export default function DriverPortalPage() {
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
                 <Shield className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="text-sm font-semibold">Ava</span>
+              <span className="text-sm font-semibold">Tasha</span>
               <div className={`w-2.5 h-2.5 rounded-full ${
                 voiceState === 'listening' ? 'bg-emerald-400 animate-pulse' :
                 voiceState === 'thinking' ? 'bg-amber-400 animate-pulse' :
@@ -424,8 +424,8 @@ export default function DriverPortalPage() {
                 'bg-gray-500'
               }`} />
               <span className="text-xs text-gray-500 capitalize">
-                {voiceState === 'dispatching' ? 'Ava is checking with dispatch' :
-                 voiceState === 'dispatch_reporting' ? 'Ava is reporting back' :
+                {voiceState === 'dispatching' ? 'Tasha is checking with dispatch' :
+                 voiceState === 'dispatch_reporting' ? 'Tasha is reporting back' :
                  voiceState}
               </span>
             </div>
@@ -499,7 +499,7 @@ export default function DriverPortalPage() {
             <div className="flex-1 w-full overflow-y-auto px-5 pb-2 space-y-2 min-h-0">
               {transcripts.length === 0 && voiceState !== 'disconnected' && (
                 <div className="text-center py-4 text-gray-600 text-sm">
-                  Listening... say something to Ava
+                  Listening... say something to Tasha
                 </div>
               )}
               {transcripts.length === 0 && voiceState === 'disconnected' && (
@@ -548,7 +548,7 @@ export default function DriverPortalPage() {
               type="text" value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') sendChat(chatInput); }}
-              placeholder="Ask Ava..."
+              placeholder="Ask Tasha..."
               className="flex-1 bg-[#0F1520] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none focus:border-[#FBAF1A]"
               disabled={chatStreaming}
             />
@@ -808,7 +808,7 @@ export default function DriverPortalPage() {
         )}
       </AnimatePresence>
 
-      {/* ===== Ava ↔ Dispatch Conversation Overlay ===== */}
+      {/* ===== Tasha ↔ Dispatch Conversation Overlay ===== */}
       <AnimatePresence>
         {dispatchCallActive && (
           <motion.div
@@ -853,12 +853,12 @@ export default function DriverPortalPage() {
                 </div>
                 <div className="flex-1">
                   <div className={`font-semibold ${dispatchSummary ? 'text-white' : 'text-[#18202F]'}`}>
-                    Ava → Dispatch (Mike)
+                    Tasha → Dispatch (Mike)
                   </div>
                   <div className={`text-xs ${dispatchSummary ? 'text-white/70' : 'text-[#18202F]/70'}`}>
                     {dispatchSummary ? 'Done' :
-                     dispatchPhase === 'connecting' ? 'Ava is reaching dispatch...' :
-                     dispatchPhase === 'on_call' ? 'Ava is talking to Mike' :
+                     dispatchPhase === 'connecting' ? 'Tasha is reaching dispatch...' :
+                     dispatchPhase === 'on_call' ? 'Tasha is talking to Mike' :
                      dispatchPhase === 'wrapping_up' ? 'Wrapping up...' :
                      dispatchPhase === 'error' ? 'Could not reach dispatch' :
                      'Connecting...'}
@@ -907,7 +907,7 @@ export default function DriverPortalPage() {
                         : 'bg-[#0F1520] text-gray-300 border border-white/5 rounded-bl-sm'
                     }`}>
                       <div className="text-[10px] font-semibold mb-0.5 opacity-70">
-                        {m.role === 'ava' ? 'Ava' : 'Mike'}
+                        {m.role === 'ava' ? 'Tasha' : 'Mike'}
                       </div>
                       {m.text}
                     </div>
@@ -929,7 +929,7 @@ export default function DriverPortalPage() {
                       <Loader2 className="w-6 h-6 text-[#FBAF1A] mx-auto" />
                     </motion.div>
                     <div className="text-gray-500 text-xs mt-3">
-                      {dispatchPhase === 'connecting' ? 'Ava is reaching out to Mike at dispatch...' : 'Ava is contacting dispatch...'}
+                      {dispatchPhase === 'connecting' ? 'Tasha is reaching out to Mike at dispatch...' : 'Tasha is contacting dispatch...'}
                     </div>
                   </div>
                 )}

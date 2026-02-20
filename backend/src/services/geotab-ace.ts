@@ -32,8 +32,8 @@ export class GeotabAce {
     });
 
     if (!res.ok) throw new Error(`Ace createChat failed: ${res.status}`);
-    const data: any = await res.json();
-    return data.chatId || data.id;
+    const data = await res.json() as { chatId?: string; id?: string };
+    return data.chatId || data.id || '';
   }
 
   /** Send a natural language prompt to an Ace chat */
@@ -47,8 +47,8 @@ export class GeotabAce {
     });
 
     if (!res.ok) throw new Error(`Ace sendPrompt failed: ${res.status}`);
-    const data: any = await res.json();
-    return data.messageId || data.id;
+    const data = await res.json() as { messageId?: string; id?: string };
+    return data.messageId || data.id || '';
   }
 
   /** Poll for Ace response with exponential backoff */
@@ -63,7 +63,7 @@ export class GeotabAce {
       });
 
       if (!res.ok) throw new Error(`Ace poll failed: ${res.status}`);
-      const data: any = await res.json();
+      const data = await res.json() as { status?: string; state?: string; content?: string; text?: string; data?: unknown; result?: unknown; charts?: unknown[]; error?: string };
 
       if (data.status === 'completed' || data.state === 'completed') {
         return {

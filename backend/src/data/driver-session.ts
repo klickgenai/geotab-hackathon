@@ -432,7 +432,6 @@ export function initDriverSessions(): void {
     }
   }
 
-  console.log(`[DriverSession] Initialized ${allLoads.length} loads, messages for ${driverMessages.size} drivers`);
 }
 
 export function loginDriver(driverId: string): DriverSession | null {

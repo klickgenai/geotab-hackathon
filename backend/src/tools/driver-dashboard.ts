@@ -118,7 +118,7 @@ export const getLoadUpdates = tool({
 
 export const initiateDispatcherCall = tool({
   description:
-    'Contact dispatcher "Mike" on behalf of the driver to get information, resolve issues, or handle requests that require dispatch coordination. Ava calls Mike autonomously — the driver does NOT talk directly. Use when a driver needs dispatch help: load questions, delivery extensions, schedule changes, mechanical issues, route changes, ETA updates, or anything requiring dispatcher input. Also use when the driver says "ask dispatch", "check with dispatch", "call dispatch", or "talk to Mike".',
+    'Contact dispatcher "Mike" on behalf of the driver to get information, resolve issues, or handle requests that require dispatch coordination. Tasha calls Mike autonomously — the driver does NOT talk directly. Use when a driver needs dispatch help: load questions, delivery extensions, schedule changes, mechanical issues, route changes, ETA updates, or anything requiring dispatcher input. Also use when the driver says "ask dispatch", "check with dispatch", "call dispatch", or "talk to Mike".',
   parameters: z.object({
     driverId: z
       .string()
@@ -130,7 +130,7 @@ export const initiateDispatcherCall = tool({
       .describe('Search by driver name (partial match).'),
     intent: z
       .string()
-      .describe('What Ava needs to discuss with dispatch on the driver\'s behalf (e.g., "driver is running 30 minutes late and needs delivery extension", "driver needs next load assignment", "driver reporting brake issue on vehicle").'),
+      .describe('What Tasha needs to discuss with dispatch on the driver\'s behalf (e.g., "driver is running 30 minutes late and needs delivery extension", "driver needs next load assignment", "driver reporting brake issue on vehicle").'),
     conversationContext: z
       .string()
       .optional()

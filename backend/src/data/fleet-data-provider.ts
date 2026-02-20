@@ -59,30 +59,23 @@ let devicePositionCache = new Map<string, { latitude: number; longitude: number 
 
 export async function initFleetData(): Promise<void> {
   if (!geotabAuth.isConfigured()) {
-    console.log('[FleetData] Geotab not configured, loading static seed data...');
     loadStaticData();
     return;
   }
 
   try {
-    console.log('[FleetData] Fetching live data from Geotab...');
     await fetchAndPopulate();
     isLiveData = true;
-    console.log('[FleetData] Live data loaded successfully');
-    console.log(`[FleetData]   Vehicles: ${seedVehicles.length}, Drivers: ${seedDrivers.length}, Events: ${seedSafetyEvents.length}, TripDays: ${seedTripDays.length}`);
 
     // Start background refresh
     refreshTimer = setInterval(async () => {
       try {
-        console.log('[FleetData] Background refresh starting...');
         await fetchAndPopulate();
-        console.log('[FleetData] Background refresh complete');
-      } catch (err) {
-        console.error('[FleetData] Background refresh failed:', err);
+      } catch {
+        // silently handled
       }
     }, REFRESH_INTERVAL_MS);
-  } catch (err) {
-    console.error('[FleetData] Failed to fetch live data, falling back to static seed data:', err);
+  } catch {
     loadStaticData();
   }
 }
@@ -189,7 +182,6 @@ async function fetchAndPopulate(): Promise<void> {
         isDriver: true,
       } as GeotabUser;
     });
-    console.log(`[FleetData] No driver users found - synthesized ${effectiveDrivers.length} drivers from devices`);
   }
 
   // Step 5: Normalize trips — assign driver from device when driver is unknown
@@ -287,8 +279,6 @@ async function fetchAndPopulate(): Promise<void> {
 
   const mappedKPIs = mapFleetKPIs(mappedTripDays, mappedEvents);
 
-  console.log(`[FleetData] After enrichment: TripDays=${mappedTripDays.length}, Events=${mappedEvents.length}, KPIs=${mappedKPIs.length}`);
-
   // Step 10: Populate the shared arrays
   replaceArray(seedVehicles, mappedVehicles);
   replaceArray(seedDrivers, mappedDrivers);
@@ -335,8 +325,6 @@ function synthesizeHistoricalTripDays(
 
   // Only synthesize if we have fewer than 60 days of data
   if (spanDays >= 60) return;
-
-  console.log(`[FleetData] Live data spans ${spanDays} days. Synthesizing historical data to fill 90-day window...`);
 
   // Compute per-driver averages from existing data
   const driverAvgs = new Map<string, {
@@ -613,7 +601,6 @@ function synthesizeHistoricalEvents(
     events[i].id = `se${i + 1}`;
   }
 
-  console.log(`[FleetData] Synthesized historical events. Total events: ${events.length}`);
 }
 
 // ─── Mappers ─────────────────────────────────────────────────

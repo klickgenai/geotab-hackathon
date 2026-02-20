@@ -91,7 +91,7 @@ export default function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'bot',
-      content: "Hi! I'm **Ava**, your fleet risk analyst. Ask me about insurance scores, driver risk, wellness, financial impact, or I can generate a report for you.",
+      content: "Hi! I'm **Tasha**, your fleet risk analyst. Ask me about insurance scores, driver risk, wellness, financial impact, or I can generate a report for you.",
       timestamp: new Date(),
     },
   ]);
@@ -244,7 +244,7 @@ export default function ChatPanel() {
                   <Shield className="w-3.5 h-3.5 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold">Ava</div>
+                  <div className="text-sm font-semibold">Tasha</div>
                   <div className="text-xs text-emerald-500 font-medium">Online</div>
                 </div>
               </div>
@@ -305,7 +305,7 @@ export default function ChatPanel() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(input); }}
-                placeholder="Ask Ava about your fleet..."
+                placeholder="Ask Tasha about your fleet..."
                 className="flex-1 bg-[#FAF9F7] border border-[#E5E2DC] rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#FBAF1A] transition-colors"
                 disabled={streaming}
               />

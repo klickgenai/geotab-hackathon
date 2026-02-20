@@ -198,8 +198,7 @@ export async function getLiveFleet(): Promise<LiveVehicle[]> {
           activeAlerts: recentEvents.length,
         };
       });
-    } catch (error) {
-      console.error('[LiveFleet] Geotab API error, falling back to simulation:', error);
+    } catch {
       vehicles = generateSimulatedFleet();
     }
   } else {
@@ -236,8 +235,7 @@ export async function getGPSTrail(vehicleId: string, hours: number = 4): Promise
         speed: r.speed,
         dateTime: r.dateTime,
       }));
-    } catch (error) {
-      console.error('[LiveFleet] GPS trail Geotab error, falling back:', error);
+    } catch {
       return generateSimulatedTrail(vehicleId, hours);
     }
   }

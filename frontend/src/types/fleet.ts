@@ -432,3 +432,107 @@ export interface ActionItem {
   createdAt: string;
   completedAt?: string;
 }
+
+// --- Sustainability / Green Fleet ---
+export interface GreenFleetDashboard {
+  fleetScore: FleetGreenScore;
+  carbonFootprint: CarbonFootprint;
+  fuelEfficiency: FuelEfficiencyMetrics;
+  idleWaste: IdleWasteMetrics;
+  driverGreenRankings: DriverGreenScore[];
+  evReadiness: EVReadinessReport;
+  recommendations: GreenRecommendation[];
+  monthlyTrend: MonthlyGreenTrend[];
+}
+
+export interface FleetGreenScore {
+  overallScore: number;
+  grade: string;
+  components: {
+    fuelEfficiency: { score: number; weight: number; weightedScore: number };
+    idleReduction: { score: number; weight: number; weightedScore: number };
+    ecoDriving: { score: number; weight: number; weightedScore: number };
+    fleetModernity: { score: number; weight: number; weightedScore: number };
+  };
+  trend: 'improving' | 'stable' | 'declining';
+}
+
+export interface CarbonFootprint {
+  totalCO2Tons: number;
+  dailyAvgCO2Kg: number;
+  co2PerVehiclePerDay: number;
+  co2PerKm: number;
+  treesEquivalent: number;
+  monthOverMonthChange: number;
+}
+
+export interface FuelEfficiencyMetrics {
+  fleetAvgKmPerLiter: number;
+  totalFuelConsumed: number;
+  totalDistance: number;
+  bestDriver: { id: string; name: string; kmPerLiter: number };
+  worstDriver: { id: string; name: string; kmPerLiter: number };
+  benchmarkComparison: string;
+}
+
+export interface IdleWasteMetrics {
+  totalIdleHours: number;
+  fuelWastedLiters: number;
+  co2FromIdling: number;
+  costWasted: number;
+  avgIdlePercentage: number;
+  topOffenders: { driverId: string; driverName: string; idleMinutes: number; fuelWasted: number; co2Produced: number }[];
+}
+
+export interface DriverGreenScore {
+  driverId: string;
+  driverName: string;
+  greenScore: number;
+  grade: string;
+  rank: number;
+  fuelEfficiency: number;
+  idlePercent: number;
+  harshEventsPerKm: number;
+  co2PerKm: number;
+  co2SavedVsAvg: number;
+}
+
+export interface EVReadinessReport {
+  totalCandidates: number;
+  projectedAnnualSavings: number;
+  projectedCO2Reduction: number;
+  vehicles: EVCandidate[];
+}
+
+export interface EVCandidate {
+  vehicleId: string;
+  vehicleName: string;
+  type: string;
+  year: number;
+  avgDailyDistance: number;
+  currentFuelCost: number;
+  projectedEVSavings: number;
+  co2Reduction: number;
+  readinessScore: number;
+  reason: string;
+}
+
+export interface GreenRecommendation {
+  id: string;
+  priority: 'high' | 'medium' | 'low';
+  category: 'idle' | 'fuel' | 'ev' | 'driving' | 'route';
+  title: string;
+  description: string;
+  projectedSavings: number;
+  projectedCO2Reduction: number;
+  difficulty: 'easy' | 'moderate' | 'hard';
+  timeToImpact: string;
+}
+
+export interface MonthlyGreenTrend {
+  month: string;
+  co2Tons: number;
+  fuelEfficiency: number;
+  idlePercent: number;
+  greenScore: number;
+}

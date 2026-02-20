@@ -40,6 +40,7 @@ import { simulateDispatcherCall } from './data/dispatcher-ai.js';
 import { calculateFleetROI, calculateBeforeAfter, calculateRetentionSavings } from './scoring/roi-engine.js';
 import { getGamificationState, getPointsHistory, getDriverBadges, getRewardsCatalog, getDailyChallenge, checkChallengeProgress } from './scoring/gamification-engine.js';
 import { simulateWhatIf, getDefaultScenarios } from './scoring/what-if-simulator.js';
+import { calculateGreenDashboard } from './scoring/green-score-engine.js';
 import { geotabAce } from './services/geotab-ace.js';
 import { isUsingLiveData } from './data/fleet-data-provider.js';
 import { TwilioDispatchSession, getCallSession, getCallSessionByCallSid } from './services/twilio-dispatch-service.js';
@@ -207,7 +208,7 @@ app.get('/api/fleet/wellness-all', (_req, res) => {
 // --- Chat endpoint (non-streaming) ---
 app.post('/api/chat', async (req, res) => {
   const { message } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message required' });
+  if (!message || typeof message !== 'string' || message.length > 10000) return res.status(400).json({ error: 'Invalid message' });
 
   try {
     const result = await generateAgentResponse(message);
@@ -216,7 +217,6 @@ app.post('/api/chat', async (req, res) => {
       toolResults: result.steps?.flatMap((s) => s.toolResults || []) || [],
     });
   } catch (error) {
-    console.error('[Chat] Error:', error);
     res.status(500).json({ error: 'Agent error' });
   }
 });
@@ -240,7 +240,6 @@ app.post('/api/chat/stream', async (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     res.end();
   } catch (error) {
-    console.error('[Chat Stream] Error:', error);
     res.write(`data: ${JSON.stringify({ type: 'error', content: 'Agent error' })}\n\n`);
     res.end();
   }
@@ -249,14 +248,13 @@ app.post('/api/chat/stream', async (req, res) => {
 // --- Assistant SSE Stream (full-screen assistant with tool results) ---
 app.post('/api/assistant/stream', async (req, res) => {
   const { message, currentPage } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message required' });
+  if (!message || typeof message !== 'string') return res.status(400).json({ error: 'Message required' });
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    console.log('[Assistant Stream] Starting for message:', message.slice(0, 80));
     const result = await streamAssistantResponse(message, currentPage);
 
     // Voice tag parser: buffer text until <voice>...</voice> is extracted or determined absent
@@ -282,7 +280,6 @@ app.post('/api/assistant/stream', async (req, res) => {
                 if (voiceContent) {
                   res.write(`data: ${JSON.stringify({ type: 'voice_summary', content: voiceContent })}\n\n`);
                   voiceEmitted = true;
-                  console.log('[Assistant Stream] Voice summary extracted:', voiceContent.slice(0, 60));
                 }
               }
               // Emit any text after the closing voice tag
@@ -313,11 +310,9 @@ app.post('/api/assistant/stream', async (req, res) => {
             voiceBuffer = '';
             streamingDirectly = true;
           }
-          console.log('[Assistant Stream] Tool call:', part.toolName);
           res.write(`data: ${JSON.stringify({ type: 'tool_call', toolName: part.toolName, args: part.args })}\n\n`);
           break;
         case 'tool-result':
-          console.log('[Assistant Stream] Tool result:', part.toolName);
           res.write(`data: ${JSON.stringify({ type: 'tool_result', toolName: part.toolName, result: part.result })}\n\n`);
           // Emit report_ready for auto-download
           if (part.toolName === 'generateContextReport' && part.result?.downloadUrl) {
@@ -325,7 +320,6 @@ app.post('/api/assistant/stream', async (req, res) => {
           }
           break;
         case 'error':
-          console.error('[Assistant Stream] Stream error event:', part.error);
           res.write(`data: ${JSON.stringify({ type: 'error', content: String(part.error) })}\n\n`);
           break;
       }
@@ -342,8 +336,6 @@ app.post('/api/assistant/stream', async (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     res.end();
   } catch (error: any) {
-    console.error('[Assistant Stream] Error:', error?.message || error);
-    if (error?.cause) console.error('[Assistant Stream] Cause:', error.cause);
     const errorMsg = error?.message?.includes('rate') ? 'Rate limited — please wait a moment and try again.' : 'Agent error — check backend logs.';
     res.write(`data: ${JSON.stringify({ type: 'error', content: errorMsg })}\n\n`);
     res.end();
@@ -359,12 +351,13 @@ app.post('/api/tts/synthesize', async (req, res) => {
   if (!apiKey) return res.status(503).json({ error: 'TTS not configured (SMALLEST_API_KEY missing)' });
 
   try {
+    const safeSpeed = Math.max(0.5, Math.min(2.0, speed || 1.0));
     const { synthesizeSpeech } = await import('./voice/tts-synthesize.js');
     const pcmBuffer = await synthesizeSpeech(apiKey, {
       text: text.slice(0, 500),
       voiceId: voiceId || 'sophia',
       sampleRate: 24000,
-      speed: speed || 1.0,
+      speed: safeSpeed,
       addWavHeader: false, // API doesn't reliably add WAV header, we do it ourselves
     });
 
@@ -395,7 +388,6 @@ app.post('/api/tts/synthesize', async (req, res) => {
     res.setHeader('Content-Length', wavBuffer.length);
     res.send(wavBuffer);
   } catch (error: any) {
-    console.error('[TTS] Synthesis error:', error?.message || error);
     res.status(500).json({ error: 'TTS synthesis failed' });
   }
 });
@@ -413,6 +405,8 @@ app.get('/api/fleet/map/live', async (_req, res) => {
 app.get('/api/fleet/map/trail/:vehicleId', async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string) || 4;
+    let count = parseInt(req.query.count as string);
+    if (isNaN(count)) count = 50;
     const trail = await getGPSTrail(req.params.vehicleId, hours);
     res.json(trail);
   } catch (error) {
@@ -474,7 +468,7 @@ app.get('/api/fleet/predictive/corridors', (_req, res) => {
 // --- Alert Triage API ---
 app.get('/api/fleet/alerts', (req, res) => {
   try {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const limit = parseInt(req.query.limit as string) || 100;
     res.json(getTriagedAlerts(limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to get triaged alerts' });
@@ -535,6 +529,8 @@ app.put('/api/driver/:id/load/status', (req, res) => {
   try {
     const { status, loadId } = req.body;
     if (!status) return res.status(400).json({ error: 'status is required' });
+    const allowed = ['assigned','picked_up','in_transit','delivered','completed'];
+    if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
     // Find load ID from driver if not provided
     let targetLoadId = loadId;
@@ -703,7 +699,6 @@ app.get('/api/driver/:id/pre-shift-briefing', (req, res) => {
 
     res.json(briefing);
   } catch (error) {
-    console.error('[Pre-Shift Briefing] Error:', error);
     res.status(500).json({ error: 'Failed to generate pre-shift briefing' });
   }
 });
@@ -861,7 +856,6 @@ app.post('/api/fleet/ace/query', async (req, res) => {
     const result = await geotabAce.query(prompt);
     res.json(result);
   } catch (error) {
-    console.error('[Ace] Query error:', error);
     res.json({
       text: `Ace query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       data: null,
@@ -890,6 +884,34 @@ app.post('/api/fleet/what-if/custom', (req, res) => {
   }
 });
 
+// --- Sustainability / Green Fleet ---
+app.get('/api/fleet/sustainability', (_req, res) => {
+  try {
+    const dashboard = calculateGreenDashboard();
+    res.json(dashboard);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to calculate sustainability metrics' });
+  }
+});
+
+app.get('/api/fleet/sustainability/drivers', (_req, res) => {
+  try {
+    const dashboard = calculateGreenDashboard();
+    res.json(dashboard.driverGreenRankings);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get driver green rankings' });
+  }
+});
+
+app.get('/api/fleet/sustainability/vehicles', (_req, res) => {
+  try {
+    const dashboard = calculateGreenDashboard();
+    res.json(dashboard.evReadiness);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get EV readiness report' });
+  }
+});
+
 // --- Data Source Info ---
 app.get('/api/fleet/data-source', (_req, res) => {
   res.json({
@@ -902,7 +924,6 @@ app.get('/api/fleet/data-source', (_req, res) => {
 // --- Twilio Call Status Webhook ---
 app.post('/api/twilio/call-status', (req, res) => {
   const { CallSid, CallStatus } = req.body;
-  console.log(`[Twilio Webhook] CallSid=${CallSid} Status=${CallStatus}`);
   const session = getCallSessionByCallSid(CallSid);
   if (session) {
     session.handleStatusUpdate(CallStatus);
@@ -926,14 +947,12 @@ app.post('/api/driver/:id/dispatch-call', async (req, res) => {
     });
     res.json(result);
   } catch (error) {
-    console.error('[Dispatch Call] Error:', error);
     res.status(500).json({ error: 'Failed to simulate dispatch call' });
   }
 });
 
 // --- Twilio Media Stream WebSocket ---
 twilioWss.on('connection', (ws) => {
-  console.log('[TwilioWS] New Twilio media stream connection');
   const bufferedMessages: string[] = [];
   let linked = false;
 
@@ -950,24 +969,20 @@ twilioWss.on('connection', (ws) => {
         const callId = msg.start.customParameters.callId;
         const session = getCallSession(callId);
         if (session) {
-          console.log(`[TwilioWS] Linked to dispatch session ${callId}`);
           linked = true;
           session.handleMediaStream(ws as any, bufferedMessages);
-        } else {
-          console.warn(`[TwilioWS] No session found for callId ${callId}`);
         }
       }
     } catch {}
   });
 
   ws.on('close', () => {
-    console.log('[TwilioWS] Connection closed');
+    // connection closed
   });
 });
 
 // --- Browser WebSocket (for voice + dispatch calls) ---
 browserWss.on('connection', (ws) => {
-  console.log('[WS] Client connected');
   let session: VoiceSession | null = null;
   let activeDispatchCall: TwilioDispatchSession | null = null;
 
@@ -1073,7 +1088,6 @@ browserWss.on('connection', (ws) => {
             sendJson({ type: 'session_ended', summary });
           },
           onError: (error) => {
-            console.error('[Voice] Error:', error.message);
             sendJson({ type: 'error', message: error.message });
           },
           onMicStatus: (status) => {
@@ -1095,7 +1109,6 @@ browserWss.on('connection', (ws) => {
           },
           onDispatchCallRequested: async () => {
             // Real Twilio call requested by voice session
-            console.log('[WS] Dispatch call requested via Twilio');
             try {
               activeDispatchCall = new TwilioDispatchSession({
                 onStateChange: (state) => {
@@ -1132,7 +1145,6 @@ browserWss.on('connection', (ws) => {
 
               await activeDispatchCall.startCall();
             } catch (err) {
-              console.error('[WS] Twilio dispatch call failed:', (err as Error).message);
               sendJson({
                 type: 'dispatch_call_state',
                 callState: 'failed',
@@ -1145,9 +1157,7 @@ browserWss.on('connection', (ws) => {
         }, driverContext);
         try {
           await session.startListening();
-          console.log(`[WS] Voice session started: ${session.sessionId}${voiceDriverId ? ` for driver ${voiceDriverId}` : ''}`);
         } catch (err) {
-          console.error('[WS] Failed to start voice session:', (err as Error).message);
           sendJson({ type: 'error', message: (err as Error).message });
           session = null;
         }
@@ -1157,7 +1167,6 @@ browserWss.on('connection', (ws) => {
       case 'dispatch_call_start': {
         // Manual dispatch call start from frontend button
         if (activeDispatchCall) {
-          console.log('[WS] Dispatch call already active');
           break;
         }
         if (!process.env.TWILIO_ACCOUNT_SID) {
@@ -1197,7 +1206,6 @@ browserWss.on('connection', (ws) => {
           });
           await activeDispatchCall.startCall();
         } catch (err) {
-          console.error('[WS] Manual dispatch call failed:', (err as Error).message);
           sendJson({ type: 'error', message: (err as Error).message });
           activeDispatchCall = null;
         }
@@ -1217,7 +1225,6 @@ browserWss.on('connection', (ws) => {
           const currentState = session.getState();
           // During dispatch (AI sim), don't interrupt
           if (currentState === 'dispatching' && !activeDispatchCall) {
-            console.log('[WS] Speech during AI dispatch — ignoring barge-in');
             break;
           }
           // During real Twilio call, don't send speech_start (audio is being forwarded directly)
@@ -1248,8 +1255,7 @@ browserWss.on('connection', (ws) => {
           activeDispatchCall = null;
         }
         if (session) {
-          const summary = session.end();
-          console.log(`[WS] Voice session ended: ${summary.sessionId}`);
+          session.end();
           session = null;
         }
         break;
@@ -1261,7 +1267,6 @@ browserWss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log('[WS] Client disconnected');
     if (activeDispatchCall) {
       activeDispatchCall.hangup();
       activeDispatchCall = null;
@@ -1286,20 +1291,15 @@ async function start() {
   initDriverSessions();
 
   // Initialize filler cache (pre-generate TTS audio for filler phrases)
-  fillerCache.initialize().catch((err) => {
-    console.error('[FillerCache] Initialization failed:', err);
+  fillerCache.initialize().catch(() => {
+    // error handled silently
   });
 
   server.listen(PORT, () => {
-    console.log(`\n🛡️  FleetShield AI running on http://localhost:${PORT}`);
-    console.log(`   Geotab API: ${geotabAuth.isConfigured() ? '✅ Configured' : '⚠️  Using seed data'}`);
-    console.log(`   WebSocket:  ws://localhost:${PORT}/ws`);
-    console.log(`   Twilio:     ${process.env.TWILIO_ACCOUNT_SID ? '✅ Configured (real dispatch calls)' : '⚠️  Not configured (AI simulation)'}`);
-    console.log('');
+    // server started
   });
 }
 
-start().catch((err) => {
-  console.error('Failed to start server:', err);
+start().catch(() => {
   process.exit(1);
 });

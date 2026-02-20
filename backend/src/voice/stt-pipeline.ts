@@ -73,7 +73,6 @@ export class PulseSTTPipeline {
         this.connected = true;
         this.connectPromise = null;
         this.resetIdleTimer();
-        console.log("[PulseSTT] Connected");
         resolve();
       });
 
@@ -81,18 +80,16 @@ export class PulseSTTPipeline {
         try {
           const msg = JSON.parse(data.toString());
           this.gotAnyResponse = true;
-          console.log("[PulseSTT] Received:", JSON.stringify(msg).substring(0, 200));
 
           const text = msg.transcript || msg.text;
           if (text) {
             if (msg.is_final) {
               if (this.gotLastFinal) {
-                console.log("[PulseSTT] Ignoring duplicate final");
+                // silently handled — duplicate final ignored
               } else {
                 const finalText = text.trim();
                 if (finalText) {
                   this.accumulatedFinalText += (this.accumulatedFinalText ? " " : "") + finalText;
-                  console.log("[PulseSTT] Final text:", finalText);
                 }
                 if (msg.is_last) this.gotLastFinal = true;
               }
@@ -111,7 +108,6 @@ export class PulseSTTPipeline {
 
       this.ws.on("error", (err) => {
         clearTimeout(timeout);
-        console.error("[PulseSTT] Error:", err.message);
         this.connected = false;
         this.connectPromise = null;
         this.clearIdleTimer();
@@ -119,11 +115,10 @@ export class PulseSTTPipeline {
         if (!this.connected) reject(err);
       });
 
-      this.ws.on("close", (code, reason) => {
+      this.ws.on("close", () => {
         this.connected = false;
         this.connectPromise = null;
         this.clearIdleTimer();
-        console.log(`[PulseSTT] Disconnected (code=${code})`);
       });
     });
 
@@ -147,14 +142,6 @@ export class PulseSTTPipeline {
       const boosted = this.applyGain(pcmBuffer);
       this.ws.send(boosted);
       this.audioChunksSent++;
-      if (this.audioChunksSent % 10 === 1) {
-        const logBuf = Buffer.from(boosted);
-        const logSamples = new Int16Array(logBuf.buffer, logBuf.byteOffset, logBuf.length / 2);
-        let sum = 0;
-        for (let i = 0; i < logSamples.length; i++) sum += (logSamples[i] / 32768) ** 2;
-        const rms = Math.sqrt(sum / logSamples.length);
-        console.log(`[PulseSTT] Audio chunk #${this.audioChunksSent}, RMS: ${rms.toFixed(5)} (gain: ${this.currentGain.toFixed(1)}x), size: ${boosted.length}b, gotResponse: ${this.gotAnyResponse}`);
-      }
     }
   }
 
@@ -240,10 +227,6 @@ export class PulseSTTPipeline {
       setTimeout(() => { ws.removeListener("message", earlyResolve); }, waitMs + 50);
     });
 
-    if (!this.gotAnyResponse && this.audioChunksSent > 0) {
-      console.warn(`[PulseSTT] WARNING: Sent ${this.audioChunksSent} audio chunks but got NO response from Pulse`);
-    }
-
     const text = this.getBestText();
 
     // Disconnect — Pulse won't accept new audio after "end"
@@ -256,7 +239,6 @@ export class PulseSTTPipeline {
   flush(): void {
     const text = this.getBestText();
     if (text) {
-      console.log("[PulseSTT] Flush:", text);
       this.callbacks.onFinal(text);
     }
     this.accumulatedFinalText = "";
@@ -293,7 +275,6 @@ export class PulseSTTPipeline {
 
     // Safety limit — force full reconnect after too many reuses
     if (this.reuseCount >= PulseSTTPipeline.MAX_REUSE_COUNT) {
-      console.log(`[PulseSTT] cancelUtterance: Max reuse count (${PulseSTTPipeline.MAX_REUSE_COUNT}) reached, disconnecting`);
       this.disconnectQuiet();
       return false;
     }
@@ -304,14 +285,12 @@ export class PulseSTTPipeline {
     this.reuseCount++;
     this.resetIdleTimer();
 
-    console.log(`[PulseSTT] cancelUtterance: Connection preserved (reuse #${this.reuseCount}, ${chunksSent} chunks sent with no response)`);
     return true;
   }
 
   private resetIdleTimer(): void {
     this.clearIdleTimer();
     this.idleTimer = setTimeout(() => {
-      console.log(`[PulseSTT] Idle timeout (${PulseSTTPipeline.IDLE_TIMEOUT_MS / 1000}s) — disconnecting`);
       this.disconnectQuiet();
     }, PulseSTTPipeline.IDLE_TIMEOUT_MS);
   }

@@ -44,18 +44,20 @@ export default function PredictivePage() {
   const [trends, setTrends] = useState<DriverTrend[]>([]);
   const [corridors, setCorridors] = useState<DangerousZone[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [showAllRisks, setShowAllRisks] = useState(false);
   const [showAllTrends, setShowAllTrends] = useState(false);
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [r, f, t, c] = await Promise.all([
         api.preShiftRisks(), api.fleetForecast(), api.driverTrends(), api.dangerousCorridors(),
       ]);
       setRisks(r); setForecast(f); setTrends(t); setCorridors(c);
-    } catch (err) { console.error(err); }
+    } catch { setError('Failed to load predictive data. Please check that the backend is running.'); }
     setLoading(false);
   };
 
@@ -65,6 +67,15 @@ export default function PredictivePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-6 h-6 animate-spin text-[#FBAF1A]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-4">{error}</div>
+        <button onClick={load} className="text-sm text-[#FBAF1A] hover:underline">Retry</button>
       </div>
     );
   }

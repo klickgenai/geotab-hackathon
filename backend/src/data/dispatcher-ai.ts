@@ -1,9 +1,9 @@
 /**
- * Dispatcher AI - Ava-to-Mike Agent Delegation
+ * Dispatcher AI - Tasha-to-Mike Agent Delegation
  *
- * When a driver needs dispatch help, Ava autonomously contacts Mike
+ * When a driver needs dispatch help, Tasha autonomously contacts Mike
  * (the dispatcher) on the driver's behalf. The driver never talks directly —
- * Ava handles the entire conversation and reports back with the outcome.
+ * Tasha handles the entire conversation and reports back with the outcome.
  * Progress streams to the driver's UI via dispatch bridge callbacks.
  */
 
@@ -48,25 +48,25 @@ export async function runDispatcherDelegation(
   const loadInfo = buildLoadInfo(context.currentLoad);
 
   // Phase 1: Connecting
-  callbacks.onStatus('connecting', `Ava is checking with dispatch...`);
+  callbacks.onStatus('connecting', `Tasha is checking with dispatch...`);
 
   if (abortSignal?.aborted) {
     return buildCancelledResult(callId, messages);
   }
 
   try {
-    // Turn 1: Ava opens the call on behalf of the driver, Mike responds
+    // Turn 1: Tasha opens the call on behalf of the driver, Mike responds
     turnNumber++;
-    const avaOpener = `Hey Mike, it's Ava calling on behalf of ${firstName}. ${driverRequest}`;
+    const avaOpener = `Hey Mike, it's Tasha calling on behalf of ${firstName}. ${driverRequest}`;
     messages.push({ role: 'ava', text: avaOpener });
     callbacks.onMessage('ava', avaOpener, turnNumber);
 
     if (abortSignal?.aborted) return buildCancelledResult(callId, messages);
 
-    callbacks.onStatus('on_call', 'Ava is talking to Mike');
+    callbacks.onStatus('on_call', 'Tasha is talking to Mike');
     await delay(300); // Brief pause for realism
 
-    // Claude call #1: Mike responds to Ava
+    // Claude call #1: Mike responds to Tasha
     const mikeResponse1 = await generateMikeResponse(
       firstName, driverId, loadInfo, driverRequest,
       messages, abortSignal
@@ -79,11 +79,11 @@ export async function runDispatcherDelegation(
 
     await delay(500);
 
-    // Turn 2: Ava follow-up, then Mike responds
+    // Turn 2: Tasha follow-up, then Mike responds
     turnNumber++;
     if (abortSignal?.aborted) return buildCancelledResult(callId, messages);
 
-    const avaFollowUp = await generateAvaProxy(
+    const avaFollowUp = await generateTashaProxy(
       firstName, driverRequest, messages, abortSignal
     );
 
@@ -108,11 +108,11 @@ export async function runDispatcherDelegation(
 
     // Turn 3: Natural wrap-up
     turnNumber++;
-    callbacks.onStatus('wrapping_up', 'Ava is wrapping up with dispatch...');
+    callbacks.onStatus('wrapping_up', 'Tasha is wrapping up with dispatch...');
 
     if (abortSignal?.aborted) return buildCancelledResult(callId, messages);
 
-    const avaClose = await generateAvaProxy(
+    const avaClose = await generateTashaProxy(
       firstName, driverRequest, messages, abortSignal
     );
 
@@ -154,7 +154,6 @@ export async function runDispatcherDelegation(
       return buildCancelledResult(callId, messages);
     }
 
-    console.error('[DispatcherAI] Multi-turn delegation error:', error);
     callbacks.onStatus('error', 'Could not reach dispatch');
 
     // If we have partial conversation, return what we got
@@ -216,12 +215,12 @@ async function generateMikeResponse(
   abortSignal?: AbortSignal,
 ): Promise<string> {
   const conversationText = conversationSoFar
-    .map(m => `${m.role === 'dispatcher' ? 'Mike' : 'Ava'}: ${m.text}`)
+    .map(m => `${m.role === 'dispatcher' ? 'Mike' : 'Tasha'}: ${m.text}`)
     .join('\n');
 
   const result = await generateText({
     model: anthropic('claude-sonnet-4-5-20250929'),
-    system: `You are Mike, a veteran fleet dispatcher at FleetShield Trucking. You're on a call with Ava, the AI co-driver assistant who is calling on behalf of driver ${driverFirstName}.
+    system: `You are Mike, a veteran fleet dispatcher at FleetShield Trucking. You're on a call with Tasha, the AI co-driver assistant who is calling on behalf of driver ${driverFirstName}.
 
 PERSONALITY (dispatch call style):
 - Short responses: 1-3 sentences max. Think dispatch radio brevity.
@@ -229,14 +228,14 @@ PERSONALITY (dispatch call style):
 - Decisive — give clear answers and concrete next steps
 - Professional but warm — you know your drivers and care about them
 - Reference actual load data when relevant
-- You're talking to Ava (the AI assistant), not the driver directly. Ava will relay info back to ${driverFirstName}.
+- You're talking to Tasha (the AI assistant), not the driver directly. Tasha will relay info back to ${driverFirstName}.
 - Sign off warmly: "Tell ${driverFirstName} to stay safe out there" / "10-4, dispatch out"
 
 DRIVER INFO:
 - Name: ${driverFirstName} (ID: ${driverId})
 ${loadInfo}
 
-DRIVER'S ORIGINAL REQUEST (relayed by Ava):
+DRIVER'S ORIGINAL REQUEST (relayed by Tasha):
 "${originalRequest}"
 
 CONVERSATION SO FAR:
@@ -251,25 +250,25 @@ Respond as Mike. Keep it brief, decisive, and natural. 1-3 sentences only. No JS
   return result.text.trim();
 }
 
-// ─── Ava Proxy Agent (speaks to Mike on behalf of the driver) ─────
+// ─── Tasha Proxy Agent (speaks to Mike on behalf of the driver) ─────
 
-async function generateAvaProxy(
+async function generateTashaProxy(
   driverFirstName: string,
   originalRequest: string,
   conversationSoFar: Array<{ role: 'dispatcher' | 'ava'; text: string }>,
   abortSignal?: AbortSignal,
 ): Promise<string> {
   const conversationText = conversationSoFar
-    .map(m => `${m.role === 'dispatcher' ? 'Mike' : 'Ava'}: ${m.text}`)
+    .map(m => `${m.role === 'dispatcher' ? 'Mike' : 'Tasha'}: ${m.text}`)
     .join('\n');
 
   const result = await generateText({
     model: anthropic('claude-sonnet-4-5-20250929'),
-    system: `You are Ava, an AI co-driver assistant for FleetShield Trucking. You are on a call with dispatcher Mike, speaking on behalf of driver ${driverFirstName}.
+    system: `You are Tasha, an AI co-driver assistant for FleetShield Trucking. You are on a call with dispatcher Mike, speaking on behalf of driver ${driverFirstName}.
 
 AVA'S STYLE:
 - Professional and concise: "Got it, thanks Mike", "Copy that", "I'll let ${driverFirstName} know"
-- Speak as Ava (not as the driver): "The driver needs...", "${driverFirstName} is asking about..."
+- Speak as Tasha (not as the driver): "The driver needs...", "${driverFirstName} is asking about..."
 - Only ask a follow-up if the original question wasn't fully answered
 - If Mike has addressed the issue, confirm and prepare to sign off
 - 1-2 sentences max
@@ -279,8 +278,8 @@ ORIGINAL REQUEST FROM ${driverFirstName}: "${originalRequest}"
 CONVERSATION SO FAR:
 ${conversationText}
 
-Generate Ava's next response to Mike. Keep it short and natural. No JSON, no formatting.`,
-    prompt: `What does Ava say next to Mike?`,
+Generate Tasha's next response to Mike. Keep it short and natural. No JSON, no formatting.`,
+    prompt: `What does Tasha say next to Mike?`,
     maxTokens: 80,
     abortSignal,
   });
@@ -300,7 +299,7 @@ async function extractOutcome(
   details: Record<string, unknown>;
 }> {
   const conversationText = messages
-    .map(m => `${m.role === 'dispatcher' ? 'Mike (Dispatcher)' : 'Ava (AI Assistant)'}: ${m.text}`)
+    .map(m => `${m.role === 'dispatcher' ? 'Mike (Dispatcher)' : 'Tasha (AI Assistant)'}: ${m.text}`)
     .join('\n');
 
   try {
@@ -437,8 +436,8 @@ function buildFallbackResponse(
       summary: `Mike confirmed the ETA update for ${firstName}. Dispatch will notify the receiver.`,
       details: { reason: intent, acknowledged: true },
       messages: [
-        { role: 'ava', text: `Hey Mike, it's Ava calling on behalf of ${firstName}. ${intent}` },
-        { role: 'dispatcher', text: `Copy that, Ava. I'll update the receiver on the new ETA. Tell ${firstName} to keep rolling safe.` },
+        { role: 'ava', text: `Hey Mike, it's Tasha calling on behalf of ${firstName}. ${intent}` },
+        { role: 'dispatcher', text: `Copy that, Tasha. I'll update the receiver on the new ETA. Tell ${firstName} to keep rolling safe.` },
         { role: 'ava', text: `Got it, thanks Mike. I'll let ${firstName} know.` },
         { role: 'dispatcher', text: `No problem. Tell ${firstName} to call if anything changes. Dispatch out.` },
       ],
@@ -457,7 +456,7 @@ function buildFallbackResponse(
         : `Dispatch is checking load availability for ${firstName}.`,
       details: load ? { loadId: load.id, status: load.status } : {},
       messages: [
-        { role: 'ava', text: `Hey Mike, Ava here. ${firstName} is asking about their load. ${intent}` },
+        { role: 'ava', text: `Hey Mike, Tasha here. ${firstName} is asking about their load. ${intent}` },
         { role: 'dispatcher', text: `Sure thing. ${loadInfo}` },
         { role: 'ava', text: `Perfect, I'll pass that along. Thanks Mike.` },
         { role: 'dispatcher', text: `You bet. Tell ${firstName} to stay safe. Dispatch out.` },
@@ -471,8 +470,8 @@ function buildFallbackResponse(
       summary: `Issue reported to dispatch for ${firstName}. Mike is arranging support.`,
       details: { issue: intent, logged: true },
       messages: [
-        { role: 'ava', text: `Mike, Ava here. ${firstName} has a situation to report. ${intent}` },
-        { role: 'dispatcher', text: `Understood, Ava. I'm logging that now. Is ${firstName} in a safe location?` },
+        { role: 'ava', text: `Mike, Tasha here. ${firstName} has a situation to report. ${intent}` },
+        { role: 'dispatcher', text: `Understood, Tasha. I'm logging that now. Is ${firstName} in a safe location?` },
         { role: 'ava', text: `Yes, ${firstName} is pulled over safely.` },
         { role: 'dispatcher', text: `Good. I'll get our roadside team on it right away. Tell ${firstName} to sit tight, I'll call back in 15 minutes. Stay safe.` },
       ],
@@ -482,11 +481,11 @@ function buildFallbackResponse(
   // General fallback
   return {
     outcome: 'general_info',
-    summary: `Ava checked with dispatch regarding: ${intent}. Information provided.`,
+    summary: `Tasha checked with dispatch regarding: ${intent}. Information provided.`,
     details: { topic: intent },
     messages: [
-      { role: 'ava', text: `Hey Mike, Ava calling on behalf of ${firstName}. ${intent}` },
-      { role: 'dispatcher', text: `Got it, Ava. Let me look into that. One moment...` },
+      { role: 'ava', text: `Hey Mike, Tasha calling on behalf of ${firstName}. ${intent}` },
+      { role: 'dispatcher', text: `Got it, Tasha. Let me look into that. One moment...` },
       { role: 'dispatcher', text: `Alright, I've got the info. Everything looks good on our end.` },
       { role: 'ava', text: `Great, I'll pass that along to ${firstName}. Thanks Mike.` },
       { role: 'dispatcher', text: `Anytime. Tell ${firstName} to drive safe. Dispatch out.` },

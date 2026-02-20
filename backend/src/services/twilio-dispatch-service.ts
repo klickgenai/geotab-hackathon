@@ -119,7 +119,6 @@ export class TwilioDispatchSession {
     activeCallSessions.set(this.callId, this);
     activeCallSessions.set(call.sid, this);
 
-    console.log(`[TwilioDispatch] Initiated call ${call.sid} to ${dispatcherPhone}, callId=${this.callId}`);
     return { callSid: call.sid, status: call.status };
   }
 
@@ -128,31 +127,27 @@ export class TwilioDispatchSession {
    */
   handleMediaStream(ws: WebSocket, bufferedMessages?: string[]): void {
     this.twilioWs = ws;
-    console.log(`[TwilioDispatch] Media stream connected for ${this.callId}`);
 
     const processMessage = (raw: string) => {
       try {
         const msg = JSON.parse(raw);
         switch (msg.event) {
           case 'connected':
-            console.log(`[TwilioDispatch] Stream connected`);
             break;
           case 'start':
             this.streamSid = msg.start.streamSid;
             this.setState('connected');
-            console.log(`[TwilioDispatch] Stream started, SID: ${this.streamSid}`);
             break;
           case 'media':
             // Incoming audio from the dispatcher's phone → convert and send to browser
             this.handlePhoneAudio(msg.media.payload);
             break;
           case 'stop':
-            console.log(`[TwilioDispatch] Stream stopped`);
             this.endCall('stream_stopped');
             break;
         }
-      } catch (err) {
-        console.error(`[TwilioDispatch] Message error:`, err);
+      } catch {
+        // silently handled
       }
     };
 
@@ -168,12 +163,11 @@ export class TwilioDispatchSession {
     });
 
     ws.on('close', () => {
-      console.log(`[TwilioDispatch] Media stream WebSocket closed`);
       this.endCall('ws_closed');
     });
 
-    ws.on('error', (err) => {
-      console.error(`[TwilioDispatch] WebSocket error:`, err);
+    ws.on('error', () => {
+      // silently handled
     });
   }
 
@@ -212,7 +206,6 @@ export class TwilioDispatchSession {
    * Handle Twilio status webhook.
    */
   handleStatusUpdate(status: string): void {
-    console.log(`[TwilioDispatch] Status: ${status}`);
     switch (status) {
       case 'ringing':
         this.setState('ringing');
@@ -248,9 +241,6 @@ export class TwilioDispatchSession {
     if (this.state === 'completed' || this.state === 'failed') return;
 
     this.endTime = Date.now();
-    const duration = Math.floor((this.endTime - this.startTime) / 1000);
-    console.log(`[TwilioDispatch] Call ended: ${reason}, duration: ${duration}s`);
-
     const failed = reason === 'failed' || reason === 'no-answer' || reason === 'busy';
     this.setState(failed ? 'failed' : 'completed');
     this.onCallEnded(reason);
@@ -265,7 +255,6 @@ export class TwilioDispatchSession {
   private setState(state: DispatchCallState): void {
     if (this.state !== state) {
       this.state = state;
-      console.log(`[TwilioDispatch] State: ${state}`);
       this.onStateChange(state);
     }
   }

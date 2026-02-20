@@ -125,42 +125,31 @@ export class TTSWebSocket {
         clearTimeout(timeout);
         this.connected = true;
         this.connectPromise = null;
-        console.log("[TTS-WS] Connected");
         resolve();
       });
 
       this.ws.on("message", (data: WebSocket.Data) => {
         try {
           const raw = data.toString();
-          // Log first 200 chars of every message for debugging
-          console.log("[TTS-WS] Received:", raw.substring(0, 200));
-
           const msg = JSON.parse(raw);
 
           if (msg.status === "chunk" && msg.data?.audio) {
             // Decode base64 audio chunk → raw PCM buffer
             const pcmBuffer = Buffer.from(msg.data.audio, "base64");
-            console.log("[TTS-WS] Audio chunk:", pcmBuffer.length, "bytes, reqId:", msg.request_id);
             this.callbacks.onAudioChunk(pcmBuffer, msg.request_id || "");
           } else if (msg.status === "comp" || msg.status === "complete" || msg.done === true) {
-            console.log("[TTS-WS] Request complete, reqId:", msg.request_id);
             this.callbacks.onRequestComplete(msg.request_id || "");
           } else if (msg.error) {
-            console.error("[TTS-WS] Server error:", msg.error);
             this.callbacks.onError(new Error(`TTS WS error: ${msg.error}`));
-          } else {
-            console.log("[TTS-WS] Unknown message type:", JSON.stringify(msg).substring(0, 200));
           }
+          // silently handled — unknown message types ignored
         } catch {
-          // Binary data or non-JSON — might be raw PCM
-          const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer);
-          console.log("[TTS-WS] Binary/non-JSON message:", buf.length, "bytes");
+          // silently handled — binary data or non-JSON
         }
       });
 
       this.ws.on("error", (err) => {
         clearTimeout(timeout);
-        console.error("[TTS-WS] Error:", err.message);
         this.callbacks.onError(err);
         if (!this.connected) {
           this.connectPromise = null;
@@ -171,7 +160,6 @@ export class TTSWebSocket {
       this.ws.on("close", () => {
         this.connected = false;
         this.connectPromise = null;
-        console.log("[TTS-WS] Disconnected");
       });
     });
 

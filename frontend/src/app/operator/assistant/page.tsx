@@ -157,7 +157,7 @@ function VoiceWaveform({ phase }: { phase: VoicePhase }) {
 export default function AssistantPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([{
     id: genId(), role: 'assistant',
-    parts: [{ type: 'text', content: "Hi, I'm **Ava** — your fleet intelligence assistant. Ask me anything about your fleet, or tap a chip below to get started. I can show you live dashboards, scores, and analytics right here." }],
+    parts: [{ type: 'text', content: "Hi, I'm **Tasha**, your fleet intelligence assistant. Ask me anything about your fleet, or tap a chip below to get started. I can show you live dashboards, scores, and analytics right here." }],
     timestamp: new Date(),
   }]);
   const [input, setInput] = useState('');
@@ -312,8 +312,8 @@ export default function AssistantPage() {
           return { ...m, parts: [...m.parts, { type: 'component', toolName, toolResult: result }] };
         }));
       },
-      onError: (error) => {
-        console.error('[VoiceMode] Error:', error);
+      onError: () => {
+        // Voice error handled by client
       },
       onPlaybackComplete: () => {
         // Playback finished — VoiceClient handles state transition
@@ -323,8 +323,7 @@ export default function AssistantPage() {
     voiceClientRef.current = client;
     try {
       await client.connect();
-    } catch (err) {
-      console.error('[VoiceMode] Connection failed:', err);
+    } catch {
       setVoiceMode(false);
       voiceModeRef.current = false;
       voiceClientRef.current = null;
@@ -470,7 +469,7 @@ export default function AssistantPage() {
         </div>
         <div className="flex-1">
           <div className="text-base font-bold text-gray-900 flex items-center gap-2">
-            Ava <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">AI Assistant</span>
+            Tasha <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">AI Assistant</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${
@@ -612,7 +611,7 @@ export default function AssistantPage() {
                 }`} />
                 <span className="text-sm text-white/60">
                   {voicePhase === 'listening' ? 'Listening...' :
-                   voicePhase === 'processing' ? 'Analyzing your fleet data...' : 'Ava is speaking...'}
+                   voicePhase === 'processing' ? 'Analyzing your fleet data...' : 'Tasha is speaking...'}
                 </span>
               </div>
 
@@ -653,7 +652,7 @@ export default function AssistantPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(input); }}
-                placeholder="Ask Ava about your fleet..."
+                placeholder="Ask Tasha about your fleet..."
                 className="flex-1 bg-[#FAF9F7] border border-[#E5E2DC] rounded-xl px-5 py-3.5 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#FBAF1A] focus:ring-2 focus:ring-[#FBAF1A]/20 transition-all"
                 disabled={streaming}
               />

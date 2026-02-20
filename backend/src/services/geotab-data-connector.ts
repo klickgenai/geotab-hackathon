@@ -33,8 +33,8 @@ export class GeotabDataConnector {
       throw new Error(`Data Connector ${table}: ${res.status} ${body}`);
     }
 
-    const data: any = await res.json();
-    return (data.value || []) as T[];
+    const data = await res.json() as { value?: T[] };
+    return data.value || [];
   }
 
   /** Get fleet-wide KPI summary for a date range */

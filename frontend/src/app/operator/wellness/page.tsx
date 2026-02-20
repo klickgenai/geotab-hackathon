@@ -90,17 +90,21 @@ export default function WellnessPage() {
   const [allWellness, setAllWellness] = useState<WellnessResult[]>([]);
   const [summary, setSummary] = useState<WellnessSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [riskFilter, setRiskFilter] = useState<string>('all');
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
+    setError(null);
     Promise.all([
       api.wellnessAll(),
       api.wellness(),
     ]).then(([all, s]) => {
       setAllWellness(all);
       setSummary(s);
+    }).catch(() => {
+      setError('Failed to load wellness data. Please check that the backend is running.');
     }).finally(() => setLoading(false));
   };
 
@@ -122,6 +126,18 @@ export default function WellnessPage() {
         <PageHeader title="Driver Wellness" subtitle="Loading wellness data..." />
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500" />
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Driver Wellness" subtitle="Error loading data" />
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-4">{error}</div>
+          <button onClick={loadData} className="text-sm text-[#FBAF1A] hover:underline">Retry</button>
         </div>
       </>
     );

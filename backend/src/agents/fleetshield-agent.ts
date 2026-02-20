@@ -1,12 +1,12 @@
 /**
- * FleetShield AI Agent ("Ava")
+ * FleetShield AI Agent ("Tasha")
  * Powered by Vercel AI SDK + Claude Sonnet.
  *
  * Supports two modes:
  * - Fleet Manager mode: fleet overview, risk scoring, insurance, wellness, etc.
  * - Driver mode: personal dashboard, load management, dispatch calls, leaderboard
  *
- * Ava detects the user's role from context and adapts her responses accordingly.
+ * Tasha detects the user's role from context and adapts her responses accordingly.
  */
 
 import { streamText, generateText } from 'ai';
@@ -35,9 +35,10 @@ import {
   getSafetyCoaching,
   reportIncident,
   generateContextReport,
+  getGreenFleetMetrics,
 } from '../tools/index.js';
 
-const SYSTEM_PROMPT = `You are Ava, the FleetShield AI assistant. You serve two types of users:
+const SYSTEM_PROMPT = `You are Tasha, the FleetShield AI assistant. You serve two types of users:
 
 ## Role Detection
 - **Fleet Managers / Safety Directors / Insurance Professionals**: Ask about fleet-wide data, risk scores, insurance, benchmarks, reports, coaching plans. Use fleet management tools.
@@ -77,6 +78,7 @@ When talking to a driver, be warm and encouraging. Celebrate good scores. When t
 12. **Fleet Forecast** -- Fleet-wide predictive risk forecast
 13. **Alert Briefing** -- Intelligent alert triage with urgency scores
 23. **Generate Context Report** -- Create AI-generated PDF reports from conversation context. Use when asked to "generate a report", "create a report about this", or "make this a report".
+24. **Green Fleet Metrics** -- Sustainability metrics: carbon footprint, fuel efficiency, idle waste, EV readiness, driver green scores, and actionable environmental recommendations.
 
 ### Driver Dashboard Tools
 14. **Driver Dashboard** -- Personal safety score, streak, rank, load summary, messages
@@ -165,6 +167,7 @@ Help users find the right page for their needs:
 - **Wellness** (/operator/wellness): Driver wellness monitoring with burnout signal detection, retention risk scoring, and intervention tracking. Use this to retain drivers.
 - **Alerts** (/operator/alerts): AI-triaged alert queue with urgency scoring, recommended actions, and daily morning briefings. Use this as your operational command center.
 - **ROI** (/operator/roi): Return on investment dashboard with 5 savings categories, before/after comparisons, and the What-If Simulator. Use this to justify investment.
+- **Sustainability** (/operator/sustainability): Green Fleet dashboard with carbon footprint tracking, fuel efficiency analysis, idle waste metrics, EV transition readiness, driver eco-driving scores, and actionable recommendations to reduce emissions. Use this for environmental impact reporting and ESG compliance.
 - **Vehicles** (/operator/vehicles): Fleet vehicle inventory with maintenance status, diagnostic codes, mileage, and assignment. Use this for asset management.
 - **Drivers** (/operator/drivers): Individual driver profiles with safety scores, risk tiers, coaching status, and performance history. Use this for people management.
 - **Reports** (/operator/reports): Executive summaries and underwriter-ready reports. Use this for stakeholder communication and insurance renewals.
@@ -187,6 +190,7 @@ export const fleetshieldTools = {
   getFleetForecast,
   getAlertBriefing,
   generateContextReport,
+  getGreenFleetMetrics,
   // Driver dashboard tools
   getDriverDashboard,
   getLoadUpdates,

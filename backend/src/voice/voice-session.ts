@@ -124,15 +124,15 @@ export class VoiceSession {
       const ttsCallbacks: TTSStreamCallbacks = {
         onAudioChunk: () => {},
         onRequestComplete: () => {},
-        onError: (err) => console.error("[TTS-WS] Session error:", err.message),
+        onError: () => { /* silently handled */ },
       };
       this.ttsWebSocket = new TTSWebSocket(apiKey, ttsCallbacks, {
         voiceId: "sophia",
         sampleRate: 24000,
         speed: 1.0,
       });
-      this.ttsWebSocket.connect().catch((err) => {
-        console.error("[TTS-WS] Eager connect failed (will retry on first use):", err.message);
+      this.ttsWebSocket.connect().catch(() => {
+        // silently handled — will retry on first use
       });
     }
 
@@ -166,16 +166,14 @@ export class VoiceSession {
       },
       onFinal: () => {},
       onError: (err) => {
-        console.error(`[VoiceSession ${this.sessionId}] STT error:`, err.message);
         this.callbacks.onError(err);
       },
     };
 
     this.sttPipeline = new PulseSTTPipeline(apiKey, sttCallbacks);
     this.sttPipeline.connect().then(() => {
-      console.log(`[VoiceSession ${this.sessionId}] STT pre-warmed and ready`);
-    }).catch((err) => {
-      console.error(`[VoiceSession ${this.sessionId}] STT pre-warm failed:`, err.message);
+      // silently handled — STT pre-warmed and ready
+    }).catch(() => {
       // Will retry on next speech_start
       this.sttPipeline = null;
     });
@@ -196,12 +194,10 @@ export class VoiceSession {
     // If pre-warmed pipeline is ready, use it directly
     if (this.sttPipeline?.isConnected()) {
       this.sttPipeline.resetUtterance();
-      console.log(`[VoiceSession ${this.sessionId}] Speech started — using pre-warmed STT`);
       return;
     }
 
     // No pre-warmed connection — need to connect now (buffer audio while waiting)
-    console.log(`[VoiceSession ${this.sessionId}] Speech started — STT not pre-warmed, connecting now...`);
     this.sttConnecting = true;
 
     // Clean up any dead pipeline
@@ -223,14 +219,12 @@ export class VoiceSession {
 
       // Flush buffered audio
       if (this.audioBuffer.length > 0) {
-        console.log(`[VoiceSession ${this.sessionId}] Flushing ${this.audioBuffer.length} buffered audio frames`);
         for (const buf of this.audioBuffer) {
           this.sttPipeline.sendAudio(buf);
         }
         this.audioBuffer = [];
       }
     } catch (err) {
-      console.error(`[VoiceSession ${this.sessionId}] STT connect failed during speech:`, (err as Error).message);
       this.sttConnecting = false;
       this.audioBuffer = [];
       this.sttPipeline = null;
@@ -242,9 +236,6 @@ export class VoiceSession {
   private audioFrameCount = 0;
   feedAudio(pcmBuffer: Buffer): void {
     this.audioFrameCount++;
-    if (this.audioFrameCount % 10 === 1) {
-      console.log(`[VoiceSession ${this.sessionId}] Audio frame #${this.audioFrameCount}, size=${pcmBuffer.length}bytes, connecting=${this.sttConnecting}, hasPipeline=${!!this.sttPipeline}`);
-    }
     // Buffer audio while STT is connecting
     if (this.sttConnecting) {
       this.audioBuffer.push(Buffer.from(pcmBuffer));
@@ -264,12 +255,10 @@ export class VoiceSession {
     if (!this.sttPipeline.hadResponse() && this.sttPipeline.isConnected() && this.audioFrameCount <= 5) {
       const preserved = this.sttPipeline.cancelUtterance();
       if (preserved) {
-        console.log(`[VoiceSession ${this.sessionId}] False trigger (${this.audioFrameCount} frames, no STT response) — connection preserved`);
         return; // Pipeline stays alive, no pre-warm needed
       }
     }
 
-    console.log(`[VoiceSession ${this.sessionId}] Speech ended — collecting transcript (${this.audioFrameCount} total frames sent)`);
     const gainAtEnd = this.sttPipeline.getGain();
     const text = await this.sttPipeline.endUtterance();
     // endUtterance() disconnects the pipeline — it's now dead
@@ -279,7 +268,6 @@ export class VoiceSession {
     this.preWarmSTT();
 
     if (text) {
-      console.log(`[VoiceSession ${this.sessionId}] Transcript: "${text}"`);
       // Reset suppression tracking on successful transcript
       if (this.micSuppressedNotified) {
         this.callbacks.onMicStatus?.("ready");
@@ -290,9 +278,7 @@ export class VoiceSession {
       await this.handleUserMessage(text);
     } else {
       this.consecutiveEmptySpeech++;
-      console.log(`[VoiceSession ${this.sessionId}] No speech detected (consecutive: ${this.consecutiveEmptySpeech}, gain: ${gainAtEnd.toFixed(1)}x)`);
       if (this.consecutiveEmptySpeech >= 2 && !this.micSuppressedNotified) {
-        console.log(`[VoiceSession ${this.sessionId}] Mic suppression detected — notifying client`);
         this.callbacks.onMicStatus?.("suppressed");
         this.micSuppressedNotified = true;
       }
@@ -338,7 +324,6 @@ export class VoiceSession {
     this.clearThinkingTimeout();
     this.thinkingTimeout = setTimeout(() => {
       if (this.state === "thinking" || this.state === "dispatching") {
-        console.warn(`[VoiceSession ${this.sessionId}] Thinking timeout (45s) — auto-recovering to listening`);
         this.transitionToListeningWithPause();
       }
     }, 45000);
@@ -353,9 +338,7 @@ export class VoiceSession {
     const isSocial = this.isShortSocialPhrase(text);
 
     try {
-      console.log(`[VoiceSession ${this.sessionId}] Starting Claude stream with ${messages.length} messages (social=${isSocial})`);
       const streamResult = await streamAgentResponseWithHistory(messages);
-      console.log(`[VoiceSession ${this.sessionId}] Claude stream created, processing chunks...`);
 
       let fillerSent = false;
       let fullResponseText = "";
@@ -403,7 +386,6 @@ export class VoiceSession {
             this.transitionToListeningWithPause();
           },
           onError: (err) => {
-            console.error("[TTS] Error:", err.message);
             this.callbacks.onError(err);
           },
         },
@@ -449,14 +431,12 @@ export class VoiceSession {
                   // Feed ONLY the voice summary to TTS
                   this.ttsPipeline.feedText(voiceContent);
                   voiceExtracted = true;
-                  console.log(`[VoiceSession ${this.sessionId}] Voice tag extracted: "${voiceContent.slice(0, 60)}..."`);
                 }
               }
               voiceBuffer = "";
               streamingDetailDirectly = true;
             } else if (voiceBuffer.length > 500 || (!voiceBuffer.includes("<") && voiceBuffer.length > 80)) {
               // No voice tag coming — feed everything to TTS as fallback
-              console.log(`[VoiceSession ${this.sessionId}] No voice tag detected, falling back to full TTS`);
               this.ttsPipeline.feedText(voiceBuffer);
               voiceBuffer = "";
               streamingDetailDirectly = true;
@@ -477,7 +457,7 @@ export class VoiceSession {
             patienceTimer = setTimeout(sendPatienceFiller, 6000);
           }
 
-          // Dispatch call handling: Ava contacts Mike autonomously via AI delegation
+          // Dispatch call handling: Tasha contacts Mike autonomously via AI delegation
           if (toolName === "initiateDispatcherCall") {
             const args = (chunk as any).args;
             if (args && typeof args === "object") {
@@ -541,9 +521,8 @@ export class VoiceSession {
       }
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") {
-        console.log(`[VoiceSession ${this.sessionId}] Response aborted (interrupt)`);
+        // silently handled — response aborted via interrupt
       } else {
-        console.error(`[VoiceSession ${this.sessionId}] Stream error:`, err);
         this.callbacks.onError(err as Error);
       }
       this.clearThinkingTimeout();
@@ -614,8 +593,8 @@ export class VoiceSession {
         addWavHeader: true,
       });
       this.callbacks.onAudioChunk(buffer, text);
-    } catch (err) {
-      console.error(`[VoiceSession ${this.sessionId}] Nudge TTS failed:`, (err as Error).message);
+    } catch {
+      // silently handled
     }
   }
 
@@ -637,7 +616,6 @@ export class VoiceSession {
   interrupt(): void {
     // During dispatch, don't interrupt — the AI-to-AI call is running
     if (this.state === "dispatching") {
-      console.log(`[VoiceSession ${this.sessionId}] Speech during dispatch — not interrupting (queued for after)`);
       return;
     }
 
@@ -737,7 +715,7 @@ export class VoiceSession {
 
       messages.push({
         role: "system",
-        content: `You are Ava, a friendly AI co-driver for FleetShield AI. You are speaking with ${dc.firstName} (full name: ${dc.name}), driving ${dc.vehicleName}.
+        content: `You are Tasha, a friendly AI co-driver for FleetShield AI. You are speaking with ${dc.firstName} (full name: ${dc.name}), driving ${dc.vehicleName}.
 
 Driver profile:
 - Safety score: ${dc.safetyScore}/100
@@ -762,7 +740,7 @@ IMPORTANT: You are speaking out loud via voice. Do NOT use markdown formatting �
     if (!this.driverContext) {
       messages.push({
         role: "system",
-        content: `You are Ava, the FleetShield AI voice assistant for fleet operators.
+        content: `You are Tasha, the FleetShield AI voice assistant for fleet operators.
 
 VOICE + VISUAL RESPONSE FORMAT:
 You have TWO output channels: voice (spoken aloud) and visual (shown on screen).

@@ -35,13 +35,15 @@ export default function MapPage() {
   const markersRef = useRef<any[]>([]);
   const hotspotLayersRef = useRef<any[]>([]);
 
+  const [error, setError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
       const [v, h] = await Promise.all([api.liveFleet(), api.hotspots()]);
       setVehicles(v);
       setHotspots(h);
       setLoading(false);
-    } catch (err) { console.error(err); setLoading(false); }
+    } catch { setError('Failed to load fleet map data.'); setLoading(false); }
   }, []);
 
   // Load Leaflet via CDN

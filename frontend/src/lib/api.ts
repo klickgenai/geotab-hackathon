@@ -5,7 +5,7 @@ import type {
   GPSTrailPoint, SpeedingHotspot, FleetROI, BeforeAfterComparison,
   WhatIfScenario, WhatIfResult, DriverSession, DriverRanking,
   GamificationState, Badge, PointTransaction, RewardItem, DailyChallenge,
-  PreShiftBriefing, ActionItem,
+  PreShiftBriefing, ActionItem, GreenFleetDashboard, DriverGreenScore, EVReadinessReport,
 } from '@/types/fleet';
 
 const API_BASE = '';
@@ -111,6 +111,11 @@ export const api = {
   whatIfDefaults: () => fetchJSON<WhatIfScenario[]>('/api/fleet/what-if/defaults'),
   whatIfSimulate: (scenarios: WhatIfScenario[]) => postJSON<WhatIfResult[]>('/api/fleet/what-if', { scenarios }),
   whatIfCustom: (adjustments: Record<string, number>) => postJSON<WhatIfResult>('/api/fleet/what-if/custom', { adjustments }),
+
+  // Sustainability / Green Fleet
+  sustainability: () => fetchJSON<GreenFleetDashboard>('/api/fleet/sustainability'),
+  sustainabilityDrivers: () => fetchJSON<DriverGreenScore[]>('/api/fleet/sustainability/drivers'),
+  sustainabilityVehicles: () => fetchJSON<EVReadinessReport>('/api/fleet/sustainability/vehicles'),
 
   // Geotab Ace (Natural Language Analytics)
   aceQuery: (prompt: string) => postJSON<{ text: string; data: unknown; charts: unknown[]; status: string }>('/api/fleet/ace/query', { prompt }),
