@@ -988,6 +988,9 @@ wss.on('connection', (ws) => {
           onAudioChunk: (audioBuffer, sentenceText) => {
             sendJson({ type: 'audio_chunk', audio: audioBuffer.toString('base64'), text: sentenceText });
           },
+          onToolResult: (toolName, result) => {
+            sendJson({ type: 'tool_result', toolName, result });
+          },
           onActionItem: (item) => {
             sendJson({ type: 'action_item', item });
           },

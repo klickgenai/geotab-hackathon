@@ -9,6 +9,7 @@ export type VoiceState = 'disconnected' | 'connecting' | 'listening' | 'thinking
 export interface VoiceCallbacks {
   onStateChange: (state: VoiceState) => void;
   onTranscript: (role: 'user' | 'assistant', text: string) => void;
+  onToolResult?: (toolName: string, result: any) => void;
   onError: (error: string) => void;
   onPlaybackComplete?: () => void;
 }
@@ -194,6 +195,9 @@ export class VoiceClient {
         } else if (msg.role === 'user') {
           this.consecutiveEmptyTranscripts = 0;
         }
+        break;
+      case 'tool_result':
+        this.callbacks.onToolResult?.(msg.toolName, msg.result);
         break;
       case 'filler_audio':
       case 'audio_chunk':

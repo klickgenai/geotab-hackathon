@@ -45,6 +45,7 @@ interface VoiceSessionCallbacks {
   onTranscript: (role: "user" | "assistant", text: string) => void;
   onFillerAudio: (audioBuffer: Buffer, text: string) => void;
   onAudioChunk: (audioBuffer: Buffer, sentenceText: string) => void;
+  onToolResult?: (toolName: string, result: unknown) => void;
   onActionItem: (item: ActionItem) => void;
   onSessionEnded: (summary: SessionSummary) => void;
   onError: (error: Error) => void;
@@ -280,6 +281,24 @@ export class VoiceSession {
     }
   }
 
+  /**
+   * Check if the user message is a short social/conversational phrase
+   * (e.g. "thank you", "okay", "goodbye") that doesn't need a data filler.
+   */
+  private isShortSocialPhrase(text: string): boolean {
+    const normalized = text.toLowerCase().trim().replace(/[.!?,]+$/g, '');
+    const socialPhrases = [
+      'thank you', 'thanks', 'thank', 'thx',
+      'okay', 'ok', 'alright', 'got it', 'cool', 'nice',
+      'goodbye', 'bye', 'see you', 'later', 'good night',
+      'yes', 'no', 'yeah', 'yep', 'nope', 'sure',
+      'hi', 'hello', 'hey', 'good morning', 'good afternoon',
+      'that makes sense', 'understood', 'perfect', 'great', 'awesome',
+      'sounds good', 'no problem', 'never mind', 'forget it',
+    ];
+    return socialPhrases.some((p) => normalized === p || normalized.startsWith(p + ' '));
+  }
+
   /** Handle a complete user utterance */
   async handleUserMessage(text: string): Promise<void> {
     this.conversationHistory.push({ role: "user", content: text });
@@ -310,16 +329,20 @@ export class VoiceSession {
     }
 
     const messages = this.buildMessages();
-    const thinkingStartTime = Date.now();
+    const isSocial = this.isShortSocialPhrase(text);
 
     try {
-      console.log(`[VoiceSession ${this.sessionId}] Starting Claude stream with ${messages.length} messages`);
+      console.log(`[VoiceSession ${this.sessionId}] Starting Claude stream with ${messages.length} messages (social=${isSocial})`);
       const streamResult = await streamAgentResponseWithHistory(messages);
       console.log(`[VoiceSession ${this.sessionId}] Claude stream created, processing chunks...`);
 
       let fillerSent = false;
-      let continuationFillerSent = false;
       let fullResponseText = "";
+
+      // Voice tag parser state: buffer text to extract <voice>...</voice>
+      let voiceBuffer = "";
+      let voiceExtracted = false;  // True once <voice> content has been sent to TTS
+      let streamingDetailDirectly = false; // True once past voice tag, streaming detail text
 
       // Set up continuation filler timer for long processing
       let continuationTimer: ReturnType<typeof setTimeout> | null = null;
@@ -330,7 +353,6 @@ export class VoiceSession {
         const filler = fillerCache.getSmartFiller(undefined, "continuation");
         if (filler?.audio) {
           this.callbacks.onFillerAudio(filler.audio, filler.text);
-          continuationFillerSent = true;
         }
       };
 
@@ -372,18 +394,49 @@ export class VoiceSession {
 
         if (chunk.type === "text-delta") {
           const textDelta: string = chunk.textDelta ?? "";
-          if (!fillerSent) {
+          // Only send fillers for substantive queries, not social phrases
+          if (!fillerSent && !isSocial) {
             fillerSent = true;
             const filler = fillerCache.getSmartFiller(undefined, "initial");
             if (filler?.audio) {
               this.callbacks.onFillerAudio(filler.audio, filler.text);
             }
-            // Schedule continuation fillers for long waits
             continuationTimer = setTimeout(sendContinuationFiller, 3000);
             patienceTimer = setTimeout(sendPatienceFiller, 6000);
           }
+
           fullResponseText += textDelta;
-          this.ttsPipeline.feedText(textDelta);
+
+          // Parse <voice> tags: only send voice content to TTS
+          if (streamingDetailDirectly) {
+            // Past the voice tag — don't feed detail text to TTS
+          } else {
+            voiceBuffer += textDelta;
+
+            // Check if voice closing tag is present
+            const closeIdx = voiceBuffer.indexOf("</voice>");
+            if (closeIdx !== -1) {
+              const openIdx = voiceBuffer.indexOf("<voice>");
+              if (openIdx !== -1) {
+                const voiceContent = voiceBuffer.slice(openIdx + 7, closeIdx).trim();
+                if (voiceContent) {
+                  // Feed ONLY the voice summary to TTS
+                  this.ttsPipeline.feedText(voiceContent);
+                  voiceExtracted = true;
+                  console.log(`[VoiceSession ${this.sessionId}] Voice tag extracted: "${voiceContent.slice(0, 60)}..."`);
+                }
+              }
+              voiceBuffer = "";
+              streamingDetailDirectly = true;
+            } else if (voiceBuffer.length > 500 || (!voiceBuffer.includes("<") && voiceBuffer.length > 80)) {
+              // No voice tag coming — feed everything to TTS as fallback
+              console.log(`[VoiceSession ${this.sessionId}] No voice tag detected, falling back to full TTS`);
+              this.ttsPipeline.feedText(voiceBuffer);
+              voiceBuffer = "";
+              streamingDetailDirectly = true;
+              // In fallback mode, continue feeding text to TTS
+            }
+          }
         }
 
         if (chunk.type === "tool-call") {
@@ -394,7 +447,6 @@ export class VoiceSession {
             if (filler?.audio) {
               this.callbacks.onFillerAudio(filler.audio, filler.text);
             }
-            // Schedule continuation fillers for long tool calls
             continuationTimer = setTimeout(sendContinuationFiller, 3000);
             patienceTimer = setTimeout(sendPatienceFiller, 6000);
           }
@@ -402,6 +454,9 @@ export class VoiceSession {
 
         if (chunk.type === "tool-result") {
           const toolResult = chunk as any;
+          // Forward tool result to frontend for visual rendering
+          this.callbacks.onToolResult?.(toolResult.toolName ?? "", toolResult.result);
+
           const actionItem = extractActionItem({
             toolName: toolResult.toolName ?? "",
             args: (toolResult.args ?? {}) as Record<string, unknown>,
@@ -414,6 +469,15 @@ export class VoiceSession {
         }
       }
 
+      // Flush any remaining voice buffer
+      if (voiceBuffer && !voiceExtracted) {
+        // Never got a voice tag — speak whatever we have
+        const clean = voiceBuffer.replace(/<\/?voice>/g, "");
+        if (clean.trim()) {
+          this.ttsPipeline.feedText(clean);
+        }
+      }
+
       // Clean up timers
       if (continuationTimer) clearTimeout(continuationTimer);
       if (patienceTimer) clearTimeout(patienceTimer);
@@ -423,11 +487,17 @@ export class VoiceSession {
       }
 
       if (fullResponseText) {
+        // Strip voice tags from display text — show only the detailed visual content
+        const displayText = fullResponseText
+          .replace(/<voice>[\s\S]*?<\/voice>/g, "")
+          .replace(/<\/?voice>/g, "")
+          .trimStart();
+
         this.conversationHistory.push({ role: "assistant", content: fullResponseText });
         this.transcript.push({ role: "assistant", text: fullResponseText, timestamp: Date.now() });
-        this.callbacks.onTranscript("assistant", fullResponseText);
+        // Send the clean display text (without voice tags) to the frontend
+        this.callbacks.onTranscript("assistant", displayText || fullResponseText);
 
-        // Also extract text-based actions for dashboard highlighting
         const textActions = extractTextActions(fullResponseText);
         for (const action of textActions) {
           this.actionItems.push(action);
@@ -638,6 +708,34 @@ ${loadInfo}
 ${tone}
 
 IMPORTANT: You are speaking out loud via voice. Do NOT use markdown formatting — no headers, bold, bullets, numbered lists, or code blocks. Speak naturally in conversational sentences. Keep responses concise (2-4 sentences unless asked for detail). Address the driver by their first name.`,
+      });
+    }
+
+    // For operator voice mode (no driver context), add voice-specific system prompt
+    if (!this.driverContext) {
+      messages.push({
+        role: "system",
+        content: `You are Ava, the FleetShield AI voice assistant for fleet operators.
+
+VOICE + VISUAL RESPONSE FORMAT:
+You have TWO output channels: voice (spoken aloud) and visual (shown on screen).
+
+1. Start EVERY response with a <voice> tag containing a 3-4 sentence spoken summary. This is read aloud via TTS. Keep it natural, conversational, no markdown. End with </voice>.
+2. After the </voice> tag, write a DETAILED visual response with full markdown formatting — headers, bold, tables, bullet points, numbers, analysis. This is displayed on screen as a rich card. Be thorough here.
+3. For social phrases (thanks, hello, bye), just use <voice>Your friendly reply</voice> with no detailed section after.
+
+Example for a data query:
+<voice>Here are your top three riskiest drivers. Marcus has the highest risk score at 82.</voice>
+
+## Top 3 Highest Risk Drivers
+
+| Rank | Driver | Risk Score | Key Issues |
+| ... detailed table ... |
+
+### Recommendations
+- ... detailed bullets ...
+
+IMPORTANT: Always include the <voice> tag first. The visual section should have ALL the detail the user needs — scores, names, tables, recommendations. Do NOT put markdown inside <voice> tags.`,
       });
     }
 

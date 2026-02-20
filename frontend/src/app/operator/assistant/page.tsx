@@ -251,22 +251,66 @@ export default function AssistantPage() {
     setVoicePhase('listening');
     setVoiceTranscript('');
 
+    // Track the current assistant message ID for appending tool results
+    let currentAssistantId: string | null = null;
+    let latestUserTranscript = '';
+    const renderedTools = new Set<string>();
+
     // Create and connect VoiceClient (no driverId for operator)
     const client = new VoiceClient({
       onStateChange: (state: VoiceState) => {
         if (!voiceModeRef.current) return;
         if (state === 'listening') setVoicePhase('listening');
-        else if (state === 'thinking') setVoicePhase('processing');
+        else if (state === 'thinking') {
+          setVoicePhase('processing');
+          // State changed to thinking = speech ended, transcript is final
+          // NOW add the user message + assistant placeholder to chat
+          if (latestUserTranscript && latestUserTranscript.trim().length > 1) {
+            const userMsg: ChatMessage = {
+              id: genId(), role: 'user',
+              parts: [{ type: 'text', content: latestUserTranscript }],
+              timestamp: new Date(),
+            };
+            currentAssistantId = genId();
+            renderedTools.clear();
+            setMessages(prev => [...prev, userMsg, {
+              id: currentAssistantId!, role: 'assistant', parts: [], timestamp: new Date(),
+            }]);
+            setVoiceTranscript('');
+            latestUserTranscript = '';
+          }
+        }
         else if (state === 'speaking') setVoicePhase('speaking');
       },
       onTranscript: (role, text) => {
         if (!voiceModeRef.current) return;
         if (role === 'user') {
+          // Just update the display — don't add to chat yet (wait for 'thinking' state)
+          latestUserTranscript = text;
           setVoiceTranscript(text);
         } else {
-          // Assistant transcript — show in voice mode display
+          // Assistant transcript — add as text in the assistant message
           setVoiceTranscript('');
+          if (currentAssistantId && text) {
+            const aid = currentAssistantId;
+            setMessages(prev => prev.map(m => {
+              if (m.id !== aid) return m;
+              const hasText = m.parts.some(p => p.type === 'text');
+              if (hasText) return m;
+              return { ...m, parts: [...m.parts, { type: 'text', content: text }] };
+            }));
+          }
         }
+      },
+      onToolResult: (toolName, result) => {
+        if (!voiceModeRef.current || !currentAssistantId) return;
+        if (renderedTools.has(toolName)) return;
+        renderedTools.add(toolName);
+        const aid = currentAssistantId;
+        setMessages(prev => prev.map(m => {
+          if (m.id !== aid) return m;
+          return { ...m, parts: [...m.parts, { type: 'component', toolName, toolResult: result }] };
+        }));
       },
       onError: (error) => {
         console.error('[VoiceMode] Error:', error);
