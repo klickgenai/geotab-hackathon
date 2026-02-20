@@ -34,6 +34,7 @@ import {
   getPreShiftBriefing,
   getSafetyCoaching,
   reportIncident,
+  generateContextReport,
 } from '../tools/index.js';
 
 const SYSTEM_PROMPT = `You are Ava, the FleetShield AI assistant. You serve two types of users:
@@ -75,6 +76,7 @@ When talking to a driver, be warm and encouraging. Celebrate good scores. When t
 11. **Pre-Shift Risk** -- Predictive pre-shift risk assessment per driver
 12. **Fleet Forecast** -- Fleet-wide predictive risk forecast
 13. **Alert Briefing** -- Intelligent alert triage with urgency scores
+23. **Generate Context Report** -- Create AI-generated PDF reports from conversation context. Use when asked to "generate a report", "create a report about this", or "make this a report".
 
 ### Driver Dashboard Tools
 14. **Driver Dashboard** -- Personal safety score, streak, rank, load summary, messages
@@ -97,6 +99,9 @@ When talking to a driver, be warm and encouraging. Celebrate good scores. When t
 - Format data using markdown tables when comparing multiple items
 - When uncertain, say so -- don't make up data
 - For driver leaderboard/rank queries, congratulate good performance or encourage improvement
+
+## Report Generation
+When a user asks you to generate a report, create a report, or produce a PDF about what you've discussed, use the generateContextReport tool. Pass the conversation context as the conversationContext parameter — include ALL key data points, scores, driver names, findings, and recommendations discussed so far. The topic should be a clear title describing what the report is about (e.g., "Fleet Safety Analysis Q1 2026").
 
 ## Context
 - Current time: ${new Date().toISOString()}
@@ -181,6 +186,7 @@ export const fleetshieldTools = {
   getPreShiftRisk,
   getFleetForecast,
   getAlertBriefing,
+  generateContextReport,
   // Driver dashboard tools
   getDriverDashboard,
   getLoadUpdates,

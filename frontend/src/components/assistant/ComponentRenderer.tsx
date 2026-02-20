@@ -245,6 +245,35 @@ const toolRenderers: Record<string, (result: any) => React.ReactNode> = {
       </motion.div>
     );
   },
+
+  generateContextReport: (result) => {
+    if (!result?.filename) return null;
+    return (
+      <div className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
+        <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Report Generated</div>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold truncate">{result.title || result.filename}</div>
+            <div className="text-xs text-white/40 mt-0.5">
+              {result.generatedAt ? new Date(result.generatedAt).toLocaleString() : 'Just now'}
+            </div>
+          </div>
+          <a
+            href={result.downloadUrl}
+            download={result.filename}
+            className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Download PDF
+          </a>
+        </div>
+      </div>
+    );
+  },
 };
 
 interface ComponentRendererProps {
@@ -254,9 +283,36 @@ interface ComponentRendererProps {
 
 export default function ComponentRenderer({ toolName, result }: ComponentRendererProps) {
   const renderer = toolRenderers[toolName];
-  if (!renderer) return null;
+  let rendered = renderer ? renderer(result) : null;
 
-  const rendered = renderer(result);
+  // Generic fallback for unmapped tools
+  if (!rendered && result && typeof result === 'object') {
+    const entries = Object.entries(result).filter(
+      ([, v]) => v !== null && v !== undefined && typeof v !== 'object'
+    ).slice(0, 5);
+    if (entries.length > 0) {
+      const displayName = toolName
+        .replace(/^get/, '')
+        .replace(/([A-Z])/g, ' $1')
+        .trim();
+      rendered = (
+        <div className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
+          <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">{displayName}</div>
+          <div className="space-y-1.5">
+            {entries.map(([key, val]) => (
+              <div key={key} className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.05] rounded-lg">
+                <span className="text-xs text-white/60">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                <span className="text-sm font-mono font-bold">
+                  {typeof val === 'number' ? val.toLocaleString() : String(val)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+  }
+
   if (!rendered) return null;
 
   return (

@@ -23,3 +23,4 @@ export {
   getSafetyCoaching,
   reportIncident,
 } from './driver-intelligence.js';
+export { generateContextReport } from './context-report.js';

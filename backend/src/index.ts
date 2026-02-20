@@ -299,6 +299,10 @@ app.post('/api/assistant/stream', async (req, res) => {
         case 'tool-result':
           console.log('[Assistant Stream] Tool result:', part.toolName);
           res.write(`data: ${JSON.stringify({ type: 'tool_result', toolName: part.toolName, result: part.result })}\n\n`);
+          // Emit report_ready for auto-download
+          if (part.toolName === 'generateContextReport' && part.result?.downloadUrl) {
+            res.write(`data: ${JSON.stringify({ type: 'report_ready', url: part.result.downloadUrl, filename: part.result.filename, title: part.result.title })}\n\n`);
+          }
           break;
         case 'error':
           console.error('[Assistant Stream] Stream error event:', part.error);

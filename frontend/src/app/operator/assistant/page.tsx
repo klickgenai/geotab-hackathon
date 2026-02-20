@@ -6,6 +6,7 @@ import { ArrowLeft, Mic, Send, Shield, Volume2, VolumeX, Sparkles, PhoneOff } fr
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import ComponentRenderer from '@/components/assistant/ComponentRenderer';
+import { VoiceClient, type VoiceState } from '@/lib/voice-client';
 
 /* ---------- Types ---------- */
 interface MessagePart {
@@ -56,15 +57,15 @@ function renderMarkdown(raw: string): string {
     const line = lines[i];
     if (/^\s*\|[\s-:|]+\|\s*$/.test(line)) continue;
     if (/^\s*\|.*\|\s*$/.test(line)) {
-      if (!inTable) { html.push('<table class="w-full text-xs my-2 border-collapse">'); inTable = true; }
+      if (!inTable) { html.push('<table class="w-full text-sm my-3 border-collapse">'); inTable = true; }
       if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
       const cells = line.split('|').filter(c => c.trim());
       const isHeader = i > 0 && /^\s*\|[\s-:|]+\|\s*$/.test(lines[i + 1] || '');
       const tag = isHeader ? 'th' : 'td';
       const cellClass = isHeader
-        ? 'px-3 py-1.5 text-left font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200'
-        : 'px-3 py-1.5 border-b border-gray-100 text-gray-700';
-      html.push(`<tr>${cells.map(c => `<${tag} class="${cellClass}">${inlineFormat(c.trim())}</${tag}>`).join('')}</tr>`);
+        ? 'px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wider text-xs bg-gray-50/80 border-b-2 border-gray-200'
+        : 'px-4 py-2.5 border-b border-gray-100 text-gray-700';
+      html.push(`<tr class="hover:bg-gray-50/50 transition-colors">${cells.map(c => `<${tag} class="${cellClass}">${inlineFormat(c.trim())}</${tag}>`).join('')}</tr>`);
       continue;
     }
     if (inTable) { html.push('</table>'); inTable = false; }
@@ -72,28 +73,32 @@ function renderMarkdown(raw: string): string {
       if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
       const level = (line.match(/^#+/) as RegExpMatchArray)[0].length;
       const content = line.replace(/^#+\s*/, '');
-      const cls = level === 1 ? 'text-sm font-bold text-gray-800 mt-3 mb-1'
-        : level === 2 ? 'text-xs font-bold text-gray-700 mt-3 mb-1 uppercase tracking-wider'
-        : 'text-xs font-semibold text-gray-600 mt-2 mb-0.5';
+      const cls = level === 1 ? 'text-lg font-bold text-gray-900 mt-5 mb-2'
+        : level === 2 ? 'text-sm font-bold text-gray-700 mt-5 mb-2 uppercase tracking-wider'
+        : 'text-sm font-semibold text-gray-600 mt-3 mb-1';
       html.push(`<div class="${cls}">${inlineFormat(content)}</div>`);
       continue;
     }
     if (/^\s*[-*]\s+/.test(line)) {
-      if (!inList || listType !== 'ul') { if (inList) html.push('</ol>'); html.push('<ul class="space-y-0.5 my-1">'); inList = true; listType = 'ul'; }
+      if (!inList || listType !== 'ul') { if (inList) html.push('</ol>'); html.push('<ul class="space-y-1.5 my-2">'); inList = true; listType = 'ul'; }
       const content = line.replace(/^\s*[-*]\s+/, '');
-      html.push(`<li class="flex gap-1.5 text-xs text-gray-700"><span class="text-amber-500 mt-0.5 shrink-0">\u2022</span><span>${inlineFormat(content)}</span></li>`);
+      html.push(`<li class="flex gap-2 text-sm text-gray-700 leading-relaxed"><span class="text-amber-500 mt-1 shrink-0 text-base">\u2022</span><span>${inlineFormat(content)}</span></li>`);
       continue;
     }
     if (/^\s*\d+\.\s+/.test(line)) {
-      if (!inList || listType !== 'ol') { if (inList) html.push('</ul>'); html.push('<ol class="space-y-0.5 my-1">'); inList = true; listType = 'ol'; }
+      if (!inList || listType !== 'ol') { if (inList) html.push('</ul>'); html.push('<ol class="space-y-1.5 my-2">'); inList = true; listType = 'ol'; }
       const num = line.match(/^\s*(\d+)\./)?.[1] || '1';
       const content = line.replace(/^\s*\d+\.\s+/, '');
-      html.push(`<li class="flex gap-1.5 text-xs text-gray-700"><span class="text-amber-600 font-bold shrink-0">${num}.</span><span>${inlineFormat(content)}</span></li>`);
+      html.push(`<li class="flex gap-2 text-sm text-gray-700 leading-relaxed"><span class="text-amber-600 font-bold shrink-0">${num}.</span><span>${inlineFormat(content)}</span></li>`);
       continue;
     }
     if (inList) { html.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
-    if (!line.trim()) { html.push('<div class="h-1.5"></div>'); continue; }
-    html.push(`<p class="text-sm text-gray-800 leading-relaxed">${inlineFormat(line)}</p>`);
+    if (/^\s*[-*_]{3,}\s*$/.test(line)) {
+      html.push('<hr class="my-4 border-t border-gray-200" />');
+      continue;
+    }
+    if (!line.trim()) { html.push('<div class="h-2"></div>'); continue; }
+    html.push(`<p class="text-[15px] text-gray-800 leading-relaxed">${inlineFormat(line)}</p>`);
   }
   if (inTable) html.push('</table>');
   if (inList) html.push(listType === 'ul' ? '</ul>' : '</ol>');
@@ -104,8 +109,8 @@ function inlineFormat(text: string): string {
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-700">$1</code>')
-    .replace(/\$([0-9,]+)/g, '<span class="text-emerald-600 font-semibold">$$$1</span>')
+    .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-gray-700">$1</code>')
+    .replace(/\$([0-9,]+)/g, '<span class="text-emerald-600 font-bold text-base">$$$1</span>')
     .replace(/→/g, '<span class="text-amber-500">\u2192</span>')
     .replace(/⚠️/g, '<span class="text-amber-500">\u26A0</span>')
     .replace(/✅/g, '<span class="text-emerald-500">\u2713</span>');
@@ -158,21 +163,21 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [interimTranscript, setInterimTranscript] = useState('');
 
   // Voice conversation mode
   const [voiceMode, setVoiceMode] = useState(false);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>('listening');
+  const [voiceTranscript, setVoiceTranscript] = useState('');
 
-  // Refs for async-safe access (avoid stale closures)
+  // Refs for async-safe access
   const voiceModeRef = useRef(false);
   const streamingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const sendMessageRef = useRef<(text: string) => void>(null!);
+  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const voiceClientRef = useRef<VoiceClient | null>(null);
 
   // Keep refs in sync
   useEffect(() => { voiceModeRef.current = voiceMode; }, [voiceMode]);
@@ -182,17 +187,30 @@ export default function AssistantPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  /* ---------- TTS (Promise-based) ---------- */
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+      if (voiceClientRef.current) {
+        voiceClientRef.current.disconnect();
+        voiceClientRef.current = null;
+      }
+    };
+  }, []);
+
+  /* ---------- TTS (Promise-based, text mode only) ---------- */
   const speakAsync = useCallback(async (voiceText: string): Promise<void> => {
     if (!voiceEnabled || typeof window === 'undefined' || !voiceText.trim()) return;
 
-    return new Promise<void>(async (resolve) => {
-      // Try Smallest AI TTS
+    const ttsPromise = new Promise<void>(async (resolve) => {
       try {
         const res = await api.ttsSynthesize(voiceText);
         if (res.ok) {
           const arrayBuffer = await res.arrayBuffer();
-          if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+          if (!audioContextRef.current) {
             audioContextRef.current = new AudioContext({ sampleRate: 24000 });
           }
           const ctx = audioContextRef.current;
@@ -201,7 +219,8 @@ export default function AssistantPage() {
           const source = ctx.createBufferSource();
           source.buffer = audioBuffer;
           source.connect(ctx.destination);
-          source.onended = () => resolve();
+          activeSourceRef.current = source;
+          source.onended = () => { activeSourceRef.current = null; resolve(); };
           source.start();
           return;
         }
@@ -209,7 +228,6 @@ export default function AssistantPage() {
         // Fall through to browser TTS
       }
 
-      // Fallback: browser SpeechSynthesis
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(voiceText);
       utterance.rate = 1.0;
@@ -218,69 +236,82 @@ export default function AssistantPage() {
       utterance.onerror = () => resolve();
       window.speechSynthesis.speak(utterance);
     });
+
+    return Promise.race([
+      ttsPromise,
+      new Promise<void>((resolve) => setTimeout(resolve, 15000)),
+    ]);
   }, [voiceEnabled]);
 
-  /* ---------- Speech Recognition ---------- */
-  const startListening = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-
-    // Stop any existing recognition
-    recognitionRef.current?.stop();
-
-    const recognition = new SR();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    recognition.onresult = (event: any) => {
-      let interim = '';
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) final += transcript;
-        else interim += transcript;
-      }
-      if (interim) setInterimTranscript(interim);
-      if (final.trim()) {
-        setInterimTranscript('');
-        sendMessageRef.current(final);
-      }
-    };
-
-    recognition.onerror = () => { setInterimTranscript(''); };
-    recognition.onend = () => { setInterimTranscript(''); };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-  }, []);
-
-  /* ---------- Voice Mode Controls ---------- */
-  const enterVoiceMode = useCallback(() => {
+  /* ---------- Voice Mode Controls (uses VoiceClient) ---------- */
+  const enterVoiceMode = useCallback(async () => {
     setVoiceMode(true);
     voiceModeRef.current = true;
     setVoiceEnabled(true);
     setVoicePhase('listening');
-    startListening();
-  }, [startListening]);
+    setVoiceTranscript('');
+
+    // Create and connect VoiceClient (no driverId for operator)
+    const client = new VoiceClient({
+      onStateChange: (state: VoiceState) => {
+        if (!voiceModeRef.current) return;
+        if (state === 'listening') setVoicePhase('listening');
+        else if (state === 'thinking') setVoicePhase('processing');
+        else if (state === 'speaking') setVoicePhase('speaking');
+      },
+      onTranscript: (role, text) => {
+        if (!voiceModeRef.current) return;
+        if (role === 'user') {
+          setVoiceTranscript(text);
+        } else {
+          // Assistant transcript — show in voice mode display
+          setVoiceTranscript('');
+        }
+      },
+      onError: (error) => {
+        console.error('[VoiceMode] Error:', error);
+      },
+      onPlaybackComplete: () => {
+        // Playback finished — VoiceClient handles state transition
+      },
+    });
+
+    voiceClientRef.current = client;
+    try {
+      await client.connect();
+    } catch (err) {
+      console.error('[VoiceMode] Connection failed:', err);
+      setVoiceMode(false);
+      voiceModeRef.current = false;
+      voiceClientRef.current = null;
+    }
+  }, []);
 
   const endVoiceMode = useCallback(() => {
     setVoiceMode(false);
     voiceModeRef.current = false;
     setVoicePhase('listening');
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
-    setInterimTranscript('');
+    setVoiceTranscript('');
+
+    // Disconnect VoiceClient
+    if (voiceClientRef.current) {
+      voiceClientRef.current.disconnect();
+      voiceClientRef.current = null;
+    }
+
+    // Stop any text-mode audio
     if (abortRef.current) abortRef.current.abort();
+    if (activeSourceRef.current) {
+      try { activeSourceRef.current.stop(); } catch {}
+      activeSourceRef.current = null;
+    }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
+      audioContextRef.current.suspend().catch(() => {});
     }
   }, []);
 
-  /* ---------- Send Message ---------- */
+  /* ---------- Send Message (text mode — SSE) ---------- */
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || streamingRef.current) return;
 
@@ -290,11 +321,8 @@ export default function AssistantPage() {
     const userMsg: ChatMessage = { id: genId(), role: 'user', parts: [{ type: 'text', content: text }], timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
-    setInterimTranscript('');
     streamingRef.current = true;
     setStreaming(true);
-
-    if (voiceModeRef.current) setVoicePhase('processing');
 
     const assistantId = genId();
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', parts: [], timestamp: new Date() }]);
@@ -342,7 +370,6 @@ export default function AssistantPage() {
             } else if (data.type === 'voice_summary') {
               if (!voiceSpoken) {
                 voiceSpoken = true;
-                if (voiceModeRef.current) setVoicePhase('speaking');
                 speakPromise = speakAsync(data.content);
               }
 
@@ -354,6 +381,14 @@ export default function AssistantPage() {
                 if (m.id !== assistantId) return m;
                 return { ...m, parts: [...m.parts, { type: 'component', toolName: data.toolName, toolResult: data.result }] };
               }));
+
+            } else if (data.type === 'report_ready') {
+              const a = document.createElement('a');
+              a.href = data.url;
+              a.download = data.filename || 'report.pdf';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
             }
           } catch {}
         }
@@ -370,41 +405,28 @@ export default function AssistantPage() {
       setStreaming(false);
       abortRef.current = null;
 
-      // Voice mode: wait for speech to finish, then auto-restart listening
-      if (voiceModeRef.current) {
-        if (speakPromise) {
-          try { await speakPromise; } catch {}
-        }
-        // Small pause before re-listening so it feels natural
-        if (voiceModeRef.current) {
-          await new Promise(r => setTimeout(r, 400));
-          if (voiceModeRef.current) {
-            setVoicePhase('listening');
-            startListening();
-          }
-        }
+      // Text mode TTS: wait for speech to finish
+      if (speakPromise) {
+        try { await speakPromise; } catch {}
       }
     }
-  }, [speakAsync, startListening]);
-
-  // Keep sendMessage ref in sync for recognition callback
-  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
+  }, [speakAsync]);
 
   const hasUserSent = messages.some(m => m.role === 'user');
 
   return (
     <div className="fixed inset-0 flex flex-col bg-[#F5F3EF]">
       {/* Top Bar */}
-      <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#E5E2DC] shrink-0">
+      <header className="flex items-center gap-4 px-6 py-3.5 bg-white border-b border-[#E5E2DC] shrink-0">
         <Link href="/operator" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
-          <Shield className="w-4.5 h-4.5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center shadow-md shadow-amber-500/20">
+          <Shield className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1">
-          <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-            Ava <span className="text-[10px] font-medium text-gray-400">AI Assistant</span>
+          <div className="text-base font-bold text-gray-900 flex items-center gap-2">
+            Ava <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">AI Assistant</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${
@@ -429,8 +451,8 @@ export default function AssistantPage() {
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="max-w-5xl mx-auto space-y-5">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
               <motion.div
@@ -440,25 +462,27 @@ export default function AssistantPage() {
                 transition={{ duration: 0.3 }}
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`${msg.role === 'user' ? 'max-w-[75%]' : 'max-w-full w-full'}`}>
+                <div className={`${msg.role === 'user' ? 'max-w-[80%]' : 'max-w-full w-full'}`}>
                   {msg.parts.map((part, pi) => (
                     <div key={`${msg.id}-${pi}`}>
                       {part.type === 'text' && part.content && (
-                        <div
-                          className={`px-4 py-3 text-sm leading-relaxed ${
-                            msg.role === 'user'
-                              ? 'bg-[#18202F] text-white rounded-2xl rounded-br-sm'
-                              : 'bg-white text-gray-800 border border-[#E5E2DC] rounded-2xl rounded-bl-sm shadow-sm'
-                          } ${pi > 0 ? 'mt-2' : ''}`}
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(part.content) }}
-                        />
+                        msg.role === 'user' ? (
+                          <div className={`px-5 py-3.5 text-[15px] leading-relaxed bg-[#18202F] text-white rounded-2xl rounded-br-sm ${pi > 0 ? 'mt-3' : ''}`}>
+                            {part.content}
+                          </div>
+                        ) : (
+                          <div
+                            className={`px-6 py-5 leading-relaxed bg-white text-gray-800 border border-[#E5E2DC] rounded-2xl rounded-bl-sm shadow-sm ${pi > 0 ? 'mt-3' : ''}`}
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(part.content) }}
+                          />
+                        )
                       )}
                       {part.type === 'component' && part.toolName && (
                         <motion.div
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.3 }}
-                          className={pi > 0 ? 'mt-2' : ''}
+                          className={pi > 0 ? 'mt-3' : ''}
                         >
                           <ComponentRenderer toolName={part.toolName} result={part.toolResult} />
                         </motion.div>
@@ -466,7 +490,7 @@ export default function AssistantPage() {
                     </div>
                   ))}
                   {msg.role === 'assistant' && msg.parts.length === 0 && (
-                    <div className="bg-white text-gray-400 border border-[#E5E2DC] rounded-2xl rounded-bl-sm shadow-sm px-4 py-3 text-sm">
+                    <div className="bg-white text-gray-400 border border-[#E5E2DC] rounded-2xl rounded-bl-sm shadow-sm px-6 py-5 text-[15px]">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#FBAF1A] animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -482,34 +506,25 @@ export default function AssistantPage() {
             ))}
           </AnimatePresence>
 
-          {/* Interim voice transcript */}
-          {interimTranscript && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-end">
-              <div className="px-4 py-3 bg-[#18202F]/60 text-white/70 rounded-2xl rounded-br-sm text-sm italic">
-                {interimTranscript}...
-              </div>
-            </motion.div>
-          )}
-
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Quick Actions */}
       {!hasUserSent && !voiceMode && (
-        <div className="px-4 pb-2 shrink-0">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#FBAF1A]" />
-              <span className="text-xs font-medium text-gray-400">Quick actions</span>
+        <div className="px-6 pb-3 shrink-0">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Sparkles className="w-4 h-4 text-[#FBAF1A]" />
+              <span className="text-sm font-medium text-gray-400">Quick actions</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {quickActions.map((q) => (
                 <button
                   key={q.text}
                   onClick={() => sendMessage(q.text)}
                   disabled={streaming}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#E5E2DC] text-gray-500 bg-white hover:border-[#FBAF1A] hover:text-[#BF7408] hover:bg-[#FFF8EB] transition-all duration-200 disabled:opacity-50"
+                  className="px-4 py-2 rounded-full text-sm font-medium border border-[#E5E2DC] text-gray-500 bg-white hover:border-[#FBAF1A] hover:text-[#BF7408] hover:bg-[#FFF8EB] transition-all duration-200 disabled:opacity-50"
                 >
                   {q.label}
                 </button>
@@ -530,18 +545,18 @@ export default function AssistantPage() {
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="border-t border-white/10 bg-gradient-to-t from-[#0F172A] via-[#1A2332] to-[#1E293B] px-4 py-5 shrink-0"
           >
-            <div className="max-w-3xl mx-auto flex flex-col items-center gap-3">
+            <div className="max-w-5xl mx-auto flex flex-col items-center gap-3">
               {/* Waveform */}
               <VoiceWaveform phase={voicePhase} />
 
-              {/* Interim transcript in voice mode */}
-              {interimTranscript && (
+              {/* Voice transcript */}
+              {voiceTranscript && (
                 <motion.p
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="text-white/50 text-sm italic max-w-md text-center"
                 >
-                  &ldquo;{interimTranscript}...&rdquo;
+                  &ldquo;{voiceTranscript}...&rdquo;
                 </motion.p>
               )}
 
@@ -574,14 +589,14 @@ export default function AssistantPage() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 20, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-t border-[#E5E2DC] bg-white px-4 py-3 shrink-0"
+            className="border-t border-[#E5E2DC] bg-white px-6 py-4 shrink-0"
           >
-            <div className="max-w-3xl mx-auto flex items-center gap-2">
+            <div className="max-w-5xl mx-auto flex items-center gap-3">
               {/* Mic Button — enters voice conversation mode */}
               <button
                 onClick={enterVoiceMode}
                 disabled={streaming}
-                className="w-11 h-11 rounded-xl bg-[#18202F] text-white hover:bg-[#2D3748] flex items-center justify-center transition-all duration-200 shrink-0 disabled:opacity-40"
+                className="w-12 h-12 rounded-xl bg-[#18202F] text-white hover:bg-[#2D3748] flex items-center justify-center transition-all duration-200 shrink-0 disabled:opacity-40"
                 title="Start voice conversation"
               >
                 <Mic className="w-5 h-5" />
@@ -595,7 +610,7 @@ export default function AssistantPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(input); }}
                 placeholder="Ask Ava about your fleet..."
-                className="flex-1 bg-[#FAF9F7] border border-[#E5E2DC] rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#FBAF1A] focus:ring-1 focus:ring-[#FBAF1A]/20 transition-all"
+                className="flex-1 bg-[#FAF9F7] border border-[#E5E2DC] rounded-xl px-5 py-3.5 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#FBAF1A] focus:ring-2 focus:ring-[#FBAF1A]/20 transition-all"
                 disabled={streaming}
               />
 
@@ -603,7 +618,7 @@ export default function AssistantPage() {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={streaming || !input.trim()}
-                className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] text-white flex items-center justify-center hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-200 disabled:opacity-40 disabled:shadow-none shrink-0"
+                className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] text-white flex items-center justify-center hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-200 disabled:opacity-40 disabled:shadow-none shrink-0"
               >
                 <Send className="w-5 h-5" />
               </button>

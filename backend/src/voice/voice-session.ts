@@ -82,6 +82,9 @@ export class VoiceSession {
   private sttConnecting = false;              // True while awaiting STT connection
   private consecutiveEmptySpeech = 0;         // Tracks consecutive speech attempts with no transcript
   private micSuppressedNotified = false;      // True after we've notified client of mic suppression
+  private silenceTimer: ReturnType<typeof setTimeout> | null = null;
+  private silenceNudgeCount = 0;
+  private thinkingTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(callbacks: VoiceSessionCallbacks, driverContext?: DriverVoiceContext) {
     this.sessionId = randomUUID();
@@ -116,6 +119,7 @@ export class VoiceSession {
     this.preWarmSTT();
 
     this.setState("listening");
+    this.startSilenceTimer();
   }
 
   /**
@@ -161,6 +165,10 @@ export class VoiceSession {
     this.audioFrameCount = 0;
     this.audioBuffer = [];
     this.sttConnecting = false;
+
+    // Reset silence tracking
+    this.clearSilenceTimer();
+    this.silenceNudgeCount = 0;
 
     const apiKey = process.env.SMALLEST_API_KEY!;
 
@@ -267,6 +275,8 @@ export class VoiceSession {
         this.callbacks.onMicStatus?.("suppressed");
         this.micSuppressedNotified = true;
       }
+      // Restart silence timer
+      this.startSilenceTimer();
     }
   }
 
@@ -284,6 +294,15 @@ export class VoiceSession {
     const localAbort = new AbortController();
     this.abortController = localAbort;
 
+    // Set thinking timeout guard — auto-recover if stuck
+    this.clearThinkingTimeout();
+    this.thinkingTimeout = setTimeout(() => {
+      if (this.state === "thinking") {
+        console.warn(`[VoiceSession ${this.sessionId}] Thinking timeout (30s) — auto-recovering to listening`);
+        this.transitionToListeningWithPause();
+      }
+    }, 30000);
+
     const apiKey = process.env.SMALLEST_API_KEY;
     if (!apiKey) {
       this.callbacks.onError(new Error("SMALLEST_API_KEY required"));
@@ -291,6 +310,7 @@ export class VoiceSession {
     }
 
     const messages = this.buildMessages();
+    const thinkingStartTime = Date.now();
 
     try {
       console.log(`[VoiceSession ${this.sessionId}] Starting Claude stream with ${messages.length} messages`);
@@ -298,19 +318,45 @@ export class VoiceSession {
       console.log(`[VoiceSession ${this.sessionId}] Claude stream created, processing chunks...`);
 
       let fillerSent = false;
+      let continuationFillerSent = false;
       let fullResponseText = "";
+
+      // Set up continuation filler timer for long processing
+      let continuationTimer: ReturnType<typeof setTimeout> | null = null;
+      let patienceTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const sendContinuationFiller = () => {
+        if (localAbort.signal.aborted || this.state === "speaking") return;
+        const filler = fillerCache.getSmartFiller(undefined, "continuation");
+        if (filler?.audio) {
+          this.callbacks.onFillerAudio(filler.audio, filler.text);
+          continuationFillerSent = true;
+        }
+      };
+
+      const sendPatienceFiller = () => {
+        if (localAbort.signal.aborted || this.state === "speaking") return;
+        const filler = fillerCache.getSmartFiller(undefined, "patience");
+        if (filler?.audio) {
+          this.callbacks.onFillerAudio(filler.audio, filler.text);
+        }
+      };
 
       this.ttsPipeline = new TTSSentencePipeline(
         apiKey,
         {
           onAudioChunk: (audioBuffer, sentenceText) => {
+            // Clear continuation timers once we start speaking
+            if (continuationTimer) { clearTimeout(continuationTimer); continuationTimer = null; }
+            if (patienceTimer) { clearTimeout(patienceTimer); patienceTimer = null; }
+
             if (this.state !== "speaking") this.setState("speaking");
             this.callbacks.onAudioChunk(audioBuffer, sentenceText);
           },
           onDone: () => {
-            this.setState("listening");
-            // Pre-warm STT when TTS finishes (in case the earlier pre-warm expired)
-            this.preWarmSTT();
+            this.clearThinkingTimeout();
+            // Variable post-speech pause (200-500ms) before transitioning to listening
+            this.transitionToListeningWithPause();
           },
           onError: (err) => {
             console.error("[TTS] Error:", err.message);
@@ -328,10 +374,13 @@ export class VoiceSession {
           const textDelta: string = chunk.textDelta ?? "";
           if (!fillerSent) {
             fillerSent = true;
-            const filler = fillerCache.getSmartFiller();
+            const filler = fillerCache.getSmartFiller(undefined, "initial");
             if (filler?.audio) {
               this.callbacks.onFillerAudio(filler.audio, filler.text);
             }
+            // Schedule continuation fillers for long waits
+            continuationTimer = setTimeout(sendContinuationFiller, 3000);
+            patienceTimer = setTimeout(sendPatienceFiller, 6000);
           }
           fullResponseText += textDelta;
           this.ttsPipeline.feedText(textDelta);
@@ -341,10 +390,13 @@ export class VoiceSession {
           const toolName: string = (chunk as any).toolName ?? "";
           if (!fillerSent) {
             fillerSent = true;
-            const filler = fillerCache.getSmartFiller(toolName);
+            const filler = fillerCache.getSmartFiller(toolName, "initial");
             if (filler?.audio) {
               this.callbacks.onFillerAudio(filler.audio, filler.text);
             }
+            // Schedule continuation fillers for long tool calls
+            continuationTimer = setTimeout(sendContinuationFiller, 3000);
+            patienceTimer = setTimeout(sendPatienceFiller, 6000);
           }
         }
 
@@ -361,6 +413,10 @@ export class VoiceSession {
           }
         }
       }
+
+      // Clean up timers
+      if (continuationTimer) clearTimeout(continuationTimer);
+      if (patienceTimer) clearTimeout(patienceTimer);
 
       if (this.ttsPipeline && !localAbort.signal.aborted) {
         this.ttsPipeline.finish();
@@ -385,7 +441,90 @@ export class VoiceSession {
         console.error(`[VoiceSession ${this.sessionId}] Stream error:`, err);
         this.callbacks.onError(err as Error);
       }
-      this.setState("listening");
+      this.clearThinkingTimeout();
+      this.transitionToListeningWithPause();
+    }
+  }
+
+  /**
+   * Transition to listening with a natural pause.
+   * Randomized 200-500ms delay mimics natural breathing gap between turns.
+   */
+  private transitionToListeningWithPause(): void {
+    const pause = 200 + Math.random() * 300;
+    setTimeout(() => {
+      if (this.state !== "idle") {
+        this.setState("listening");
+        // Pre-warm STT after the pause
+        this.preWarmSTT();
+        // Start silence monitoring
+        this.startSilenceTimer();
+      }
+    }, pause);
+  }
+
+  /**
+   * Start silence timer — sends gentle nudges if user is quiet.
+   */
+  private startSilenceTimer(): void {
+    this.clearSilenceTimer();
+
+    // First nudge after 20s of silence
+    this.silenceTimer = setTimeout(() => {
+      if (this.state !== "listening") return;
+      this.silenceNudgeCount++;
+
+      const nudgeText = this.silenceNudgeCount <= 1
+        ? "I'm still here if you need anything."
+        : "Just let me know when you're ready.";
+
+      // Send as a spoken nudge via TTS
+      const apiKey = process.env.SMALLEST_API_KEY;
+      if (apiKey) {
+        this.sendNudgeAudio(apiKey, nudgeText);
+      }
+
+      // Second nudge after another 25s
+      if (this.silenceNudgeCount < 2) {
+        this.silenceTimer = setTimeout(() => {
+          if (this.state !== "listening") return;
+          this.silenceNudgeCount++;
+          const secondNudge = "Just let me know when you're ready.";
+          if (apiKey) {
+            this.sendNudgeAudio(apiKey, secondNudge);
+          }
+        }, 25000);
+      }
+    }, 20000);
+  }
+
+  private async sendNudgeAudio(apiKey: string, text: string): Promise<void> {
+    try {
+      const { synthesizeSpeech } = await import("./tts-synthesize.js");
+      const buffer = await synthesizeSpeech(apiKey, {
+        text,
+        voiceId: "sophia",
+        sampleRate: 24000,
+        speed: 1.0,
+        addWavHeader: true,
+      });
+      this.callbacks.onAudioChunk(buffer, text);
+    } catch (err) {
+      console.error(`[VoiceSession ${this.sessionId}] Nudge TTS failed:`, (err as Error).message);
+    }
+  }
+
+  private clearSilenceTimer(): void {
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+  }
+
+  private clearThinkingTimeout(): void {
+    if (this.thinkingTimeout) {
+      clearTimeout(this.thinkingTimeout);
+      this.thinkingTimeout = null;
     }
   }
 
@@ -401,11 +540,15 @@ export class VoiceSession {
       this.ttsPipeline = null;
     }
 
+    this.clearThinkingTimeout();
     this.setState("listening");
   }
 
   /** End the session and return summary */
   end(): SessionSummary {
+    this.clearSilenceTimer();
+    this.clearThinkingTimeout();
+
     if (this.sttPipeline) {
       this.sttPipeline.flush();
       this.sttPipeline.disconnect();
