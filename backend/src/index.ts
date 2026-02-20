@@ -42,16 +42,36 @@ import { getGamificationState, getPointsHistory, getDriverBadges, getRewardsCata
 import { simulateWhatIf, getDefaultScenarios } from './scoring/what-if-simulator.js';
 import { geotabAce } from './services/geotab-ace.js';
 import { isUsingLiveData } from './data/fleet-data-provider.js';
+import { TwilioDispatchSession, getCallSession, getCallSessionByCallSid } from './services/twilio-dispatch-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+
+// Dual WebSocket: browser voice on /ws, Twilio media streams on /twilio-media
+const browserWss = new WebSocketServer({ noServer: true });
+const twilioWss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname;
+  if (pathname === '/ws') {
+    browserWss.handleUpgrade(request, socket, head, (ws) => {
+      browserWss.emit('connection', ws, request);
+    });
+  } else if (pathname === '/twilio-media') {
+    twilioWss.handleUpgrade(request, socket, head, (ws) => {
+      twilioWss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // --- Health Check ---
@@ -879,6 +899,17 @@ app.get('/api/fleet/data-source', (_req, res) => {
   });
 });
 
+// --- Twilio Call Status Webhook ---
+app.post('/api/twilio/call-status', (req, res) => {
+  const { CallSid, CallStatus } = req.body;
+  console.log(`[Twilio Webhook] CallSid=${CallSid} Status=${CallStatus}`);
+  const session = getCallSessionByCallSid(CallSid);
+  if (session) {
+    session.handleStatusUpdate(CallStatus);
+  }
+  res.sendStatus(200);
+});
+
 // --- Dispatcher Call ---
 app.post('/api/driver/:id/dispatch-call', async (req, res) => {
   try {
@@ -900,10 +931,45 @@ app.post('/api/driver/:id/dispatch-call', async (req, res) => {
   }
 });
 
-// --- WebSocket (for voice) ---
-wss.on('connection', (ws) => {
+// --- Twilio Media Stream WebSocket ---
+twilioWss.on('connection', (ws) => {
+  console.log('[TwilioWS] New Twilio media stream connection');
+  const bufferedMessages: string[] = [];
+  let linked = false;
+
+  ws.on('message', (data) => {
+    const raw = data.toString();
+    if (linked) return; // Once linked, session handles messages directly
+
+    // Buffer messages until we find the callId in a 'start' event
+    bufferedMessages.push(raw);
+
+    try {
+      const msg = JSON.parse(raw);
+      if (msg.event === 'start' && msg.start?.customParameters?.callId) {
+        const callId = msg.start.customParameters.callId;
+        const session = getCallSession(callId);
+        if (session) {
+          console.log(`[TwilioWS] Linked to dispatch session ${callId}`);
+          linked = true;
+          session.handleMediaStream(ws as any, bufferedMessages);
+        } else {
+          console.warn(`[TwilioWS] No session found for callId ${callId}`);
+        }
+      }
+    } catch {}
+  });
+
+  ws.on('close', () => {
+    console.log('[TwilioWS] Connection closed');
+  });
+});
+
+// --- Browser WebSocket (for voice + dispatch calls) ---
+browserWss.on('connection', (ws) => {
   console.log('[WS] Client connected');
   let session: VoiceSession | null = null;
+  let activeDispatchCall: TwilioDispatchSession | null = null;
 
   const sendJson = (msg: Record<string, unknown>) => {
     if (ws.readyState === ws.OPEN) {
@@ -914,8 +980,17 @@ wss.on('connection', (ws) => {
   ws.on('message', async (raw, isBinary) => {
     // Binary data = PCM audio frames from the browser mic
     if (isBinary) {
+      const pcmBuffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
+
+      // If there's an active Twilio dispatch call, forward mic audio to Twilio
+      if (activeDispatchCall && activeDispatchCall.currentState === 'connected') {
+        activeDispatchCall.sendBrowserAudio(pcmBuffer);
+        return;
+      }
+
+      // Otherwise, feed to voice session STT
       if (session) {
-        session.feedAudio(Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer));
+        session.feedAudio(pcmBuffer);
       }
       return;
     }
@@ -977,7 +1052,7 @@ wss.on('connection', (ws) => {
 
         session = new VoiceSession({
           onStateChange: (state) => {
-            sendJson({ type: 'state_change', state });
+            sendJson({ type: 'state_change', state, voiceState: state });
           },
           onTranscript: (role, text) => {
             sendJson({ type: 'transcript', role, text });
@@ -1004,6 +1079,69 @@ wss.on('connection', (ws) => {
           onMicStatus: (status) => {
             sendJson({ type: 'mic_status', status });
           },
+          onDispatchProgress: (event) => {
+            sendJson({
+              type: 'dispatch_progress',
+              eventType: event.type,
+              phase: (event as any).phase,
+              message: (event as any).message,
+              role: (event as any).role,
+              text: (event as any).text,
+              turnNumber: (event as any).turnNumber,
+              outcome: (event as any).outcome,
+              summary: (event as any).summary,
+              details: (event as any).details,
+            });
+          },
+          onDispatchCallRequested: async () => {
+            // Real Twilio call requested by voice session
+            console.log('[WS] Dispatch call requested via Twilio');
+            try {
+              activeDispatchCall = new TwilioDispatchSession({
+                onStateChange: (state) => {
+                  // Map Twilio states to dispatch phases
+                  const phaseMap: Record<string, string> = {
+                    ringing: 'connecting',
+                    connected: 'on_call',
+                    completed: 'complete',
+                    failed: 'error',
+                  };
+                  sendJson({
+                    type: 'dispatch_call_state',
+                    callState: state,
+                    phase: phaseMap[state] || state,
+                    callId: activeDispatchCall?.callId,
+                  });
+                },
+                onPhoneAudio: (wavBuffer) => {
+                  // Send dispatcher's phone audio to browser for playback
+                  sendJson({
+                    type: 'dispatch_audio',
+                    audio: wavBuffer.toString('base64'),
+                  });
+                },
+                onCallEnded: (reason) => {
+                  sendJson({
+                    type: 'dispatch_call_ended',
+                    reason,
+                    callId: activeDispatchCall?.callId,
+                  });
+                  activeDispatchCall = null;
+                },
+              });
+
+              await activeDispatchCall.startCall();
+            } catch (err) {
+              console.error('[WS] Twilio dispatch call failed:', (err as Error).message);
+              sendJson({
+                type: 'dispatch_call_state',
+                callState: 'failed',
+                phase: 'error',
+                error: (err as Error).message,
+              });
+              activeDispatchCall = null;
+            }
+          },
         }, driverContext);
         try {
           await session.startListening();
@@ -1016,10 +1154,78 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      case 'dispatch_call_start': {
+        // Manual dispatch call start from frontend button
+        if (activeDispatchCall) {
+          console.log('[WS] Dispatch call already active');
+          break;
+        }
+        if (!process.env.TWILIO_ACCOUNT_SID) {
+          sendJson({ type: 'error', message: 'Twilio not configured' });
+          break;
+        }
+        try {
+          activeDispatchCall = new TwilioDispatchSession({
+            onStateChange: (state) => {
+              const phaseMap: Record<string, string> = {
+                ringing: 'connecting',
+                connected: 'on_call',
+                completed: 'complete',
+                failed: 'error',
+              };
+              sendJson({
+                type: 'dispatch_call_state',
+                callState: state,
+                phase: phaseMap[state] || state,
+                callId: activeDispatchCall?.callId,
+              });
+            },
+            onPhoneAudio: (wavBuffer) => {
+              sendJson({
+                type: 'dispatch_audio',
+                audio: wavBuffer.toString('base64'),
+              });
+            },
+            onCallEnded: (reason) => {
+              sendJson({
+                type: 'dispatch_call_ended',
+                reason,
+                callId: activeDispatchCall?.callId,
+              });
+              activeDispatchCall = null;
+            },
+          });
+          await activeDispatchCall.startCall();
+        } catch (err) {
+          console.error('[WS] Manual dispatch call failed:', (err as Error).message);
+          sendJson({ type: 'error', message: (err as Error).message });
+          activeDispatchCall = null;
+        }
+        break;
+      }
+
+      case 'dispatch_call_hangup': {
+        if (activeDispatchCall) {
+          activeDispatchCall.hangup();
+          activeDispatchCall = null;
+        }
+        break;
+      }
+
       case 'speech_start': {
         if (session) {
+          const currentState = session.getState();
+          // During dispatch (AI sim), don't interrupt
+          if (currentState === 'dispatching' && !activeDispatchCall) {
+            console.log('[WS] Speech during AI dispatch — ignoring barge-in');
+            break;
+          }
+          // During real Twilio call, don't send speech_start (audio is being forwarded directly)
+          if (activeDispatchCall) {
+            break;
+          }
           // Interrupt any ongoing response (barge-in)
-          if (session.getState() === 'speaking' || session.getState() === 'thinking') {
+          if (currentState === 'speaking' || currentState === 'thinking') {
             session.interrupt();
           }
           await session.onSpeechStart();
@@ -1028,6 +1234,8 @@ wss.on('connection', (ws) => {
       }
 
       case 'speech_end': {
+        // During real Twilio call, don't process speech_end
+        if (activeDispatchCall) break;
         if (session) {
           await session.onSpeechEnd();
         }
@@ -1035,6 +1243,10 @@ wss.on('connection', (ws) => {
       }
 
       case 'end_session': {
+        if (activeDispatchCall) {
+          activeDispatchCall.hangup();
+          activeDispatchCall = null;
+        }
         if (session) {
           const summary = session.end();
           console.log(`[WS] Voice session ended: ${summary.sessionId}`);
@@ -1050,6 +1262,10 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log('[WS] Client disconnected');
+    if (activeDispatchCall) {
+      activeDispatchCall.hangup();
+      activeDispatchCall = null;
+    }
     if (session) {
       session.end();
       session = null;
@@ -1078,6 +1294,7 @@ async function start() {
     console.log(`\n🛡️  FleetShield AI running on http://localhost:${PORT}`);
     console.log(`   Geotab API: ${geotabAuth.isConfigured() ? '✅ Configured' : '⚠️  Using seed data'}`);
     console.log(`   WebSocket:  ws://localhost:${PORT}/ws`);
+    console.log(`   Twilio:     ${process.env.TWILIO_ACCOUNT_SID ? '✅ Configured (real dispatch calls)' : '⚠️  Not configured (AI simulation)'}`);
     console.log('');
   });
 }

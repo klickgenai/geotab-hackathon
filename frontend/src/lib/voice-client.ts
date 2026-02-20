@@ -4,7 +4,21 @@
  * Handles mic capture, VAD, audio playback.
  */
 
-export type VoiceState = 'disconnected' | 'connecting' | 'listening' | 'thinking' | 'speaking';
+export type VoiceState = 'disconnected' | 'connecting' | 'listening' | 'thinking' | 'speaking' | 'dispatching' | 'dispatch_reporting';
+
+export type DispatchPhase = 'connecting' | 'on_call' | 'wrapping_up' | 'complete' | 'error' | 'cancelled';
+
+export interface DispatchProgressEvent {
+  type: 'dispatch_status' | 'dispatch_message' | 'dispatch_outcome';
+  phase?: DispatchPhase;
+  message?: string;
+  role?: 'dispatcher' | 'ava';
+  text?: string;
+  turnNumber?: number;
+  outcome?: string;
+  summary?: string;
+  details?: Record<string, unknown>;
+}
 
 export interface VoiceCallbacks {
   onStateChange: (state: VoiceState) => void;
@@ -12,6 +26,9 @@ export interface VoiceCallbacks {
   onToolResult?: (toolName: string, result: any) => void;
   onError: (error: string) => void;
   onPlaybackComplete?: () => void;
+  onDispatchProgress?: (event: DispatchProgressEvent) => void;
+  onDispatchCallState?: (callState: string, phase: string, callId?: string) => void;
+  onDispatchCallEnded?: (reason: string, callId?: string) => void;
 }
 
 export class VoiceClient {
@@ -65,12 +82,22 @@ export class VoiceClient {
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
       this.processor.onaudioprocess = (e) => {
+        const inputData = e.inputBuffer.getChannelData(0);
+
+        // During active Twilio dispatch call: bypass VAD, stream all audio raw
+        if (this.state === 'dispatching' && this.ws?.readyState === WebSocket.OPEN) {
+          const pcm16 = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            pcm16[i] = Math.max(-32768, Math.min(32767, Math.round(inputData[i] * 32767)));
+          }
+          this.ws.send(pcm16.buffer);
+          return;
+        }
+
         // Only process mic audio when in listening state — prevents echo feedback
         if (this.state !== 'listening') return;
         // Skip during VAD grace period (let echo cancellation settle)
         if (this.vadGracePeriod) return;
-
-        const inputData = e.inputBuffer.getChannelData(0);
 
         // Simple VAD
         let energy = 0;
@@ -205,6 +232,32 @@ export class VoiceClient {
         this.queueAudio(msg.audio);
         this.reconcileState();
         break;
+      case 'dispatch_progress':
+        // Map eventType back to type for the frontend event interface
+        this.callbacks.onDispatchProgress?.({
+          ...msg,
+          type: msg.eventType || msg.type,
+        } as DispatchProgressEvent);
+        break;
+      case 'dispatch_call_state':
+        // Real Twilio call state update
+        this.callbacks.onDispatchCallState?.(msg.callState, msg.phase, msg.callId);
+        // Map Twilio states to voice states for the UI
+        if (msg.phase === 'connecting' || msg.phase === 'on_call') {
+          this.backendState = 'dispatching';
+          this.reconcileState();
+        }
+        break;
+      case 'dispatch_audio':
+        // Dispatcher phone audio — queue for playback
+        this.playbackComplete = false;
+        this.queueAudio(msg.audio);
+        break;
+      case 'dispatch_call_ended':
+        this.callbacks.onDispatchCallEnded?.(msg.reason, msg.callId);
+        this.backendState = 'listening';
+        this.reconcileState();
+        break;
       case 'error':
         this.callbacks.onError(msg.message || 'Voice error');
         break;
@@ -217,6 +270,14 @@ export class VoiceClient {
    */
   private reconcileState() {
     let effectiveState = this.backendState;
+
+    // Dispatch states pass through directly — don't override with playback logic
+    if (this.backendState === 'dispatching' || this.backendState === 'dispatch_reporting') {
+      if (effectiveState !== this.state) {
+        this.setState(effectiveState);
+      }
+      return;
+    }
 
     // If we have audio playing/queued, stay in speaking regardless of backend
     if (!this.playbackComplete && (this.backendState === 'listening' || this.backendState === 'speaking')) {
@@ -331,10 +392,21 @@ export class VoiceClient {
     this.playbackComplete = true;
   }
 
+  /** Send a control message to the backend */
   private sendControl(type: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type }));
     }
+  }
+
+  /** Initiate a real Twilio dispatch call */
+  sendDispatchCallStart() {
+    this.sendControl('dispatch_call_start');
+  }
+
+  /** Hang up the active Twilio dispatch call */
+  sendDispatchHangup() {
+    this.sendControl('dispatch_call_hangup');
   }
 
   private setState(state: VoiceState) {

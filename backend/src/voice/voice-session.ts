@@ -5,8 +5,9 @@ import { TTSSentencePipeline } from "./tts-pipeline.js";
 import { TTSWebSocket, type TTSStreamCallbacks } from "./tts-synthesize.js";
 import { extractActionItem, extractTextActions, type ActionItem } from "./action-extractor.js";
 import { streamAgentResponseWithHistory } from "../agents/fleetshield-agent.js";
+import { createDispatchBridge, removeDispatchBridge, type DispatchEvent } from "./dispatch-bridge.js";
 
-export type SessionState = "idle" | "listening" | "thinking" | "speaking";
+export type SessionState = "idle" | "listening" | "thinking" | "speaking" | "dispatching" | "dispatch_reporting";
 
 export interface DriverVoiceContext {
   firstName: string;
@@ -50,6 +51,8 @@ interface VoiceSessionCallbacks {
   onSessionEnded: (summary: SessionSummary) => void;
   onError: (error: Error) => void;
   onMicStatus?: (status: "suppressed" | "ready") => void;
+  onDispatchProgress?: (event: DispatchEvent) => void;
+  onDispatchCallRequested?: () => void;
 }
 
 export interface SessionSummary {
@@ -92,6 +95,23 @@ export class VoiceSession {
     this.callbacks = callbacks;
     this.driverContext = driverContext;
     this.startedAt = Date.now();
+
+    // Create dispatch bridge for this session and wire progress events
+    const bridge = createDispatchBridge(this.sessionId);
+    bridge.on('dispatch_progress', (event: DispatchEvent) => {
+      // Update session state based on dispatch phase
+      if (event.type === 'dispatch_status') {
+        if (event.phase === 'connecting' || event.phase === 'on_call' || event.phase === 'wrapping_up') {
+          this.setState('dispatching');
+        } else if (event.phase === 'complete') {
+          this.setState('dispatch_reporting');
+        } else if (event.phase === 'error' || event.phase === 'cancelled') {
+          // Will transition to listening after tool result is processed
+        }
+      }
+      // Forward to WebSocket
+      this.callbacks.onDispatchProgress?.(event);
+    });
   }
 
   /** Initialize and set to listening state */
@@ -314,13 +334,14 @@ export class VoiceSession {
     this.abortController = localAbort;
 
     // Set thinking timeout guard — auto-recover if stuck
+    // Use longer timeout (45s) to accommodate dispatch calls which involve multiple AI turns
     this.clearThinkingTimeout();
     this.thinkingTimeout = setTimeout(() => {
-      if (this.state === "thinking") {
-        console.warn(`[VoiceSession ${this.sessionId}] Thinking timeout (30s) — auto-recovering to listening`);
+      if (this.state === "thinking" || this.state === "dispatching") {
+        console.warn(`[VoiceSession ${this.sessionId}] Thinking timeout (45s) — auto-recovering to listening`);
         this.transitionToListeningWithPause();
       }
-    }, 30000);
+    }, 45000);
 
     const apiKey = process.env.SMALLEST_API_KEY;
     if (!apiKey) {
@@ -343,6 +364,7 @@ export class VoiceSession {
       let voiceBuffer = "";
       let voiceExtracted = false;  // True once <voice> content has been sent to TTS
       let streamingDetailDirectly = false; // True once past voice tag, streaming detail text
+      let noVoiceTagFallback = false; // True when no <voice> tag found — keep feeding ALL text to TTS
 
       // Set up continuation filler timer for long processing
       let continuationTimer: ReturnType<typeof setTimeout> | null = null;
@@ -409,7 +431,11 @@ export class VoiceSession {
 
           // Parse <voice> tags: only send voice content to TTS
           if (streamingDetailDirectly) {
-            // Past the voice tag — don't feed detail text to TTS
+            // In fallback mode (no voice tags), keep feeding ALL text to TTS
+            if (noVoiceTagFallback && this.ttsPipeline) {
+              this.ttsPipeline.feedText(textDelta);
+            }
+            // Otherwise: past the voice tag — don't feed detail text to TTS
           } else {
             voiceBuffer += textDelta;
 
@@ -434,7 +460,7 @@ export class VoiceSession {
               this.ttsPipeline.feedText(voiceBuffer);
               voiceBuffer = "";
               streamingDetailDirectly = true;
-              // In fallback mode, continue feeding text to TTS
+              noVoiceTagFallback = true; // Keep feeding all remaining text to TTS
             }
           }
         }
@@ -449,6 +475,15 @@ export class VoiceSession {
             }
             continuationTimer = setTimeout(sendContinuationFiller, 3000);
             patienceTimer = setTimeout(sendPatienceFiller, 6000);
+          }
+
+          // Dispatch call handling: Ava contacts Mike autonomously via AI delegation
+          if (toolName === "initiateDispatcherCall") {
+            const args = (chunk as any).args;
+            if (args && typeof args === "object") {
+              // Inject sessionId so dispatch progress streams to the driver's UI
+              args.sessionId = this.sessionId;
+            }
           }
         }
 
@@ -600,6 +635,12 @@ export class VoiceSession {
 
   /** Interrupt current response — user started speaking again */
   interrupt(): void {
+    // During dispatch, don't interrupt — the AI-to-AI call is running
+    if (this.state === "dispatching") {
+      console.log(`[VoiceSession ${this.sessionId}] Speech during dispatch — not interrupting (queued for after)`);
+      return;
+    }
+
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -618,6 +659,9 @@ export class VoiceSession {
   end(): SessionSummary {
     this.clearSilenceTimer();
     this.clearThinkingTimeout();
+
+    // Clean up dispatch bridge
+    removeDispatchBridge(this.sessionId);
 
     if (this.sttPipeline) {
       this.sttPipeline.flush();
@@ -706,6 +750,9 @@ Driver profile:
 ${loadInfo}
 
 ${tone}
+
+DISPATCH DELEGATION:
+You handle ALL dispatch communication on the driver's behalf. The driver NEVER talks to dispatch directly — you do. When the driver needs dispatch help (load questions, delivery extensions, ETA changes, mechanical issues, schedule changes, route questions), use the initiateDispatcherCall tool. Be PROACTIVE: if the driver mentions a problem that clearly needs dispatch involvement, contact Mike without being asked. Before calling, say something brief like "Let me check with Mike at dispatch for you." After the call completes, summarize the outcome naturally — for example: "Good news — I checked with Mike and he confirmed your delivery extension to 6 PM. The receiver has been notified." Never say "I simulated" or "I generated a call" — you genuinely contacted dispatch. If the driver asks "what did dispatch say?", reference the conversation details from the tool result.
 
 IMPORTANT: You are speaking out loud via voice. Do NOT use markdown formatting — no headers, bold, bullets, numbered lists, or code blocks. Speak naturally in conversational sentences. Keep responses concise (2-4 sentences unless asked for detail). Address the driver by their first name.`,
       });

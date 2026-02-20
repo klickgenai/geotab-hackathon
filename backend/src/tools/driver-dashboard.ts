@@ -15,7 +15,8 @@ import {
   getDriverMessages,
   type LoadAssignment,
 } from '../data/driver-session.js';
-import { simulateDispatcherCall } from '../data/dispatcher-ai.js';
+import { runDispatcherDelegation } from '../data/dispatcher-ai.js';
+import { makeDispatchProgressCallbacks } from '../voice/dispatch-bridge.js';
 import { seedDrivers } from '../data/seed-data.js';
 
 export const getDriverDashboard = tool({
@@ -117,7 +118,7 @@ export const getLoadUpdates = tool({
 
 export const initiateDispatcherCall = tool({
   description:
-    'Simulate calling fleet dispatch. The driver speaks with dispatcher "Mike" about their load, ETA, issues, or other topics. Use when a driver says "call dispatch", "talk to dispatch", "I need to report an issue", or wants to discuss something with dispatch.',
+    'Contact dispatcher "Mike" on behalf of the driver to get information, resolve issues, or handle requests that require dispatch coordination. Ava calls Mike autonomously — the driver does NOT talk directly. Use when a driver needs dispatch help: load questions, delivery extensions, schedule changes, mechanical issues, route changes, ETA updates, or anything requiring dispatcher input. Also use when the driver says "ask dispatch", "check with dispatch", "call dispatch", or "talk to Mike".',
   parameters: z.object({
     driverId: z
       .string()
@@ -129,9 +130,17 @@ export const initiateDispatcherCall = tool({
       .describe('Search by driver name (partial match).'),
     intent: z
       .string()
-      .describe('What the driver wants to discuss with dispatch (e.g., "I\'m running 30 minutes late", "need load details", "mechanical issue with brakes").'),
+      .describe('What Ava needs to discuss with dispatch on the driver\'s behalf (e.g., "driver is running 30 minutes late and needs delivery extension", "driver needs next load assignment", "driver reporting brake issue on vehicle").'),
+    conversationContext: z
+      .string()
+      .optional()
+      .describe('Additional context from the conversation with the driver, if relevant.'),
+    sessionId: z
+      .string()
+      .optional()
+      .describe('Voice session ID for streaming dispatch progress to the driver UI.'),
   }),
-  execute: async ({ driverId, driverName, intent }) => {
+  execute: async ({ driverId, driverName, intent, conversationContext, sessionId }) => {
     const resolvedId = resolveDriverId(driverId, driverName);
     if (!resolvedId) return { error: 'Driver not found.' };
 
@@ -140,10 +149,21 @@ export const initiateDispatcherCall = tool({
 
     const load = getDriverLoad(resolvedId);
 
-    const result = await simulateDispatcherCall(resolvedId, intent, {
-      currentLoad: load,
-      driverName: driver.name,
-    });
+    // Create progress callbacks — streams to UI if sessionId is available
+    const callbacks = sessionId
+      ? makeDispatchProgressCallbacks(sessionId)
+      : { onStatus: () => {}, onMessage: () => {}, onOutcome: () => {} };
+
+    const result = await runDispatcherDelegation(
+      resolvedId,
+      intent,
+      {
+        currentLoad: load,
+        driverName: driver.name,
+        driverContext: conversationContext,
+      },
+      callbacks,
+    );
 
     return {
       callId: result.callId,
@@ -153,6 +173,7 @@ export const initiateDispatcherCall = tool({
       summary: result.summary,
       conversation: result.messages,
       details: result.details,
+      cancelled: result.cancelled || false,
     };
   },
 });

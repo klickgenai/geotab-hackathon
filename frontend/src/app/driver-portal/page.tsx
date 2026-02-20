@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
-import { VoiceClient, type VoiceState } from '@/lib/voice-client';
+import { VoiceClient, type VoiceState, type DispatchProgressEvent, type DispatchPhase } from '@/lib/voice-client';
 import type {
   DriverSession, DriverRanking, GamificationState, PreShiftBriefing, ActionItem,
 } from '@/types/fleet';
@@ -124,10 +124,12 @@ export default function DriverPortalPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatStreaming, setChatStreaming] = useState(false);
 
-  // Dispatch call
+  // Dispatch call (real-time via voice or manual)
   const [dispatchCallActive, setDispatchCallActive] = useState(false);
   const [dispatchMessages, setDispatchMessages] = useState<{ role: string; text: string }[]>([]);
   const [dispatchSummary, setDispatchSummary] = useState('');
+  const [dispatchPhase, setDispatchPhase] = useState<DispatchPhase | null>(null);
+
 
   // Badge detail modal
   const [selectedBadge, setSelectedBadge] = useState<GamificationState['badges'][0] | null>(null);
@@ -135,6 +137,7 @@ export default function DriverPortalPage() {
   const transcriptsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcripts]);
+
 
   const login = async () => {
     if (!employeeNumber.trim() || !pinInput.trim()) return;
@@ -195,6 +198,25 @@ export default function DriverPortalPage() {
         });
       },
       onError: (err) => console.error('[Voice]', err),
+      onDispatchProgress: (event: DispatchProgressEvent) => {
+        if (event.type === 'dispatch_status' && event.phase) {
+          setDispatchPhase(event.phase);
+          if (event.phase === 'connecting' || event.phase === 'on_call') {
+            setDispatchCallActive(true);
+            if (event.phase === 'connecting') {
+              setDispatchMessages([]);
+              setDispatchSummary('');
+            }
+          }
+        }
+        if (event.type === 'dispatch_message' && event.role && event.text) {
+          setDispatchMessages((prev) => [...prev, { role: event.role!, text: event.text! }]);
+        }
+        if (event.type === 'dispatch_outcome' && event.summary) {
+          setDispatchSummary(event.summary);
+          setTimeout(() => { setDispatchPhase(null); }, 5000);
+        }
+      },
     }, session?.driverId);
 
     voiceClientRef.current = client;
@@ -265,7 +287,7 @@ export default function DriverPortalPage() {
   const quickActions = [
     { label: "What's my score?", action: () => sendChat("What's my safety score and how am I doing?") },
     { label: 'Load update', action: () => sendChat('Give me details about my current load assignment') },
-    { label: 'Call Dispatch', action: () => callDispatch('I need to check in about my current load status') },
+    { label: 'Ask dispatch', action: () => sendChat('Can you check with dispatch about my current load status?') },
     { label: 'How am I doing?', action: () => sendChat('How is my driving performance this week? Any tips?') },
     { label: 'Pre-shift briefing', action: () => sendChat('Give me my pre-shift safety briefing') },
     { label: 'Safety coaching', action: () => sendChat('Give me safety coaching tips') },
@@ -340,426 +362,154 @@ export default function DriverPortalPage() {
     );
   }
 
-  // --- DASHBOARD ---
+  // --- DASHBOARD (Voice-Dominant Layout) ---
   return (
-    <div className="min-h-screen bg-[#0F1520] text-white">
+    <div className="h-screen bg-[#0F1520] text-white flex flex-col overflow-hidden">
       {/* ===== TOP BAR ===== */}
-      <div className="bg-[#18202F] border-b border-white/10 px-6 py-3 flex items-center justify-between">
-        {/* Left: Driver info */}
+      <div className="bg-[#18202F] border-b border-white/10 px-6 py-2.5 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
-            <Shield className="w-4.5 h-4.5 text-white" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
+            <Shield className="w-4 h-4 text-white" />
           </div>
           <div>
             <div className="font-semibold text-sm">{session.driverName}</div>
             <div className="text-gray-400 text-xs">#{session.employeeNumber} &middot; {session.vehicleName}</div>
           </div>
         </div>
-
-        {/* Center: Level Badge */}
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${levelColor(level)} flex items-center justify-center text-white font-bold text-sm shadow-lg`}>
+          <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${levelColor(level)} flex items-center justify-center text-white font-bold text-xs shadow-lg`}>
             {level}
           </div>
-          <div className="text-center">
-            <div className="text-sm font-semibold text-white">{levelTitle}</div>
-            <div className="text-xs text-gray-500">Level {level}</div>
-          </div>
+          <span className="text-sm font-medium text-white">{levelTitle}</span>
         </div>
-
-        {/* Right: Points, Streak, Logout */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <Star className="w-4 h-4 text-[#FBAF1A]" />
-            <motion.span
-              key={totalPoints}
-              className="text-sm font-bold text-[#FBAF1A]"
-              initial={{ scale: 1.3 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400 }}
-            >
-              {totalPoints.toLocaleString()}
-            </motion.span>
-            <span className="text-xs text-gray-500">pts</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <Star className="w-3.5 h-3.5 text-[#FBAF1A]" />
+            <span className="text-sm font-bold text-[#FBAF1A]">{totalPoints.toLocaleString()}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-orange-400" />
-            <span className="text-sm font-bold text-orange-400">{currentStreak}</span>
-            <span className="text-xs text-gray-500">days</span>
+          <div className="flex items-center gap-1">
+            <Flame className="w-3.5 h-3.5 text-orange-400" />
+            <span className="text-sm font-bold text-orange-400">{currentStreak}d</span>
           </div>
           {streakMultiplier > 1 && (
-            <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold">
-              x{streakMultiplier.toFixed(1)}
-            </span>
+            <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px] font-bold">x{streakMultiplier.toFixed(1)}</span>
           )}
-          <button onClick={logout} className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors ml-2">
-            <LogOut className="w-4 h-4" />
-            Sign Out
+          <button onClick={logout} className="flex items-center gap-1 text-gray-400 hover:text-white text-xs transition-colors ml-1">
+            <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-5 space-y-5">
+      {/* ===== MAIN: Voice Hero (8col) + Info Stack (4col) ===== */}
+      <div className="flex-1 grid grid-cols-12 gap-4 p-4 min-h-0">
 
-        {/* ===== ROW 1: Safety Score + Level | Today's Briefing ===== */}
-        <div className="grid grid-cols-12 gap-5">
-          {/* Safety Score + Level Progress */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0 }}
-            className="col-span-5 bg-[#18202F] rounded-2xl border border-white/10 p-6 flex flex-col items-center"
-          >
-            <ScoreGauge score={session.safetyScore} size={150} />
-
-            {/* Level Progress Bar */}
-            <div className="w-full mt-5">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-medium text-gray-400">Level {level}: {levelTitle}</span>
-                <span className="text-xs text-gray-500">{pointsToNext} pts to next level</span>
+        {/* ─── VOICE AI HERO (8 columns) ─── */}
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          className="col-span-8 bg-[#18202F] rounded-2xl border border-white/10 flex flex-col min-h-0"
+        >
+          {/* Voice header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-white" />
               </div>
-              <div className="w-full h-2.5 rounded-full bg-[#0F1520] overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-[#FBAF1A] to-[#BF7408]"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${levelProgress}%` }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
-                />
-              </div>
+              <span className="text-sm font-semibold">Ava</span>
+              <div className={`w-2.5 h-2.5 rounded-full ${
+                voiceState === 'listening' ? 'bg-emerald-400 animate-pulse' :
+                voiceState === 'thinking' ? 'bg-amber-400 animate-pulse' :
+                voiceState === 'speaking' ? 'bg-blue-400 animate-pulse' :
+                voiceState === 'dispatching' ? 'bg-[#FBAF1A] animate-pulse' :
+                voiceState === 'dispatch_reporting' ? 'bg-blue-400 animate-pulse' :
+                'bg-gray-500'
+              }`} />
+              <span className="text-xs text-gray-500 capitalize">
+                {voiceState === 'dispatching' ? 'Ava is checking with dispatch' :
+                 voiceState === 'dispatch_reporting' ? 'Ava is reporting back' :
+                 voiceState}
+              </span>
             </div>
+            {voiceState !== 'disconnected' && (
+              <button
+                onClick={toggleVoice}
+                className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors group"
+                title="End voice session"
+              >
+                <X className="w-4 h-4 text-red-400 group-hover:text-red-300" />
+              </button>
+            )}
+          </div>
 
-            {/* Points + Streak + Rank */}
-            <div className="flex items-center gap-6 mt-5 w-full justify-center">
-              <div className="text-center">
-                <motion.div
-                  className="flex items-center gap-1 justify-center"
-                  initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  transition={{ delay: 0.4, type: 'spring' }}
-                >
-                  <Star className="w-4 h-4 text-[#FBAF1A]" />
-                  <span className="text-lg font-bold text-[#FBAF1A]">{totalPoints.toLocaleString()}</span>
-                </motion.div>
-                <div className="text-xs text-gray-500 uppercase">Total Points</div>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center gap-1 justify-center">
-                  <Flame className="w-4 h-4 text-orange-400" />
-                  <span className="text-lg font-bold">{currentStreak}</span>
-                </div>
-                <div className="text-xs text-gray-500 uppercase">Day Streak</div>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center gap-1 justify-center">
-                  <Trophy className="w-4 h-4 text-amber-400" />
-                  <span className="text-lg font-bold">#{session.weeklyRank}</span>
-                </div>
-                <div className="text-xs text-gray-500 uppercase">Weekly Rank</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-emerald-400">{session.todayEvents}</div>
-                <div className="text-xs text-gray-500 uppercase">Events Today</div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Today's Briefing */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.05 }}
-            className="col-span-7 bg-[#18202F] rounded-2xl border border-white/10 p-5 flex flex-col"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-[#FBAF1A]" />
-                <span className="text-sm font-semibold">Today&apos;s Briefing</span>
-              </div>
-              {briefing && (
-                <div className="flex items-center gap-2">
-                  <div className={`w-2.5 h-2.5 rounded-full ${riskDotColor(briefing.riskLevel)}`} />
-                  <span className={`text-xs font-semibold uppercase ${riskTextColor(briefing.riskLevel)}`}>
-                    {briefing.riskLevel} Risk
-                  </span>
+          {/* Animated orb + transcript area */}
+          <div className="flex-1 flex flex-col items-center min-h-0 overflow-hidden">
+            {/* Orb area */}
+            <div className="flex-shrink-0 py-6 flex flex-col items-center">
+              {voiceState === 'disconnected' ? (
+                <button onClick={toggleVoice} className="group relative">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FBAF1A]/20 to-[#BF7408]/10 border-2 border-[#FBAF1A]/30 flex items-center justify-center transition-all group-hover:border-[#FBAF1A] group-hover:scale-105">
+                    <Mic className="w-10 h-10 text-[#FBAF1A]/60 group-hover:text-[#FBAF1A] transition-colors" />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-3 text-center">Tap to start</div>
+                </button>
+              ) : (
+                <div className="relative w-24 h-24">
+                  {/* Outer pulse ring */}
+                  {(voiceState === 'listening' || voiceState === 'dispatching') && (
+                    <motion.div
+                      className={`absolute inset-0 rounded-full border-2 ${voiceState === 'dispatching' ? 'border-[#FBAF1A]/40' : 'border-emerald-400/40'}`}
+                      animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  )}
+                  {/* Main orb */}
+                  <motion.div
+                    className={`w-24 h-24 rounded-full flex items-center justify-center ${
+                      voiceState === 'listening' ? 'bg-emerald-500/20 border-2 border-emerald-400/50' :
+                      voiceState === 'thinking' ? 'bg-amber-500/20 border-2 border-amber-400/50' :
+                      voiceState === 'speaking' ? 'bg-blue-500/20 border-2 border-blue-400/50' :
+                      voiceState === 'dispatching' ? 'bg-[#FBAF1A]/20 border-2 border-[#FBAF1A]/50' :
+                      'bg-gray-500/20 border-2 border-gray-400/50'
+                    }`}
+                    animate={
+                      voiceState === 'thinking' ? { rotate: 360 } :
+                      voiceState === 'speaking' ? { scale: [1, 1.05, 1] } :
+                      {}
+                    }
+                    transition={
+                      voiceState === 'thinking' ? { duration: 2, repeat: Infinity, ease: 'linear' } :
+                      voiceState === 'speaking' ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' } :
+                      {}
+                    }
+                  >
+                    {voiceState === 'thinking' ? (
+                      <Loader2 className="w-10 h-10 text-amber-400 animate-spin" />
+                    ) : voiceState === 'dispatching' ? (
+                      <MessageCircle className="w-10 h-10 text-[#FBAF1A]" />
+                    ) : voiceState === 'speaking' ? (
+                      <MessageCircle className="w-10 h-10 text-blue-400" />
+                    ) : (
+                      <Mic className="w-10 h-10 text-emerald-400" />
+                    )}
+                  </motion.div>
                 </div>
               )}
             </div>
 
-            {briefing ? (
-              <div className="flex-1 space-y-3 overflow-y-auto">
-                {/* Greeting */}
-                <p className="text-sm text-gray-300">{briefing.greeting}</p>
-
-                {/* Focus Areas */}
-                {briefing.focusAreas.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-gray-400 uppercase mb-1.5">Focus Areas</div>
-                    <div className="space-y-1">
-                      {briefing.focusAreas.map((area, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <CircleDot className="w-3 h-3 text-[#FBAF1A] mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-300">{area}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Weather + Route */}
-                <div className="flex gap-3">
-                  {/* Weather */}
-                  <div className="flex-1 bg-[#0F1520] rounded-xl p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <WeatherIcon condition={briefing.weather.condition} />
-                      <span className="text-sm font-medium text-white">{briefing.weather.temp}&deg;F</span>
-                    </div>
-                    <div className="text-xs text-gray-400 capitalize">{briefing.weather.condition}</div>
-                    {briefing.weather.advisory && (
-                      <div className="text-xs text-amber-400 mt-1">{briefing.weather.advisory}</div>
-                    )}
-                  </div>
-
-                  {/* Route Hazards */}
-                  {briefing.routeHazards.length > 0 && (
-                    <div className="flex-1 bg-[#0F1520] rounded-xl p-3">
-                      <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Route Alerts</div>
-                      {briefing.routeHazards.slice(0, 3).map((h, i) => (
-                        <div key={i} className="text-xs text-gray-300 flex items-start gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5" />
-                          {h}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            {/* Scrollable transcript */}
+            <div className="flex-1 w-full overflow-y-auto px-5 pb-2 space-y-2 min-h-0">
+              {transcripts.length === 0 && voiceState !== 'disconnected' && (
+                <div className="text-center py-4 text-gray-600 text-sm">
+                  Listening... say something to Ava
                 </div>
-
-                {/* Motivational + Streak */}
-                <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-xl p-3">
-                  <p className="text-sm text-emerald-300 italic">&ldquo;{briefing.motivational}&rdquo;</p>
-                  <p className="text-xs text-gray-500 mt-1">{briefing.streakStatus}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Loading briefing...
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* ===== ROW 2: Daily Challenge | Current Load ===== */}
-        <div className="grid grid-cols-12 gap-5">
-          {/* Daily Challenge */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="col-span-5 bg-[#18202F] rounded-2xl border border-white/10 p-5"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Zap className="w-4 h-4 text-[#FBAF1A]" />
-              <span className="text-sm font-semibold">Daily Challenge</span>
-            </div>
-
-            {dailyChallenge ? (
-              <div className={`rounded-xl p-4 border ${dailyChallenge.completed ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-[#0F1520] border-white/5'}`}>
-                <div className="flex items-start gap-3">
-                  <div className="text-2xl">{dailyChallenge.icon}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{dailyChallenge.name}</span>
-                      {dailyChallenge.completed && (
-                        <CheckCircle className="w-4 h-4 text-emerald-400" />
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{dailyChallenge.description}</p>
-
-                    {/* Progress bar */}
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500">
-                          {dailyChallenge.completed ? 'Completed!' : `${dailyChallenge.current}/${dailyChallenge.target}`}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#FBAF1A]/20 text-[#FBAF1A]">
-                          +{dailyChallenge.pointsReward} pts
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-[#18202F] overflow-hidden">
-                        <motion.div
-                          className={`h-full rounded-full ${dailyChallenge.completed ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#FBAF1A] to-[#BF7408]'}`}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.round(dailyChallenge.progress * 100)}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
-                        />
-                      </div>
-                    </div>
-
-                    {!dailyChallenge.completed && (
-                      <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                        <Clock className="w-3 h-3" />
-                        Expires {new Date(dailyChallenge.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-24 text-gray-600 text-sm">
-                <Target className="w-4 h-4 mr-2 opacity-30" />
-                No active challenge
-              </div>
-            )}
-          </motion.div>
-
-          {/* Current Load (kept exactly) */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="col-span-7 bg-[#18202F] rounded-2xl border border-white/10 p-5"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Package className="w-4 h-4 text-[#FBAF1A]" />
-              <span className="text-sm font-semibold">Current Load</span>
-            </div>
-            {session.currentLoad ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-300">{session.currentLoad.id}</span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#FBAF1A]/20 text-[#FBAF1A] capitalize">
-                      {session.currentLoad.status.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-500">{session.currentLoad.commodity} &middot; {session.currentLoad.weight.toLocaleString()} lbs</span>
-                </div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 bg-[#0F1520] rounded-xl p-3">
-                    <div className="text-xs text-gray-500 uppercase">Pickup</div>
-                    <div className="text-sm font-medium">{session.currentLoad.origin.city}, {session.currentLoad.origin.state}</div>
-                    <div className="text-xs text-gray-500">{new Date(session.currentLoad.pickupTime).toLocaleTimeString()}</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                  <div className="flex-1 bg-[#0F1520] rounded-xl p-3">
-                    <div className="text-xs text-gray-500 uppercase">Delivery</div>
-                    <div className="text-sm font-medium">{session.currentLoad.destination.city}, {session.currentLoad.destination.state}</div>
-                    <div className="text-xs text-gray-500">{new Date(session.currentLoad.deliveryTime).toLocaleTimeString()}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {['at_pickup', 'loaded', 'in_transit', 'at_delivery', 'delivered'].map((status) => (
-                    <button key={status}
-                      onClick={async () => {
-                        await api.updateLoadStatus(session.driverId, status);
-                        const sess = await api.driverDashboard(session.driverId);
-                        setSession(sess);
-                      }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                        session.currentLoad?.status === status
-                          ? 'bg-[#FBAF1A] text-[#18202F]'
-                          : 'bg-[#0F1520] text-gray-400 hover:bg-[#FBAF1A]/20 hover:text-white'
-                      }`}>
-                      {status.replace(/_/g, ' ')}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-24 text-gray-500">
-                <Package className="w-5 h-5 mr-2 opacity-30" />
-                <span className="text-sm">No active load assigned</span>
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* ===== ROW 3: Badges | Voice AI ===== */}
-        <div className="grid grid-cols-12 gap-5">
-          {/* Badges Grid */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="col-span-5 bg-[#18202F] rounded-2xl border border-white/10 p-5"
-            style={{ minHeight: 380 }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Award className="w-4 h-4 text-emerald-400" />
-              <span className="text-sm font-semibold">Badges</span>
-              <span className="ml-auto text-xs text-gray-500">
-                {badges.filter(b => b.earned).length}/{badges.length} earned
-              </span>
-            </div>
-            <div className="grid grid-cols-4 gap-2.5">
-              {badges.map((badge, i) => (
-                <motion.button
-                  key={badge.id}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.3 + i * 0.04, type: 'spring', stiffness: 300 }}
-                  onClick={() => setSelectedBadge(badge)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all cursor-pointer ${
-                    badge.earned
-                      ? 'bg-[#0F1520] border border-[#FBAF1A]/30 hover:border-[#FBAF1A]/60 shadow-sm shadow-[#FBAF1A]/10'
-                      : 'bg-[#0F1520]/50 border border-white/5 hover:border-white/15 opacity-60'
-                  }`}
-                >
-                  <span className={`text-2xl ${badge.earned ? '' : 'grayscale'}`}>{badge.icon}</span>
-                  <span className={`text-[10px] font-medium truncate w-full text-center ${badge.earned ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {badge.name}
-                  </span>
-                  {!badge.earned && badge.progress > 0 && (
-                    <div className="w-full h-1 rounded-full bg-[#18202F] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gray-500"
-                        style={{ width: `${Math.round(badge.progress * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                  {badge.earned && (
-                    <Check className="w-3 h-3 text-emerald-400" />
-                  )}
-                </motion.button>
-              ))}
-            </div>
-
-            {badges.length === 0 && (
-              <div className="flex items-center justify-center h-40 text-gray-600 text-sm">
-                <Award className="w-5 h-5 mr-2 opacity-30" />
-                Badges loading...
-              </div>
-            )}
-          </motion.div>
-
-          {/* Voice AI Panel (kept exactly with new quick actions) */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.25 }}
-            className="col-span-7 bg-[#18202F] rounded-2xl border border-white/10 flex flex-col"
-            style={{ height: 420 }}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] flex items-center justify-center">
-                  <Shield className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-sm font-semibold">Ava</span>
-                <div className={`w-2 h-2 rounded-full ${
-                  voiceState === 'listening' ? 'bg-emerald-400 animate-pulse' :
-                  voiceState === 'thinking' ? 'bg-amber-400 animate-pulse' :
-                  voiceState === 'speaking' ? 'bg-blue-400 animate-pulse' :
-                  'bg-gray-500'
-                }`} />
-                <span className="text-xs text-gray-500 capitalize">{voiceState}</span>
-              </div>
-            </div>
-
-            {/* Transcripts */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-              {transcripts.length === 0 && (
-                <div className="text-center py-8 text-gray-600 text-sm">
-                  <Mic className="w-6 h-6 mx-auto mb-2 opacity-30" />
-                  Tap the mic or type to talk with Ava
+              )}
+              {transcripts.length === 0 && voiceState === 'disconnected' && (
+                <div className="text-center py-2 text-gray-600 text-xs">
+                  Start voice mode or type a message below
                 </div>
               )}
               {transcripts.map((t, i) => (
                 <div key={i} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+                  <div className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
                     t.role === 'user'
                       ? 'bg-[#FBAF1A] text-[#18202F] rounded-br-sm'
                       : 'bg-[#0F1520] text-gray-300 border border-white/5 rounded-bl-sm'
@@ -770,257 +520,236 @@ export default function DriverPortalPage() {
               ))}
               <div ref={transcriptsEndRef} />
             </div>
+          </div>
 
-            {/* Quick Actions */}
-            {transcripts.length === 0 && (
-              <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-                {quickActions.map((q) => (
-                  <button key={q.label} onClick={q.action}
-                    className="px-2.5 py-1 rounded-full text-xs font-medium border border-white/10 text-gray-400 hover:border-[#FBAF1A]/50 hover:text-[#FBAF1A] transition-all">
-                    {q.label}
-                  </button>
-                ))}
+          {/* Quick actions (when empty) */}
+          {transcripts.length === 0 && (
+            <div className="flex flex-wrap gap-1.5 px-5 pb-2 flex-shrink-0">
+              {quickActions.map((q) => (
+                <button key={q.label} onClick={q.action}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium border border-white/10 text-gray-400 hover:border-[#FBAF1A]/50 hover:text-[#FBAF1A] transition-all">
+                  {q.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input bar */}
+          <div className="flex items-center gap-2 px-4 py-3 border-t border-white/10 flex-shrink-0">
+            <button onClick={toggleVoice}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all flex-shrink-0 ${
+                voiceState !== 'disconnected'
+                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
+                  : 'bg-gradient-to-br from-[#FBAF1A] to-[#BF7408] text-white shadow-lg shadow-[#FBAF1A]/30 hover:shadow-[#FBAF1A]/50'
+              }`}>
+              {voiceState !== 'disconnected' ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+            <input
+              type="text" value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') sendChat(chatInput); }}
+              placeholder="Ask Ava..."
+              className="flex-1 bg-[#0F1520] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none focus:border-[#FBAF1A]"
+              disabled={chatStreaming}
+            />
+            <button onClick={() => sendChat(chatInput)} disabled={chatStreaming || !chatInput.trim()}
+              className="w-12 h-12 rounded-2xl bg-[#FBAF1A] text-[#18202F] flex items-center justify-center disabled:opacity-40 flex-shrink-0">
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
+
+        {/* ─── INFO STACK (4 columns) ─── */}
+        <div className="col-span-4 flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
+          {/* Safety Score Card */}
+          <motion.div
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.05 }}
+            className="bg-[#18202F] rounded-2xl border border-white/10 p-4 flex items-center gap-4 flex-shrink-0"
+          >
+            <ScoreGauge score={session.safetyScore} size={80} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-center">
+                  <div className="flex items-center gap-0.5"><Flame className="w-3 h-3 text-orange-400" /><span className="text-sm font-bold">{currentStreak}</span></div>
+                  <div className="text-[10px] text-gray-500">Streak</div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center gap-0.5"><Trophy className="w-3 h-3 text-amber-400" /><span className="text-sm font-bold">#{session.weeklyRank}</span></div>
+                  <div className="text-[10px] text-gray-500">Rank</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-bold text-emerald-400">{session.todayEvents}</div>
+                  <div className="text-[10px] text-gray-500">Events</div>
+                </div>
               </div>
-            )}
-
-            {/* Input Bar */}
-            <div className="flex items-center gap-1.5 px-3 py-2.5 border-t border-white/10">
-              <button onClick={toggleVoice}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  voiceState !== 'disconnected'
-                    ? 'bg-red-500 text-white animate-pulse'
-                    : 'bg-[#0F1520] border border-white/10 text-gray-400 hover:border-[#FBAF1A] hover:text-[#FBAF1A]'
-                }`}>
-                {voiceState !== 'disconnected' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </button>
-              <input
-                type="text" value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') sendChat(chatInput); }}
-                placeholder="Ask Ava..."
-                className="flex-1 bg-[#0F1520] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-gray-600 outline-none focus:border-[#FBAF1A]"
-                disabled={chatStreaming}
-              />
-              <button onClick={() => sendChat(chatInput)} disabled={chatStreaming || !chatInput.trim()}
-                className="w-9 h-9 rounded-xl bg-[#FBAF1A] text-[#18202F] flex items-center justify-center disabled:opacity-40">
-                <Send className="w-4 h-4" />
-              </button>
+              {/* Level bar */}
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-gray-500">Lv{level} {levelTitle}</span>
+                  <span className="text-[10px] text-gray-600">{pointsToNext} to next</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-[#0F1520] overflow-hidden">
+                  <motion.div className="h-full rounded-full bg-gradient-to-r from-[#FBAF1A] to-[#BF7408]"
+                    initial={{ width: 0 }} animate={{ width: `${levelProgress}%` }}
+                    transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
+                  />
+                </div>
+              </div>
             </div>
           </motion.div>
-        </div>
 
-        {/* ===== ROW 4: Leaderboard | Rewards/Points/Actions ===== */}
-        <div className="grid grid-cols-12 gap-5">
-          {/* Leaderboard (kept exactly) */}
+          {/* Briefing Card */}
           <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="col-span-5 bg-[#18202F] rounded-2xl border border-white/10 p-4"
-            style={{ height: 420 }}
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }}
+            className="bg-[#18202F] rounded-2xl border border-white/10 p-4 flex-shrink-0"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span className="text-sm font-semibold">Safety Leaderboard</span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-[#FBAF1A]" />
+                <span className="text-xs font-semibold">Briefing</span>
+              </div>
+              {briefing && (
+                <span className={`text-[10px] font-semibold uppercase ${riskTextColor(briefing.riskLevel)}`}>
+                  {briefing.riskLevel}
+                </span>
+              )}
             </div>
-            <div className="space-y-1 overflow-y-auto" style={{ maxHeight: 360 }}>
-              {leaderboard.slice(0, 15).map((r) => {
+            {briefing ? (
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-300 leading-relaxed">{briefing.greeting}</p>
+                {briefing.focusAreas.slice(0, 2).map((area, i) => (
+                  <div key={i} className="flex items-start gap-1.5">
+                    <CircleDot className="w-2.5 h-2.5 text-[#FBAF1A] mt-0.5 flex-shrink-0" />
+                    <span className="text-[11px] text-gray-400 leading-tight">{area}</span>
+                  </div>
+                ))}
+                {briefing.weather.advisory && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-400">
+                    <WeatherIcon condition={briefing.weather.condition} />
+                    {briefing.weather.advisory}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-gray-600 text-xs flex items-center"><Loader2 className="w-3 h-3 animate-spin mr-1" />Loading...</div>
+            )}
+          </motion.div>
+
+          {/* Current Load Card */}
+          <motion.div
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 }}
+            className="bg-[#18202F] rounded-2xl border border-white/10 p-4 flex-shrink-0"
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Package className="w-3.5 h-3.5 text-[#FBAF1A]" />
+              <span className="text-xs font-semibold">Current Load</span>
+            </div>
+            {session.currentLoad ? (
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xs font-medium text-gray-300">{session.currentLoad.id}</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[#FBAF1A]/20 text-[#FBAF1A] capitalize">
+                    {session.currentLoad.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{session.currentLoad.origin.city}, {session.currentLoad.origin.state}</span>
+                  <ArrowRight className="w-3 h-3 flex-shrink-0 text-gray-600" />
+                  <span className="truncate">{session.currentLoad.destination.city}, {session.currentLoad.destination.state}</span>
+                </div>
+                <div className="text-[10px] text-gray-600 mt-1">{session.currentLoad.commodity} &middot; {session.currentLoad.weight.toLocaleString()} lbs</div>
+              </div>
+            ) : (
+              <div className="text-xs text-gray-600 flex items-center gap-1"><Package className="w-3 h-3 opacity-30" />No active load</div>
+            )}
+          </motion.div>
+
+          {/* Daily Challenge Card */}
+          <motion.div
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}
+            className="bg-[#18202F] rounded-2xl border border-white/10 p-4 flex-shrink-0"
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Zap className="w-3.5 h-3.5 text-[#FBAF1A]" />
+              <span className="text-xs font-semibold">Daily Challenge</span>
+            </div>
+            {dailyChallenge ? (
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">{dailyChallenge.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-white truncate">{dailyChallenge.name}</span>
+                    {dailyChallenge.completed && <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
+                    <span className="text-[10px] font-bold text-[#FBAF1A] ml-auto flex-shrink-0">+{dailyChallenge.pointsReward}</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-[#0F1520] overflow-hidden mt-1">
+                    <motion.div
+                      className={`h-full rounded-full ${dailyChallenge.completed ? 'bg-emerald-500' : 'bg-[#FBAF1A]'}`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.round(dailyChallenge.progress * 100)}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-gray-600 flex items-center gap-1"><Target className="w-3 h-3 opacity-30" />No active challenge</div>
+            )}
+          </motion.div>
+
+          {/* Leaderboard Card */}
+          <motion.div
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.25 }}
+            className="bg-[#18202F] rounded-2xl border border-white/10 p-4 flex-shrink-0"
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-xs font-semibold">Leaderboard</span>
+            </div>
+            <div className="space-y-0.5">
+              {leaderboard.slice(0, 5).map((r) => {
                 const isMe = r.driverId === session.driverId;
                 return (
                   <div key={r.driverId}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${
-                      isMe ? 'bg-[#FBAF1A]/15 border border-[#FBAF1A]/30' : 'hover:bg-white/5'
+                    className={`flex items-center gap-2 px-2 py-1 rounded-lg text-xs ${
+                      isMe ? 'bg-[#FBAF1A]/10 border border-[#FBAF1A]/20' : ''
                     }`}>
-                    <span className={`w-6 text-center font-bold text-xs ${
-                      r.rank <= 3 ? 'text-amber-400' : 'text-gray-500'
-                    }`}>#{r.rank}</span>
-                    <span className={`flex-1 truncate ${isMe ? 'text-white font-semibold' : 'text-gray-300'}`}>
-                      {r.name} <span className="text-gray-500 text-xs">#{r.employeeNumber}</span> {isMe && <span className="text-xs text-[#FBAF1A]">(You)</span>}
+                    <span className={`w-4 text-center font-bold ${r.rank <= 3 ? 'text-amber-400' : 'text-gray-600'}`}>
+                      {r.rank}
                     </span>
-                    <span className="text-xs font-medium text-gray-400">{r.score}</span>
-                    <div className="flex items-center gap-0.5 text-xs text-gray-500">
-                      <Flame className="w-3 h-3 text-orange-400/60" />
-                      {r.streak}d
-                    </div>
+                    <span className={`flex-1 truncate ${isMe ? 'text-white font-medium' : 'text-gray-400'}`}>
+                      {r.name.split(' ')[0]} {isMe && <span className="text-[#FBAF1A]">(You)</span>}
+                    </span>
+                    <span className="text-gray-500">{r.score}</span>
                   </div>
                 );
               })}
             </div>
           </motion.div>
 
-          {/* Rewards / Points / Actions Tabbed Panel */}
+          {/* Badges Card */}
           <motion.div
-            initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.35 }}
-            className="col-span-7 bg-[#18202F] rounded-2xl border border-white/10 flex flex-col"
-            style={{ height: 420 }}
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }}
+            className="bg-[#18202F] rounded-2xl border border-white/10 p-4 flex-shrink-0"
           >
-            {/* Tab Header */}
-            <div className="flex border-b border-white/10">
-              {[
-                { key: 'rewards' as const, label: 'Rewards', icon: <Gift className="w-3.5 h-3.5" /> },
-                { key: 'points' as const, label: 'Points', icon: <Star className="w-3.5 h-3.5" /> },
-                { key: 'actions' as const, label: 'Actions', icon: <ListChecks className="w-3.5 h-3.5" />, count: actionItems.filter(a => a.status === 'pending').length },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium transition-all border-b-2 ${
-                    activeTab === tab.key
-                      ? 'border-[#FBAF1A] text-[#FBAF1A]'
-                      : 'border-transparent text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#FBAF1A]/20 text-[#FBAF1A] text-[10px] font-bold">
-                      {tab.count}
-                    </span>
-                  )}
+            <button onClick={() => badges.length > 0 && setSelectedBadge(badges[0])}
+              className="flex items-center gap-1.5 w-full text-left">
+              <Award className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-semibold">Badges</span>
+              <span className="ml-auto text-[10px] text-gray-500">
+                {badges.filter(b => b.earned).length}/{badges.length} earned
+              </span>
+              <ChevronRight className="w-3 h-3 text-gray-600" />
+            </button>
+            <div className="flex gap-1 mt-2 flex-wrap">
+              {badges.filter(b => b.earned).slice(0, 8).map((b) => (
+                <button key={b.id} onClick={() => setSelectedBadge(b)} className="text-lg hover:scale-110 transition-transform">
+                  {b.icon}
                 </button>
               ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* Rewards Tab */}
-              {activeTab === 'rewards' && (
-                <div className="space-y-2">
-                  {rewards.length > 0 ? rewards.map((reward) => {
-                    const canAfford = totalPoints >= reward.pointsCost;
-                    const levelOk = level >= reward.levelRequired;
-                    const available = canAfford && levelOk && reward.available;
-                    return (
-                      <div
-                        key={reward.id}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                          available
-                            ? 'bg-[#0F1520] border-[#FBAF1A]/30 hover:border-[#FBAF1A]/60'
-                            : 'bg-[#0F1520]/50 border-white/5 opacity-60'
-                        }`}
-                      >
-                        <span className="text-2xl">{reward.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white truncate">{reward.name}</div>
-                          <div className="text-xs text-gray-500">{reward.category}</div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          {!levelOk ? (
-                            <span className="text-xs text-gray-500">Level {reward.levelRequired} required</span>
-                          ) : available ? (
-                            <button className="px-3 py-1.5 rounded-lg bg-[#FBAF1A] text-[#18202F] text-xs font-bold hover:bg-[#BF7408] transition-colors">
-                              Redeem &middot; {reward.pointsCost}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-gray-500">
-                              Need {(reward.pointsCost - totalPoints).toLocaleString()} more pts
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    <div className="flex items-center justify-center h-40 text-gray-600 text-sm">
-                      <Gift className="w-5 h-5 mr-2 opacity-30" />
-                      No rewards available yet
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Points Tab */}
-              {activeTab === 'points' && (
-                <div className="space-y-1.5">
-                  {recentPoints.length > 0 ? recentPoints.slice(0, 20).map((pt) => (
-                    <div key={pt.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-[#0F1520] border border-white/5">
-                      <span className={`text-sm font-bold min-w-[50px] text-right ${
-                        pt.points > 0
-                          ? pt.type === 'earned' ? 'text-emerald-400' : 'text-[#FBAF1A]'
-                          : 'text-red-400'
-                      }`}>
-                        {pt.points > 0 ? '+' : ''}{pt.points}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-gray-300 truncate">{pt.reason}</div>
-                        <div className="text-[10px] text-gray-600 uppercase">{pt.type}</div>
-                      </div>
-                      <span className="text-[10px] text-gray-600 flex-shrink-0">{timeAgo(pt.timestamp)}</span>
-                    </div>
-                  )) : (
-                    <div className="flex items-center justify-center h-40 text-gray-600 text-sm">
-                      <Star className="w-5 h-5 mr-2 opacity-30" />
-                      No point history yet
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Actions Tab */}
-              {activeTab === 'actions' && (
-                <div className="space-y-1.5">
-                  {actionItems.length > 0 ? actionItems.map((item) => {
-                    const isPending = item.status === 'pending';
-                    return (
-                      <div
-                        key={item.id}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                          isPending
-                            ? 'bg-[#0F1520] border-white/10'
-                            : 'bg-[#0F1520]/50 border-white/5 opacity-50'
-                        }`}
-                      >
-                        <button
-                          onClick={async () => {
-                            if (!isPending) return;
-                            try {
-                              await api.completeAction(session.driverId, item.id);
-                              setActionItems(prev => prev.map(a =>
-                                a.id === item.id ? { ...a, status: 'completed' as const } : a
-                              ));
-                            } catch {}
-                          }}
-                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                            isPending
-                              ? 'border-gray-500 hover:border-[#FBAF1A]'
-                              : 'border-emerald-500 bg-emerald-500'
-                          }`}
-                        >
-                          {!isPending && <Check className="w-3 h-3 text-white" />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm ${isPending ? 'text-gray-300' : 'text-gray-500 line-through'}`}>
-                            {item.text}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {item.source === 'voice' && <Mic className="w-3 h-3 text-gray-600" />}
-                          {item.source === 'tool' && <Zap className="w-3 h-3 text-gray-600" />}
-                          {item.source === 'system' && <Shield className="w-3 h-3 text-gray-600" />}
-                          {isPending && (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await api.dismissAction(session.driverId, item.id);
-                                  setActionItems(prev => prev.map(a =>
-                                    a.id === item.id ? { ...a, status: 'dismissed' as const } : a
-                                  ));
-                                } catch {}
-                              }}
-                              className="text-gray-600 hover:text-gray-400 transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    <div className="flex items-center justify-center h-40 text-gray-600 text-sm">
-                      <ListChecks className="w-5 h-5 mr-2 opacity-30" />
-                      No action items
-                    </div>
-                  )}
-                </div>
+              {badges.filter(b => b.earned).length === 0 && (
+                <span className="text-[10px] text-gray-600">No badges earned yet</span>
               )}
             </div>
           </motion.div>
@@ -1079,7 +808,7 @@ export default function DriverPortalPage() {
         )}
       </AnimatePresence>
 
-      {/* ===== Dispatch Call Overlay (kept exactly) ===== */}
+      {/* ===== Ava ↔ Dispatch Conversation Overlay ===== */}
       <AnimatePresence>
         {dispatchCallActive && (
           <motion.div
@@ -1087,54 +816,171 @@ export default function DriverPortalPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
-            onClick={() => { if (dispatchSummary) setDispatchCallActive(false); }}
+            onClick={() => { if (dispatchSummary) { setDispatchCallActive(false); setDispatchPhase(null); } }}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#18202F] rounded-2xl border border-white/10 w-[400px] max-h-[500px] overflow-hidden"
+              className="bg-[#18202F] rounded-2xl border border-white/10 w-[420px] max-h-[550px] overflow-hidden"
             >
-              <div className="bg-[#FBAF1A] px-5 py-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-[#18202F]" />
+              {/* Header with phase indicator */}
+              <div className={`px-5 py-4 flex items-center gap-3 transition-colors ${
+                dispatchSummary ? 'bg-emerald-600' :
+                dispatchPhase === 'error' ? 'bg-red-600' :
+                'bg-[#FBAF1A]'
+              }`}>
+                <div className="relative">
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center ${
+                    dispatchSummary ? 'bg-white/20' :
+                    'bg-white/20'
+                  }`}>
+                    {dispatchSummary ? (
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    ) : (
+                      <MessageCircle className="w-5 h-5 text-[#18202F]" />
+                    )}
+                  </div>
+                  {/* Pulsing ring animation during active conversation */}
+                  {!dispatchSummary && dispatchPhase !== 'error' && (
+                    <motion.div
+                      className="absolute inset-0 rounded-full border-2 border-white/40"
+                      animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  )}
                 </div>
-                <div>
-                  <div className="text-[#18202F] font-semibold">Dispatch - Mike</div>
-                  <div className="text-[#18202F]/70 text-xs">
-                    {dispatchSummary ? 'Call ended' : 'Calling...'}
+                <div className="flex-1">
+                  <div className={`font-semibold ${dispatchSummary ? 'text-white' : 'text-[#18202F]'}`}>
+                    Ava → Dispatch (Mike)
+                  </div>
+                  <div className={`text-xs ${dispatchSummary ? 'text-white/70' : 'text-[#18202F]/70'}`}>
+                    {dispatchSummary ? 'Done' :
+                     dispatchPhase === 'connecting' ? 'Ava is reaching dispatch...' :
+                     dispatchPhase === 'on_call' ? 'Ava is talking to Mike' :
+                     dispatchPhase === 'wrapping_up' ? 'Wrapping up...' :
+                     dispatchPhase === 'error' ? 'Could not reach dispatch' :
+                     'Connecting...'}
                   </div>
                 </div>
+                {/* Call duration / phase dots */}
+                {!dispatchSummary && dispatchPhase && dispatchPhase !== 'error' && (
+                  <div className="flex items-center gap-1">
+                    <motion.div
+                      className="w-1.5 h-1.5 rounded-full bg-[#18202F]/50"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+                    />
+                    <motion.div
+                      className="w-1.5 h-1.5 rounded-full bg-[#18202F]/50"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                    />
+                    <motion.div
+                      className="w-1.5 h-1.5 rounded-full bg-[#18202F]/50"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* Messages area */}
               <div className="px-5 py-4 space-y-3 max-h-[350px] overflow-y-auto">
                 {dispatchMessages.map((m, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${m.role === 'driver' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
-                      m.role === 'driver'
-                        ? 'bg-[#FBAF1A] text-[#18202F] rounded-br-sm'
-                        : 'bg-[#0F1520] text-gray-300 rounded-bl-sm'
-                    }`}>{m.text}</div>
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className={`flex ${m.role === 'ava' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {m.role === 'dispatcher' && (
+                      <div className="w-6 h-6 rounded-full bg-[#FBAF1A]/20 flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+                        <Phone className="w-3 h-3 text-[#FBAF1A]" />
+                      </div>
+                    )}
+                    <div className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                      m.role === 'ava'
+                        ? 'bg-blue-500 text-white rounded-br-sm'
+                        : 'bg-[#0F1520] text-gray-300 border border-white/5 rounded-bl-sm'
+                    }`}>
+                      <div className="text-[10px] font-semibold mb-0.5 opacity-70">
+                        {m.role === 'ava' ? 'Ava' : 'Mike'}
+                      </div>
+                      {m.text}
+                    </div>
+                    {m.role === 'ava' && (
+                      <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center ml-2 mt-1 flex-shrink-0">
+                        <Shield className="w-3 h-3 text-blue-400" />
+                      </div>
+                    )}
                   </motion.div>
                 ))}
+
+                {/* Connecting state with no messages yet */}
                 {!dispatchSummary && dispatchMessages.length === 0 && (
-                  <div className="text-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-[#FBAF1A] mx-auto" />
-                    <div className="text-gray-500 text-xs mt-2">Connecting to dispatch...</div>
+                  <div className="text-center py-6">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Loader2 className="w-6 h-6 text-[#FBAF1A] mx-auto" />
+                    </motion.div>
+                    <div className="text-gray-500 text-xs mt-3">
+                      {dispatchPhase === 'connecting' ? 'Ava is reaching out to Mike at dispatch...' : 'Ava is contacting dispatch...'}
+                    </div>
                   </div>
                 )}
+
+                {/* Typing indicator while waiting for next message */}
+                {!dispatchSummary && dispatchMessages.length > 0 && dispatchPhase !== 'complete' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex justify-start"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#FBAF1A]/20 flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+                      <Phone className="w-3 h-3 text-[#FBAF1A]" />
+                    </div>
+                    <div className="bg-[#0F1520] border border-white/5 rounded-2xl rounded-bl-sm px-4 py-3">
+                      <div className="flex gap-1">
+                        <motion.div className="w-1.5 h-1.5 rounded-full bg-gray-500"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: 0 }} />
+                        <motion.div className="w-1.5 h-1.5 rounded-full bg-gray-500"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} />
+                        <motion.div className="w-1.5 h-1.5 rounded-full bg-gray-500"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: 0.4 }} />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Outcome summary */}
                 {dispatchSummary && (
-                  <div className="bg-[#FBAF1A]/10 border border-[#FBAF1A]/20 rounded-xl p-3 text-sm text-gray-300">
-                    <div className="text-xs font-semibold text-[#FBAF1A] uppercase mb-1">Summary</div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3.5 text-sm text-gray-300"
+                  >
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-xs font-semibold text-emerald-400 uppercase">Call Summary</span>
+                    </div>
                     {dispatchSummary}
-                  </div>
+                  </motion.div>
                 )}
               </div>
+
+              {/* Close button */}
               {dispatchSummary && (
                 <div className="px-5 pb-4">
-                  <button onClick={() => setDispatchCallActive(false)}
-                    className="w-full py-2 rounded-xl bg-[#FBAF1A] text-[#18202F] text-sm font-medium hover:bg-[#BF7408] transition-colors">
+                  <button onClick={() => { setDispatchCallActive(false); setDispatchPhase(null); }}
+                    className="w-full py-2.5 rounded-xl bg-[#FBAF1A] text-[#18202F] text-sm font-semibold hover:bg-[#BF7408] transition-colors">
                     Close
                   </button>
                 </div>
