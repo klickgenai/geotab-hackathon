@@ -36,6 +36,7 @@ import {
   reportIncident,
   generateContextReport,
   getGreenFleetMetrics,
+  deployMission,
 } from '../tools/index.js';
 
 const SYSTEM_PROMPT = `You are Tasha, the FleetShield AI assistant. You serve two types of users:
@@ -79,6 +80,7 @@ When talking to a driver, be warm and encouraging. Celebrate good scores. When t
 13. **Alert Briefing** -- Intelligent alert triage with urgency scores
 23. **Generate Context Report** -- Create AI-generated PDF reports from conversation context. Use when asked to "generate a report", "create a report about this", or "make this a report".
 24. **Green Fleet Metrics** -- Sustainability metrics: carbon footprint, fuel efficiency, idle waste, EV readiness, driver green scores, and actionable environmental recommendations.
+25. **Deploy Mission** -- Launch an autonomous background agent for deep fleet analysis. Available missions: Coaching Sweep, Wellness Check, Safety Investigation, Insurance Optimization, Pre-Shift Sweep.
 
 ### Driver Dashboard Tools
 14. **Driver Dashboard** -- Personal safety score, streak, rank, load summary, messages
@@ -158,6 +160,29 @@ When a user asks "how to improve X" or "what should we do about Y", ALWAYS struc
 4. **Concrete Action Steps** -- Specific coaching sessions, policy changes, technology deployments, or route adjustments.
 5. **Monitoring Page** -- Direct them to the specific FleetShield page to track progress (e.g., "Monitor progress on the Insurance page's component breakdown").
 
+### Autonomous Mission Agents (Proactive Delegation)
+You can deploy background agents for deep fleet analysis. These run autonomously and deliver a full report when done — the operator can keep chatting or navigate to other pages while the agent works.
+
+**When to offer:**
+- Questions about coaching, improving, or training drivers → offer a **Coaching Sweep**
+- Questions about burnout, wellness, tired drivers, retention → offer a **Wellness Check**
+- Questions about investigating a specific driver or "what happened" → offer a **Safety Investigation**
+- Questions about insurance premiums, score improvements, savings → offer an **Insurance Optimization**
+- Questions about today's risk, morning briefing, pre-shift → offer a **Pre-Shift Sweep**
+
+**How to offer (ALWAYS follow this flow):**
+1. Answer the immediate question first using your regular tools
+2. Then offer naturally: "I can also spin up a background agent to do a deeper analysis across the fleet — it'll check risk scores, wellness signals, and build individual plans. Want me to run that?"
+3. NEVER use internal names like "coaching_sweep" or "wellness_check" in your response. Use natural names: "coaching sweep", "wellness check", "safety investigation", "insurance optimization", "pre-shift sweep"
+4. Wait for the operator to confirm ("yes", "do it", "sure", "go ahead")
+5. Call the deployMission tool
+6. After deploying, say something like: "I've kicked off the agent — it's running in the background now. I'll let you know when it's done. You can keep chatting or check other pages in the meantime."
+
+**IMPORTANT:**
+- NEVER deploy a mission without asking first
+- NEVER use technical parameter names in conversation — always use plain English
+- When the operator confirms, just deploy it — don't ask again
+
 ### Platform Navigation Guide
 Help users find the right page for their needs:
 - **Dashboard** (/operator): Fleet overview with KPIs -- safety score, active alerts, wellness summary, financial overview. Start here for a high-level picture.
@@ -191,6 +216,7 @@ export const fleetshieldTools = {
   getAlertBriefing,
   generateContextReport,
   getGreenFleetMetrics,
+  deployMission,
   // Driver dashboard tools
   getDriverDashboard,
   getLoadUpdates,

@@ -25,3 +25,4 @@ export {
 } from './driver-intelligence.js';
 export { generateContextReport } from './context-report.js';
 export { getGreenFleetMetrics } from './sustainability.js';
+export { deployMission } from './mission-tool.js';

@@ -156,4 +156,8 @@ export const api = {
   driverActions: (id: string) => fetchJSON<ActionItem[]>(`/api/driver/${id}/actions`),
   completeAction: (driverId: string, actionId: string) => postJSON<ActionItem>(`/api/driver/${driverId}/actions/${actionId}/complete`, {}),
   dismissAction: (driverId: string, actionId: string) => postJSON<ActionItem>(`/api/driver/${driverId}/actions/${actionId}/dismiss`, {}),
+
+  // Missions
+  missionsActive: () => fetchJSON<{ active: unknown[]; completed: unknown[] }>('/api/missions/active'),
+  missionResult: (id: string) => fetchJSON<unknown>(`/api/missions/${id}`),
 };

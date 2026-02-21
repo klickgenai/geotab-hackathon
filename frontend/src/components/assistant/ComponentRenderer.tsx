@@ -18,6 +18,28 @@ const FinancialCard = dynamic(() => import('@/components/dashboard/FinancialCard
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- tool results are dynamic JSON from the AI agent */
 const toolRenderers: Record<string, (result: Record<string, any>) => React.ReactNode> = {
+  deployMission: (result) => {
+    if (!result?.missionId) return null;
+    return (
+      <div className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-semibold text-white/50 uppercase tracking-wider">Agent Deployed</div>
+            <div className="text-sm font-bold">{result.displayName}</div>
+            <div className="text-xs text-white/40 mt-0.5">{result.description}</div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-xs text-amber-400 font-medium">Running</span>
+          </div>
+        </div>
+      </div>
+    );
+  },
+
   getFleetInsuranceScore: (result) => {
     // The tool result may have full InsuranceScore shape or a partial one
     if (!result.overallScore && !result.grade) return null;

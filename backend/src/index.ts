@@ -45,6 +45,7 @@ import { geotabAce } from './services/geotab-ace.js';
 import { generateFleetReport } from './reports/fleet-report.js';
 import { isUsingLiveData } from './data/fleet-data-provider.js';
 import { TwilioDispatchSession, getCallSession, getCallSessionByCallSid } from './services/twilio-dispatch-service.js';
+import { getAllMissions, getCompletedMission, getMissionBridge } from './missions/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -276,6 +277,7 @@ app.post('/api/assistant/stream', async (req, res) => {
     let voiceBuffer = '';
     let streamingDirectly = false;
     let voiceEmitted = false;
+    const activeMissionIds: string[] = [];
 
     for await (const part of result.fullStream) {
       switch (part.type) {
@@ -333,6 +335,28 @@ app.post('/api/assistant/stream', async (req, res) => {
           if (part.toolName === 'generateContextReport' && part.result?.downloadUrl) {
             res.write(`data: ${JSON.stringify({ type: 'report_ready', url: part.result.downloadUrl, filename: part.result.filename, title: part.result.title })}\n\n`);
           }
+          // Subscribe to mission bridge for live progress streaming
+          if (part.toolName === 'deployMission' && part.result?.missionId) {
+            const mid = part.result.missionId as string;
+            activeMissionIds.push(mid);
+            const missionBridge = getMissionBridge(mid);
+            if (missionBridge) {
+              missionBridge.on('mission_progress', (progress: unknown) => {
+                try { res.write(`data: ${JSON.stringify({ type: 'mission_progress', ...progress as object })}\n\n`); } catch {}
+              });
+              missionBridge.on('mission_finding', (finding: unknown) => {
+                try { res.write(`data: ${JSON.stringify({ type: 'mission_finding', ...finding as object })}\n\n`); } catch {}
+              });
+              missionBridge.on('mission_complete', (mResult: unknown) => {
+                try {
+                  res.write(`data: ${JSON.stringify({ type: 'mission_complete', ...mResult as object })}\n\n`);
+                } catch {}
+                // Remove from active list
+                const idx = activeMissionIds.indexOf(mid);
+                if (idx !== -1) activeMissionIds.splice(idx, 1);
+              });
+            }
+          }
           break;
         case 'error':
           res.write(`data: ${JSON.stringify({ type: 'error', content: String(part.error) })}\n\n`);
@@ -348,7 +372,23 @@ app.post('/api/assistant/stream', async (req, res) => {
       }
     }
 
+    // Signal text stream done (frontend can accept new input)
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+
+    // If missions are active, keep SSE open until they complete (max 65s)
+    if (activeMissionIds.length > 0) {
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 65_000);
+        const check = setInterval(() => {
+          if (activeMissionIds.length === 0) {
+            clearInterval(check);
+            clearTimeout(timeout);
+            resolve();
+          }
+        }, 500);
+        res.on('close', () => { clearInterval(check); clearTimeout(timeout); resolve(); });
+      });
+    }
     res.end();
   } catch (error: any) {
     const errorMsg = error?.message?.includes('rate') ? 'Rate limited — please wait a moment and try again.' : 'Agent error — check backend logs.';
@@ -899,6 +939,31 @@ app.post('/api/fleet/what-if/custom', (req, res) => {
   }
 });
 
+// --- Mission Agent Endpoints ---
+app.get('/api/missions/active', (_req, res) => {
+  try {
+    res.json(getAllMissions());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get missions' });
+  }
+});
+
+app.get('/api/missions/:id', (req, res) => {
+  try {
+    const result = getCompletedMission(req.params.id);
+    if (!result) {
+      // Check if it's still active
+      const all = getAllMissions();
+      const active = all.active.find(m => m.missionId === req.params.id);
+      if (active) return res.json({ status: 'running', ...active });
+      return res.status(404).json({ error: 'Mission not found' });
+    }
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get mission' });
+  }
+});
+
 // --- Sustainability / Green Fleet ---
 app.get('/api/fleet/sustainability', (_req, res) => {
   try {
@@ -1095,6 +1160,16 @@ browserWss.on('connection', (ws) => {
           },
           onToolResult: (toolName, result) => {
             sendJson({ type: 'tool_result', toolName, result });
+            // Subscribe to mission bridge for voice clients
+            const toolResult = result as Record<string, unknown> | null;
+            if (toolName === 'deployMission' && toolResult?.missionId) {
+              const mBridge = getMissionBridge(toolResult.missionId as string);
+              if (mBridge) {
+                mBridge.on('mission_progress', (p: unknown) => sendJson({ type: 'mission_progress', ...(p as object) }));
+                mBridge.on('mission_finding', (f: unknown) => sendJson({ type: 'mission_finding', ...(f as object) }));
+                mBridge.on('mission_complete', (r: unknown) => sendJson({ type: 'mission_complete', ...(r as object) }));
+              }
+            }
           },
           onActionItem: (item) => {
             sendJson({ type: 'action_item', item });

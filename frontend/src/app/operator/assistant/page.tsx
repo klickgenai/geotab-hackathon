@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Mic, Send, Shield, Volume2, VolumeX, Sparkles, PhoneOff } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import ComponentRenderer from '@/components/assistant/ComponentRenderer';
+import MissionTracker, { type MissionTrackerState } from '@/components/assistant/MissionTracker';
 import { VoiceClient, type VoiceState } from '@/lib/voice-client';
 
 /* ---------- Types ---------- */
 interface MessagePart {
-  type: 'text' | 'component';
+  type: 'text' | 'component' | 'mission';
   content?: string;
   toolName?: string;
   toolResult?: any;
+  missionState?: MissionTrackerState;
 }
 
 interface ChatMessage {
@@ -155,6 +158,15 @@ function VoiceWaveform({ phase }: { phase: VoicePhase }) {
 
 /* ---------- Main Component ---------- */
 export default function AssistantPage() {
+  return (
+    <Suspense fallback={<div className="fixed inset-0 bg-[#F5F3EF] flex items-center justify-center"><div className="text-gray-400">Loading assistant...</div></div>}>
+      <AssistantPageInner />
+    </Suspense>
+  );
+}
+
+function AssistantPageInner() {
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<ChatMessage[]>([{
     id: genId(), role: 'assistant',
     parts: [{ type: 'text', content: "Hi, I'm **Tasha**, your fleet intelligence assistant. Ask me anything about your fleet, or tap a chip below to get started. I can show you live dashboards, scores, and analytics right here." }],
@@ -202,46 +214,123 @@ export default function AssistantPage() {
   }, []);
 
   /* ---------- TTS (Promise-based, text mode only) ---------- */
+  // Generation counter — each speakAsync call gets a unique ID.
+  // At every async checkpoint we verify our ID is still current.
+  // This prevents overlapping audio from concurrent calls (React Strict Mode,
+  // rapid clicks, mission_complete + URL param, etc.).
+  const ttsGenRef = useRef(0);
+
+  const stopAllAudio = useCallback(() => {
+    // Bump generation to cancel any in-flight speakAsync
+    ttsGenRef.current++;
+    if (activeSourceRef.current) {
+      try { activeSourceRef.current.stop(); } catch {}
+      activeSourceRef.current = null;
+    }
+    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+  }, []);
+
   const speakAsync = useCallback(async (voiceText: string): Promise<void> => {
     if (!voiceEnabled || typeof window === 'undefined' || !voiceText.trim()) return;
 
-    const ttsPromise = new Promise<void>(async (resolve) => {
-      try {
-        const res = await api.ttsSynthesize(voiceText);
-        if (res.ok) {
-          const arrayBuffer = await res.arrayBuffer();
-          if (!audioContextRef.current) {
-            audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-          }
-          const ctx = audioContextRef.current;
-          if (ctx.state === 'suspended') await ctx.resume();
-          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-          const source = ctx.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(ctx.destination);
-          activeSourceRef.current = source;
-          source.onended = () => { activeSourceRef.current = null; resolve(); };
-          source.start();
-          return;
-        }
-      } catch {
-        // Fall through to browser TTS
-      }
+    // Stop any previously playing audio and invalidate older calls
+    stopAllAudio();
 
-      window.speechSynthesis.cancel();
+    // Claim this generation
+    const myGen = ttsGenRef.current;
+    const stale = () => ttsGenRef.current !== myGen;
+
+    try {
+      // Try Smallest AI TTS first
+      const res = await api.ttsSynthesize(voiceText);
+      if (stale()) return;
+
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        if (stale()) return;
+
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+        }
+        const ctx = audioContextRef.current;
+        if (ctx.state === 'suspended') await ctx.resume();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        if (stale()) return;
+
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        activeSourceRef.current = source;
+
+        await new Promise<void>((resolve) => {
+          source.onended = () => {
+            activeSourceRef.current = null;
+            resolve();
+          };
+          source.start();
+        });
+        return;
+      }
+    } catch {
+      // Fall through to browser TTS
+    }
+
+    if (stale()) return;
+
+    // Browser TTS fallback
+    window.speechSynthesis.cancel();
+    await new Promise<void>((resolve) => {
       const utterance = new SpeechSynthesisUtterance(voiceText);
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
       utterance.onend = () => resolve();
       utterance.onerror = () => resolve();
       window.speechSynthesis.speak(utterance);
+      setTimeout(resolve, 15000);
     });
+  }, [voiceEnabled, stopAllAudio]);
 
-    return Promise.race([
-      ttsPromise,
-      new Promise<void>((resolve) => setTimeout(resolve, 15000)),
-    ]);
-  }, [voiceEnabled]);
+  // Load mission result from URL param (?mission=xxx)
+  // Guard ref prevents React Strict Mode double-fire from fetching twice
+  const missionLoadedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const missionId = searchParams.get('mission');
+    if (!missionId) return;
+
+    // Already loaded this mission (Strict Mode double-fire guard)
+    if (missionLoadedRef.current === missionId) return;
+    missionLoadedRef.current = missionId;
+
+    api.missionResult(missionId).then((data: any) => {
+      if (!data || data.status === 'running') return;
+      const mState: MissionTrackerState = {
+        missionId: data.missionId,
+        type: data.type,
+        displayName: data.displayName,
+        status: data.status,
+        result: data,
+        findings: data.findings || [],
+      };
+      const msg: ChatMessage = {
+        id: genId(),
+        role: 'assistant',
+        parts: [
+          { type: 'text', content: `Here are the results from the **${data.displayName}** mission:` },
+          { type: 'mission', missionState: mState },
+        ],
+        timestamp: new Date(),
+      };
+
+      stopAllAudio();
+      setMessages(prev => [...prev, msg]);
+      // Only speak if NOT in voice mode (voice mode has its own TTS)
+      if (!voiceModeRef.current && data.summary) {
+        speakAsync(data.summary);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   /* ---------- Voice Mode Controls (uses VoiceClient) ---------- */
   const enterVoiceMode = useCallback(async () => {
@@ -255,6 +344,7 @@ export default function AssistantPage() {
     let currentAssistantId: string | null = null;
     let latestUserTranscript = '';
     const renderedTools = new Set<string>();
+    const voiceMissionStates = new Map<string, MissionTrackerState>();
 
     // Create and connect VoiceClient (no driverId for operator)
     const client = new VoiceClient({
@@ -304,12 +394,75 @@ export default function AssistantPage() {
       },
       onToolResult: (toolName, result) => {
         if (!voiceModeRef.current || !currentAssistantId) return;
+        // Handle deployMission as a mission tracker
+        if (toolName === 'deployMission' && result?.missionId) {
+          const mid = result.missionId as string;
+          const mState: MissionTrackerState = {
+            missionId: mid, type: result.type, displayName: result.displayName,
+            status: 'running', findings: [],
+          };
+          voiceMissionStates.set(mid, mState);
+          const aid = currentAssistantId;
+          setMessages(prev => prev.map(m => {
+            if (m.id !== aid) return m;
+            return { ...m, parts: [...m.parts, { type: 'mission', missionState: { ...mState } }] };
+          }));
+          return;
+        }
         if (renderedTools.has(toolName)) return;
         renderedTools.add(toolName);
         const aid = currentAssistantId;
         setMessages(prev => prev.map(m => {
           if (m.id !== aid) return m;
           return { ...m, parts: [...m.parts, { type: 'component', toolName, toolResult: result }] };
+        }));
+      },
+      onMissionProgress: (data) => {
+        if (!currentAssistantId) return;
+        const mid = data.missionId as string;
+        const state = voiceMissionStates.get(mid);
+        if (!state) return;
+        state.progress = data;
+        const aid = currentAssistantId;
+        setMessages(prev => prev.map(m => {
+          if (m.id !== aid) return m;
+          return { ...m, parts: m.parts.map(p =>
+            p.type === 'mission' && p.missionState?.missionId === mid
+              ? { ...p, missionState: { ...state, progress: { ...data } } } : p
+          )};
+        }));
+      },
+      onMissionFinding: (data) => {
+        if (!currentAssistantId) return;
+        const mid = data.missionId as string;
+        const state = voiceMissionStates.get(mid);
+        if (!state) return;
+        state.findings.push(data);
+        const aid = currentAssistantId;
+        setMessages(prev => prev.map(m => {
+          if (m.id !== aid) return m;
+          return { ...m, parts: m.parts.map(p =>
+            p.type === 'mission' && p.missionState?.missionId === mid
+              ? { ...p, missionState: { ...state, findings: [...state.findings] } } : p
+          )};
+        }));
+      },
+      onMissionComplete: (data) => {
+        if (!currentAssistantId) return;
+        const mid = data.missionId as string;
+        const state = voiceMissionStates.get(mid);
+        if (!state) return;
+        state.status = data.status;
+        state.result = data;
+        // Stop any text-mode TTS that might be playing
+        stopAllAudio();
+        const aid = currentAssistantId;
+        setMessages(prev => prev.map(m => {
+          if (m.id !== aid) return m;
+          return { ...m, parts: m.parts.map(p =>
+            p.type === 'mission' && p.missionState?.missionId === mid
+              ? { ...p, missionState: { ...state, status: data.status, result: data } } : p
+          )};
         }));
       },
       onError: () => {
@@ -328,7 +481,7 @@ export default function AssistantPage() {
       voiceModeRef.current = false;
       voiceClientRef.current = null;
     }
-  }, []);
+  }, [stopAllAudio]);
 
   const endVoiceMode = useCallback(() => {
     setVoiceMode(false);
@@ -373,6 +526,7 @@ export default function AssistantPage() {
     const abort = new AbortController();
     abortRef.current = abort;
     let speakPromise: Promise<void> | null = null;
+    const missionStates = new Map<string, MissionTrackerState>();
 
     try {
       const res = await api.assistantStream(text, '/operator/assistant');
@@ -417,13 +571,79 @@ export default function AssistantPage() {
               }
 
             } else if (data.type === 'tool_result') {
-              if (renderedTools.has(data.toolName)) continue;
-              renderedTools.add(data.toolName);
-              currentText = '';
-              setMessages(prev => prev.map(m => {
-                if (m.id !== assistantId) return m;
-                return { ...m, parts: [...m.parts, { type: 'component', toolName: data.toolName, toolResult: data.result }] };
-              }));
+              // For deployMission, track as a mission part instead of generic component
+              if (data.toolName === 'deployMission' && data.result?.missionId) {
+                const mid = data.result.missionId as string;
+                const mState: MissionTrackerState = {
+                  missionId: mid,
+                  type: data.result.type,
+                  displayName: data.result.displayName,
+                  status: 'running',
+                  findings: [],
+                };
+                missionStates.set(mid, mState);
+                currentText = '';
+                setMessages(prev => prev.map(m => {
+                  if (m.id !== assistantId) return m;
+                  return { ...m, parts: [...m.parts, { type: 'mission', missionState: { ...mState } }] };
+                }));
+              } else {
+                if (renderedTools.has(data.toolName)) continue;
+                renderedTools.add(data.toolName);
+                currentText = '';
+                setMessages(prev => prev.map(m => {
+                  if (m.id !== assistantId) return m;
+                  return { ...m, parts: [...m.parts, { type: 'component', toolName: data.toolName, toolResult: data.result }] };
+                }));
+              }
+
+            } else if (data.type === 'mission_progress') {
+              const mid = data.missionId as string;
+              const state = missionStates.get(mid);
+              if (state) {
+                state.progress = data;
+                setMessages(prev => prev.map(m => {
+                  if (m.id !== assistantId) return m;
+                  return { ...m, parts: m.parts.map(p =>
+                    p.type === 'mission' && p.missionState?.missionId === mid
+                      ? { ...p, missionState: { ...state, progress: { ...data } } }
+                      : p
+                  )};
+                }));
+              }
+
+            } else if (data.type === 'mission_finding') {
+              const mid = data.missionId as string;
+              const state = missionStates.get(mid);
+              if (state) {
+                state.findings.push(data);
+                setMessages(prev => prev.map(m => {
+                  if (m.id !== assistantId) return m;
+                  return { ...m, parts: m.parts.map(p =>
+                    p.type === 'mission' && p.missionState?.missionId === mid
+                      ? { ...p, missionState: { ...state, findings: [...state.findings] } }
+                      : p
+                  )};
+                }));
+              }
+
+            } else if (data.type === 'mission_complete') {
+              const mid = data.missionId as string;
+              const state = missionStates.get(mid);
+              if (state) {
+                state.status = data.status;
+                state.result = data;
+                // Stop any TTS that might still be playing (e.g. deploy confirmation)
+                stopAllAudio();
+                setMessages(prev => prev.map(m => {
+                  if (m.id !== assistantId) return m;
+                  return { ...m, parts: m.parts.map(p =>
+                    p.type === 'mission' && p.missionState?.missionId === mid
+                      ? { ...p, missionState: { ...state, status: data.status, result: data } }
+                      : p
+                  )};
+                }));
+              }
 
             } else if (data.type === 'report_ready') {
               const a = document.createElement('a');
@@ -529,6 +749,11 @@ export default function AssistantPage() {
                         >
                           <ComponentRenderer toolName={part.toolName} result={part.toolResult} />
                         </motion.div>
+                      )}
+                      {part.type === 'mission' && part.missionState && (
+                        <div className={pi > 0 ? 'mt-3' : ''}>
+                          <MissionTracker state={part.missionState} />
+                        </div>
                       )}
                     </div>
                   ))}

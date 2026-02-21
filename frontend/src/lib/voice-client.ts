@@ -29,6 +29,9 @@ export interface VoiceCallbacks {
   onDispatchProgress?: (event: DispatchProgressEvent) => void;
   onDispatchCallState?: (callState: string, phase: string, callId?: string) => void;
   onDispatchCallEnded?: (reason: string, callId?: string) => void;
+  onMissionProgress?: (data: any) => void;
+  onMissionFinding?: (data: any) => void;
+  onMissionComplete?: (data: any) => void;
 }
 
 export class VoiceClient {
@@ -256,6 +259,15 @@ export class VoiceClient {
         this.callbacks.onDispatchCallEnded?.(msg.reason, msg.callId);
         this.backendState = 'listening';
         this.reconcileState();
+        break;
+      case 'mission_progress':
+        this.callbacks.onMissionProgress?.(msg);
+        break;
+      case 'mission_finding':
+        this.callbacks.onMissionFinding?.(msg);
+        break;
+      case 'mission_complete':
+        this.callbacks.onMissionComplete?.(msg);
         break;
       case 'error':
         this.callbacks.onError(msg.message || 'Voice error');
