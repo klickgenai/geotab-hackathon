@@ -237,7 +237,7 @@ How it works:
 ### AI & Voice
 | Technology | Purpose |
 |-----------|---------|
-| Claude Opus 4.6 4.5 | AI agent with 17+ fleet tools + mission summaries |
+| Claude Opus 4.6 | AI agent with 17+ fleet tools + mission summaries |
 | Smallest AI Pulse | Speech-to-Text (STT) |
 | Smallest AI Waves | Text-to-Speech (TTS) |
 | Custom VAD | Energy-based Voice Activity Detection |
