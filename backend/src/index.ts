@@ -42,6 +42,7 @@ import { getGamificationState, getPointsHistory, getDriverBadges, getRewardsCata
 import { simulateWhatIf, getDefaultScenarios } from './scoring/what-if-simulator.js';
 import { calculateGreenDashboard } from './scoring/green-score-engine.js';
 import { geotabAce } from './services/geotab-ace.js';
+import { generateFleetReport } from './reports/fleet-report.js';
 import { isUsingLiveData } from './data/fleet-data-provider.js';
 import { TwilioDispatchSession, getCallSession, getCallSessionByCallSid } from './services/twilio-dispatch-service.js';
 
@@ -138,6 +139,20 @@ app.get('/api/fleet/events', (req, res) => {
 });
 
 // --- Reports ---
+app.get('/api/reports/generate', async (_req, res) => {
+  try {
+    const { filename } = await generateFleetReport();
+    const reportsDir = path.join(__dirname, '../reports');
+    const filepath = path.join(reportsDir, filename);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    fs.createReadStream(filepath).pipe(res);
+  } catch (error) {
+    console.error('Report generation failed:', error);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
 app.get('/api/reports/:filename', (req, res) => {
   const reportsDir = path.join(__dirname, '../reports');
   const filepath = path.join(reportsDir, req.params.filename);

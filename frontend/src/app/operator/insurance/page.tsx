@@ -7,8 +7,8 @@ import PageHeader from '@/components/layout/PageHeader';
 import type { InsuranceScore, WhatIfScenario, WhatIfResult } from '@/types/fleet';
 import {
   Shield, TrendingUp, TrendingDown, Minus, DollarSign, Award,
-  Loader2, ChevronRight, ArrowRight, Zap, BarChart3, Target,
-  Sliders, CheckCircle2,
+  Loader2, ChevronRight, ArrowRight, BarChart3, Target,
+  Sliders, CheckCircle2, AlertTriangle, XCircle, Users, Wrench,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { InsightTooltip } from '@/components/ui/InsightTooltip';
@@ -49,12 +49,12 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
     grade.startsWith('C') ? '#F59E0B' : '#EF4444';
 
   return (
-    <div className="relative w-56 h-56 mx-auto">
+    <div className="relative w-44 h-44 mx-auto">
       <svg viewBox="0 0 200 200" className="w-full h-full -rotate-[135deg]">
-        <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" strokeLinecap="round"
+        <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" strokeLinecap="round"
           strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`} />
         <motion.circle
-          cx="100" cy="100" r="90" fill="none" stroke={strokeColor} strokeWidth="12" strokeLinecap="round"
+          cx="100" cy="100" r="90" fill="none" stroke={strokeColor} strokeWidth="14" strokeLinecap="round"
           strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
           initial={{ strokeDashoffset: circumference * 0.75 }}
           animate={{ strokeDashoffset: dashOffset }}
@@ -62,20 +62,214 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-6xl font-extrabold text-white font-mono-kpi">
+        <div className="text-5xl font-extrabold text-white font-mono-kpi">
           <AnimatedNumber value={score} duration={2000} />
         </div>
-        <div className={clsx('text-3xl font-extrabold mt-1', gradeColor)}>{grade}</div>
+        <div className={clsx('text-2xl font-extrabold mt-0.5', gradeColor)}>{grade}</div>
       </div>
     </div>
   );
 }
 
-const componentConfig: Record<string, { icon: typeof Shield; color: string; label: string; tooltipKey?: string }> = {
-  safeDriving: { icon: Shield, color: 'text-blue-400', label: 'Safe Driving', tooltipKey: 'insurance.harshBraking' },
-  compliance: { icon: CheckCircle2, color: 'text-emerald-400', label: 'Compliance', tooltipKey: 'insurance.seatbelt' },
-  maintenance: { icon: Zap, color: 'text-amber-400', label: 'Maintenance', tooltipKey: 'insurance.idleTime' },
-  driverQuality: { icon: Award, color: 'text-purple-400', label: 'Driver Quality', tooltipKey: 'insurance.speeding' },
+const GRADE_SCALE = [
+  { grade: 'F', min: 0, color: '#EF4444' },
+  { grade: 'D', min: 50, color: '#F97316' },
+  { grade: 'C', min: 60, color: '#F59E0B' },
+  { grade: 'C+', min: 70, color: '#EAB308' },
+  { grade: 'B', min: 75, color: '#FBAF1A' },
+  { grade: 'B+', min: 85, color: '#84CC16' },
+  { grade: 'A', min: 90, color: '#34D399' },
+  { grade: 'A+', min: 95, color: '#10B981' },
+];
+
+function GradeScaleBar({ score }: { score: number }) {
+  const position = Math.min(100, Math.max(0, score));
+  return (
+    <div>
+      <div className="relative h-3 rounded-full overflow-hidden flex">
+        {GRADE_SCALE.map((g, i) => {
+          const next = GRADE_SCALE[i + 1]?.min ?? 100;
+          const width = next - g.min;
+          return <div key={g.grade} className="h-full" style={{ width: `${width}%`, backgroundColor: g.color, opacity: 0.7 }} />;
+        })}
+        {/* Score marker */}
+        <motion.div
+          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-gray-900 shadow-lg"
+          initial={{ left: '0%' }}
+          animate={{ left: `${position}%` }}
+          transition={{ duration: 1.5, ease: 'easeOut' }}
+          style={{ marginLeft: '-7px' }}
+        />
+      </div>
+      <div className="flex justify-between mt-1.5">
+        {GRADE_SCALE.map((g) => (
+          <span key={g.grade} className="text-[9px] font-bold" style={{ color: g.color, opacity: score >= g.min && score < (GRADE_SCALE[GRADE_SCALE.indexOf(g) + 1]?.min ?? 101) ? 1 : 0.4 }}>
+            {g.grade}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type StatusLevel = 'good' | 'warning' | 'critical';
+
+interface DetailMetric {
+  label: string;
+  value: string;
+  status: StatusLevel;
+  context: string;
+}
+
+const statusConfig: Record<StatusLevel, { dot: string; text: string; bg: string; border: string }> = {
+  good: { dot: 'bg-emerald-400', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  warning: { dot: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+  critical: { dot: 'bg-red-400', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
+};
+
+function getComponentDetails(key: string, details: Record<string, number | string>): DetailMetric[] {
+  switch (key) {
+    case 'safeDriving': {
+      const eventRate = Number(details.eventRate) || 0;
+      const totalEvents = Number(details.totalEvents) || 0;
+      const severity = Number(details.severityScore) || 0;
+      const trend = Number(details.trendDelta) || 0;
+      return [
+        {
+          label: 'Incident Rate',
+          value: `${eventRate} per 1,000 mi`,
+          status: eventRate < 5 ? 'good' : eventRate < 15 ? 'warning' : 'critical',
+          context: eventRate < 5 ? 'Well below industry avg of 12' : eventRate < 15 ? 'Near industry average of 12' : 'Above industry avg - review driving patterns',
+        },
+        {
+          label: 'Events (30 days)',
+          value: `${totalEvents} events`,
+          status: totalEvents < 30 ? 'good' : totalEvents < 60 ? 'warning' : 'critical',
+          context: totalEvents < 30 ? 'Low event volume' : totalEvents < 60 ? 'Moderate - monitor trends' : 'High volume - investigate root causes',
+        },
+        {
+          label: 'Severity Mix',
+          value: severity >= 70 ? 'Mostly minor' : severity >= 40 ? 'Some serious' : 'Many severe',
+          status: severity >= 70 ? 'good' : severity >= 40 ? 'warning' : 'critical',
+          context: `Severity score: ${severity}/100`,
+        },
+        {
+          label: '30-Day Trend',
+          value: trend < 0 ? `${Math.abs(trend)} fewer events` : trend > 0 ? `${trend} more events` : 'No change',
+          status: trend <= -3 ? 'good' : trend <= 2 ? 'warning' : 'critical',
+          context: trend < 0 ? 'Improving vs. prior 30 days' : trend > 0 ? 'Worsening vs. prior 30 days' : 'Stable vs. prior 30 days',
+        },
+      ];
+    }
+    case 'compliance': {
+      const seatbelt = Number(details.seatbeltViolations) || 0;
+      const speeding = Number(details.speedingEvents) || 0;
+      const hos = Number(details.hosViolations) || 0;
+      const hours = Number(details.avgDailyHours) || 0;
+      return [
+        {
+          label: 'Seatbelt Violations',
+          value: `${seatbelt} in 30 days`,
+          status: seatbelt === 0 ? 'good' : seatbelt <= 5 ? 'warning' : 'critical',
+          context: seatbelt === 0 ? 'Full compliance' : seatbelt <= 5 ? 'Schedule refresher training' : 'Enforce mandatory seatbelt policy',
+        },
+        {
+          label: 'Speeding Events',
+          value: `${speeding} in 30 days`,
+          status: speeding <= 5 ? 'good' : speeding <= 15 ? 'warning' : 'critical',
+          context: speeding <= 5 ? 'Within acceptable range' : speeding <= 15 ? 'Consider speed governor policy' : 'Implement speed limiters immediately',
+        },
+        {
+          label: 'HOS Violations',
+          value: `${hos} violations`,
+          status: hos === 0 ? 'good' : hos <= 3 ? 'warning' : 'critical',
+          context: hos === 0 ? 'No hours-of-service violations' : hos <= 3 ? 'Review driver scheduling' : 'Scheduling overhaul needed - DOT risk',
+        },
+        {
+          label: 'Avg Driving Hours/Day',
+          value: `${hours.toFixed(1)} hrs`,
+          status: hours < 9 ? 'good' : hours < 11 ? 'warning' : 'critical',
+          context: hours < 9 ? 'Healthy workload' : hours < 11 ? 'Approaching HOS limit (11 hrs)' : 'Exceeding safe driving limits',
+        },
+      ];
+    }
+    case 'maintenance': {
+      const age = Number(details.avgVehicleAge) || 0;
+      const odometer = Number(details.avgOdometer) || 0;
+      const activeFaults = Number(details.activeFaults) || 0;
+      const faultsPerVeh = Number(details.faultsPerVehicle) || 0;
+      const fleetSize = Number(details.fleetSize) || 0;
+      return [
+        {
+          label: 'Fleet Age',
+          value: `${age.toFixed(1)} yr avg across ${fleetSize} vehicles`,
+          status: age < 3 ? 'good' : age < 5 ? 'warning' : 'critical',
+          context: age < 3 ? 'Modern fleet - lower breakdown risk' : age < 5 ? 'Consider renewal for oldest units' : 'Aging fleet - plan replacements',
+        },
+        {
+          label: 'Active Fault Codes',
+          value: `${activeFaults} unresolved`,
+          status: activeFaults <= 2 ? 'good' : activeFaults <= 5 ? 'warning' : 'critical',
+          context: activeFaults <= 2 ? 'Fleet well maintained' : activeFaults <= 5 ? 'Schedule repairs this week' : 'Urgent - multiple vehicles at risk',
+        },
+        {
+          label: 'Faults per Vehicle',
+          value: faultsPerVeh.toFixed(1),
+          status: faultsPerVeh < 2 ? 'good' : faultsPerVeh < 5 ? 'warning' : 'critical',
+          context: faultsPerVeh < 2 ? 'Low fault rate' : faultsPerVeh < 5 ? 'Increase PM frequency' : 'Systemic maintenance issues',
+        },
+        {
+          label: 'Avg Mileage',
+          value: `${Math.round(odometer).toLocaleString()} km`,
+          status: odometer < 200000 ? 'good' : odometer < 400000 ? 'warning' : 'critical',
+          context: odometer < 200000 ? 'Low mileage fleet' : odometer < 400000 ? 'Monitor wear components' : 'High mileage - increased breakdown risk',
+        },
+      ];
+    }
+    case 'driverQuality': {
+      const tenure = Number(details.avgTenure) || 0;
+      const lowRisk = details.lowRiskPercent as string || '0%';
+      const highRisk = details.highRiskPercent as string || '0%';
+      const totalDrivers = Number(details.totalDrivers) || 0;
+      const lowPct = parseInt(lowRisk);
+      const highPct = parseInt(highRisk);
+      return [
+        {
+          label: 'Avg Driver Tenure',
+          value: `${tenure.toFixed(1)} years`,
+          status: tenure >= 5 ? 'good' : tenure >= 2 ? 'warning' : 'critical',
+          context: tenure >= 5 ? 'Experienced workforce - lower risk' : tenure >= 2 ? 'Mix of experience levels' : 'High turnover - invest in retention',
+        },
+        {
+          label: 'Low-Risk Drivers',
+          value: `${lowRisk} of ${totalDrivers} drivers`,
+          status: lowPct >= 60 ? 'good' : lowPct >= 40 ? 'warning' : 'critical',
+          context: lowPct >= 60 ? 'Majority of drivers are safe' : lowPct >= 40 ? 'Room to improve with coaching' : 'Fleet-wide training needed',
+        },
+        {
+          label: 'High/Critical Risk',
+          value: `${highRisk} of ${totalDrivers} drivers`,
+          status: highPct <= 10 ? 'good' : highPct <= 20 ? 'warning' : 'critical',
+          context: highPct <= 10 ? 'Very few problem drivers' : highPct <= 20 ? 'Target coaching for these drivers' : 'Intervention plans needed urgently',
+        },
+        {
+          label: 'Team Size',
+          value: `${totalDrivers} drivers`,
+          status: 'good',
+          context: 'Active fleet drivers',
+        },
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
+const componentConfig: Record<string, { icon: typeof Shield; color: string; bg: string; label: string; description: string; tooltipKey?: string }> = {
+  safeDriving: { icon: Shield, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Safe Driving', description: 'Incident frequency, severity & trends', tooltipKey: 'insurance.harshBraking' },
+  compliance: { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', label: 'Compliance', description: 'Seatbelt, speeding & HOS adherence', tooltipKey: 'insurance.seatbelt' },
+  maintenance: { icon: Wrench, color: 'text-amber-500', bg: 'bg-amber-50', label: 'Maintenance', description: 'Vehicle condition, faults & fleet age', tooltipKey: 'insurance.idleTime' },
+  driverQuality: { icon: Users, color: 'text-purple-500', bg: 'bg-purple-50', label: 'Driver Quality', description: 'Tenure, risk distribution & team profile', tooltipKey: 'insurance.speeding' },
 };
 
 interface SliderParam {
@@ -201,42 +395,95 @@ export default function InsurancePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="col-span-5 bg-gradient-to-br from-[#18202F] to-[#1E293B] rounded-3xl p-8 relative overflow-hidden"
+            className="col-span-5 bg-gradient-to-br from-[#18202F] to-[#1E293B] rounded-3xl p-6 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-40 h-40 bg-[#FBAF1A]/[0.04] rounded-full blur-[60px]" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="flex items-center gap-1">
-                  <h2 className="text-lg font-bold text-white">Fleet Insurance Score</h2>
-                  <InsightTooltip metricKey="insurance.overallScore" variant="dark" position="bottom" />
-                </span>
-                <div className={clsx('flex items-center gap-1 text-sm font-semibold', trendColor)}>
-                  <TrendIcon className="w-4 h-4" />
-                  <span className="capitalize">{score.trend}</span>
+            <div className="relative space-y-5">
+              {/* Header */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="flex items-center gap-1">
+                    <h2 className="text-base font-bold text-white">Fleet Insurance Score</h2>
+                    <InsightTooltip metricKey="insurance.overallScore" variant="dark" position="bottom" />
+                  </span>
+                  <div className={clsx('flex items-center gap-1 text-sm font-semibold', trendColor)}>
+                    <TrendIcon className="w-4 h-4" />
+                    <span className="capitalize">{score.trend}</span>
+                  </div>
+                </div>
+                <div className="text-xs text-white/40 flex items-center gap-1">
+                  Percentile: Top {100 - score.percentile}% of fleets
+                  <InsightTooltip metricKey="insurance.percentile" variant="dark" />
                 </div>
               </div>
-              <div className="text-xs text-white/40 mb-6 flex items-center gap-1">
-                Percentile: Top {100 - score.percentile}% of fleets
-                <InsightTooltip metricKey="insurance.percentile" variant="dark" />
-              </div>
+
+              {/* Gauge */}
               <ScoreGauge score={score.overallScore} grade={score.grade} />
-              <div className="mt-6 bg-white/[0.05] rounded-xl p-4">
-                <div className="flex items-center justify-between">
+
+              {/* Grade Scale */}
+              <div className="bg-white/[0.05] rounded-xl px-4 py-3">
+                <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-2">Grade Scale</div>
+                <GradeScaleBar score={score.overallScore} />
+              </div>
+
+              {/* Premium Impact */}
+              <div className="bg-white/[0.05] rounded-xl p-4">
+                <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1">
+                  Annual Premium Impact <InsightTooltip metricKey="insurance.premiumEstimate" variant="dark" />
+                </div>
+                <div className="flex items-end justify-between">
                   <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-1">Annual Premium Impact <InsightTooltip metricKey="insurance.premiumEstimate" variant="dark" /></div>
-                    <div className="text-3xl font-extrabold text-emerald-400 mt-1">
+                    <div className="text-2xl font-extrabold text-emerald-400">
                       ${score.premiumImpact.estimatedAnnualSavings.toLocaleString()}
                     </div>
-                    <div className="text-xs text-white/30">savings vs. industry average</div>
+                    <div className="text-[11px] text-white/30">savings vs. industry average</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-white/40 uppercase tracking-wider">Benchmark</div>
-                    <div className="text-xl font-bold text-white/60 mt-1">
+                    <div className="text-lg font-bold text-white/60">
                       ${score.premiumImpact.benchmarkPremium.toLocaleString()}
                     </div>
-                    <div className={clsx('text-sm font-bold', score.premiumImpact.percentChange < 0 ? 'text-emerald-400' : 'text-red-400')}>
-                      {score.premiumImpact.percentChange > 0 ? '+' : ''}{score.premiumImpact.percentChange}%
+                    <div className="flex items-center gap-1 justify-end">
+                      <span className="text-[11px] text-white/30">benchmark</span>
+                      <span className={clsx('text-xs font-bold', score.premiumImpact.percentChange < 0 ? 'text-emerald-400' : 'text-red-400')}>
+                        {score.premiumImpact.percentChange > 0 ? '+' : ''}{score.premiumImpact.percentChange}%
+                      </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Component Contributions */}
+              <div className="bg-white/[0.05] rounded-xl px-4 py-3">
+                <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-3">Point Contributions</div>
+                <div className="space-y-2.5">
+                  {Object.entries(score.components).map(([key, comp]) => {
+                    const config = componentConfig[key];
+                    if (!config) return null;
+                    const Icon = config.icon;
+                    const barPct = (comp.weightedScore / score.overallScore) * 100;
+                    return (
+                      <div key={key} className="flex items-center gap-2.5">
+                        <Icon className={clsx('w-3.5 h-3.5 flex-shrink-0', config.color)} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] text-white/60 font-medium truncate">{config.label}</span>
+                            <span className="text-[11px] text-white/80 font-bold tabular-nums ml-2">{comp.weightedScore} pts</span>
+                          </div>
+                          <div className="h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full bg-gradient-to-r from-white/30 to-white/50"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${barPct}%` }}
+                              transition={{ duration: 1, delay: 0.5 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="flex items-center justify-between pt-1.5 border-t border-white/[0.08]">
+                    <span className="text-[11px] text-white/40 font-semibold">Total</span>
+                    <span className="text-sm text-white font-extrabold tabular-nums">{score.overallScore} / 100</span>
                   </div>
                 </div>
               </div>
@@ -251,9 +498,10 @@ export default function InsurancePage() {
           >
             <div className="flex items-center gap-2 mb-6">
               <BarChart3 className="w-5 h-5 text-[#BF7408]" />
-              <h2 className="text-lg font-bold text-gray-900">Score Components</h2>
+              <h2 className="text-lg font-bold text-gray-900">Score Breakdown</h2>
+              <span className="text-xs text-gray-400 ml-auto">4 components, weighted to 100</span>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-5">
               {Object.entries(score.components).map(([key, comp], i) => {
                 const config = componentConfig[key];
                 if (!config) return null;
@@ -261,62 +509,64 @@ export default function InsurancePage() {
                 const barColor = comp.score >= 80 ? 'from-emerald-400 to-emerald-500' :
                   comp.score >= 60 ? 'from-[#FBAF1A] to-amber-500' :
                   comp.score >= 40 ? 'from-amber-500 to-orange-500' : 'from-red-400 to-red-500';
+                const componentStatus = comp.score >= 80 ? 'good' : comp.score >= 60 ? 'warning' : 'critical';
+                const statusLabel = comp.score >= 80 ? 'On Track' : comp.score >= 60 ? 'Needs Attention' : 'Critical';
+                const StatusIcon = comp.score >= 80 ? CheckCircle2 : comp.score >= 60 ? AlertTriangle : XCircle;
+                const metrics = getComponentDetails(key, comp.details);
+
                 return (
-                  <motion.div key={key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}>
-                    <div className="flex items-center justify-between mb-2">
+                  <motion.div key={key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
+                    className="border border-gray-100 rounded-2xl p-5 hover:border-gray-200 transition-colors"
+                  >
+                    {/* Component Header */}
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center">
+                        <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', config.bg)}>
                           <Icon className={clsx('w-5 h-5', config.color)} />
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-gray-800 flex items-center gap-1">{config.label} {config.tooltipKey && <InsightTooltip metricKey={config.tooltipKey} />}</div>
-                          <div className="text-xs text-gray-400">Weight: {(comp.weight * 100).toFixed(0)}%</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-gray-900">{config.label}</span>
+                            <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                              {(comp.weight * 100).toFixed(0)}% weight
+                            </span>
+                            {config.tooltipKey && <InsightTooltip metricKey={config.tooltipKey} />}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">{config.description}</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-extrabold text-gray-900">{comp.score}</div>
-                        <div className="text-xs text-gray-400">weighted: {comp.weightedScore.toFixed(1)}</div>
+                      <div className="text-right flex items-center gap-3">
+                        <div className={clsx('flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg',
+                          statusConfig[componentStatus].bg, statusConfig[componentStatus].text
+                        )}>
+                          <StatusIcon className="w-3 h-3" />
+                          {statusLabel}
+                        </div>
+                        <div>
+                          <div className="text-2xl font-extrabold text-gray-900 tabular-nums">{comp.score}</div>
+                          <div className="text-[10px] text-gray-400 text-right">{comp.weightedScore.toFixed(0)} pts to total</div>
+                        </div>
                       </div>
                     </div>
-                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+
+                    {/* Score Bar */}
+                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden mb-4">
                       <motion.div className={clsx('h-full rounded-full bg-gradient-to-r', barColor)} initial={{ width: 0 }} animate={{ width: `${comp.score}%` }} transition={{ duration: 1, delay: 0.3 + i * 0.1 }} />
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {Object.entries(comp.details).slice(0, 4).map(([k, v]) => {
-                        const detailLabels: Record<string, string> = {
-                          eventRate: 'Event Rate (per 1K mi)',
-                          totalEvents: 'Total Events',
-                          severityScore: 'Severity Score',
-                          trendDelta: 'Trend Change',
-                          seatbeltViolations: 'Seatbelt Violations',
-                          speedingEvents: 'Speeding Events',
-                          hosViolations: 'HOS Violations',
-                          avgDailyHours: 'Avg Daily Hours',
-                          avgVehicleAge: 'Avg Vehicle Age (yr)',
-                          avgOdometer: 'Avg Odometer (km)',
-                          totalFaults: 'Total Faults',
-                          activeFaults: 'Active Faults',
-                          faultsPerVehicle: 'Faults/Vehicle',
-                          fleetSize: 'Fleet Size',
-                          avgTenure: 'Avg Tenure (yr)',
-                          lowRiskPercent: 'Low Risk %',
-                          highRiskPercent: 'High Risk %',
-                          totalDrivers: 'Total Drivers',
-                        };
-                        const label = detailLabels[k] || k.replace(/([A-Z])/g, ' $1').trim();
-                        let formatted: string;
-                        if (typeof v === 'string') {
-                          formatted = v;
-                        } else if (typeof v === 'number') {
-                          if (v > 1000) formatted = v.toLocaleString();
-                          else formatted = v.toFixed(1);
-                        } else {
-                          formatted = String(v);
-                        }
+
+                    {/* Detail Metrics Grid */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {metrics.map((metric) => {
+                        const st = statusConfig[metric.status];
                         return (
-                          <span key={k} className="text-xs px-2 py-0.5 bg-gray-50 rounded text-gray-500">
-                            {label}: <span className="font-semibold text-gray-700">{formatted}</span>
-                          </span>
+                          <div key={metric.label} className={clsx('rounded-xl px-3 py-2.5 border', st.bg, st.border)}>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <div className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', st.dot)} />
+                              <span className="text-[11px] font-semibold text-gray-500 truncate">{metric.label}</span>
+                            </div>
+                            <div className="text-sm font-bold text-gray-900 mb-0.5">{metric.value}</div>
+                            <div className="text-[10px] text-gray-500 leading-tight">{metric.context}</div>
+                          </div>
                         );
                       })}
                     </div>

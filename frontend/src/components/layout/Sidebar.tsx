@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Shield, LayoutDashboard, Users, AlertTriangle, Heart, Truck,
-  Brain, Bell, MapPin, DollarSign, UserCircle, Award, Bot, Leaf,
+  Brain, Bell, MapPin, DollarSign, Award, Bot, Leaf,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -33,12 +33,6 @@ const sections = [
       { href: '/operator/roi', label: 'ROI Dashboard', icon: DollarSign },
       { href: '/operator/sustainability', label: 'Sustainability', icon: Leaf },
       { href: '/operator/assistant', label: 'AI Assistant', icon: Bot },
-    ],
-  },
-  {
-    title: 'Driver',
-    items: [
-      { href: '/driver-portal', label: 'Driver Portal', icon: UserCircle },
     ],
   },
 ];
@@ -86,10 +80,10 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    'flex items-center gap-2.5 w-full px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-200 my-[1px]',
+                    'flex items-center gap-2.5 w-full px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-200 my-[1px] origin-left',
                     isActive
-                      ? 'bg-[#FBAF1A]/15 text-[#FBAF1A]'
-                      : 'text-white/50 hover:bg-white/[0.06] hover:text-white/80'
+                      ? 'bg-[#FBAF1A]/15 text-[#FBAF1A] scale-[1.03]'
+                      : 'text-white/50 hover:bg-white/[0.06] hover:text-white/80 hover:scale-[1.05]'
                   )}
                 >
                   <Icon className={clsx('w-[17px] h-[17px]', isActive && 'text-[#FBAF1A]')} />
