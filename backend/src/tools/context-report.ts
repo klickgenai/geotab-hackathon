@@ -65,7 +65,7 @@ Trend: ${insuranceScore.trend}
 
     // Use Claude to generate structured AI analysis
     const aiResult = await generateText({
-      model: anthropic('claude-sonnet-4-5-20250929'),
+      model: anthropic('claude-opus-4-6-20250918'),
       prompt: `You are FleetShield AI, an expert fleet safety and insurance analyst. Based on the conversation context and fleet data below, produce a structured report analysis.
 
 ## Report Topic

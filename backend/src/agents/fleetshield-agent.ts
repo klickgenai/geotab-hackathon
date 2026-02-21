@@ -236,7 +236,7 @@ export async function streamAgentResponse(message: string, currentPage?: string)
     systemPrompt += `\n\n## Current Page Context\nThe user is currently viewing: ${currentPage}. Tailor your responses to what they're looking at. Reference specific metrics and features visible on this page. If they ask a vague question, interpret it in the context of this page. Proactively suggest related insights from this page's data.`;
   }
   return streamText({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: anthropic('claude-opus-4-6-20250918'),
     system: systemPrompt,
     prompt: message,
     tools: fleetshieldTools,
@@ -248,7 +248,7 @@ export async function streamAgentResponseWithHistory(
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>
 ) {
   return streamText({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: anthropic('claude-opus-4-6-20250918'),
     system: SYSTEM_PROMPT,
     messages,
     tools: fleetshieldTools,
@@ -258,7 +258,7 @@ export async function streamAgentResponseWithHistory(
 
 export async function generateAgentResponse(message: string) {
   return generateText({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: anthropic('claude-opus-4-6-20250918'),
     system: SYSTEM_PROMPT,
     prompt: message,
     tools: fleetshieldTools,
@@ -314,7 +314,7 @@ IMPORTANT: This is a voice-first interface with separate voice and visual output
   }
 
   return streamText({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: anthropic('claude-opus-4-6-20250918'),
     system: systemPrompt,
     prompt: message,
     tools: fleetshieldTools,

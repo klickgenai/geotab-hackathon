@@ -219,7 +219,7 @@ async function generateMikeResponse(
     .join('\n');
 
   const result = await generateText({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: anthropic('claude-opus-4-6-20250918'),
     system: `You are Mike, a veteran fleet dispatcher at FleetShield Trucking. You're on a call with Tasha, the AI co-driver assistant who is calling on behalf of driver ${driverFirstName}.
 
 PERSONALITY (dispatch call style):
@@ -263,7 +263,7 @@ async function generateTashaProxy(
     .join('\n');
 
   const result = await generateText({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: anthropic('claude-opus-4-6-20250918'),
     system: `You are Tasha, an AI co-driver assistant for FleetShield Trucking. You are on a call with dispatcher Mike, speaking on behalf of driver ${driverFirstName}.
 
 AVA'S STYLE:
@@ -304,7 +304,7 @@ async function extractOutcome(
 
   try {
     const result = await generateText({
-      model: anthropic('claude-sonnet-4-5-20250929'),
+      model: anthropic('claude-opus-4-6-20250918'),
       system: `Extract the outcome of this dispatch call conversation.
 
 ORIGINAL REQUEST: "${originalRequest}"

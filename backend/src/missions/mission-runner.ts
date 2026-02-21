@@ -720,7 +720,7 @@ async function generateSummary(missionId: string, type: MissionType, findings: M
 
   try {
     const result = await generateText({
-      model: anthropic('claude-sonnet-4-5-20250929'),
+      model: anthropic('claude-opus-4-6-20250918'),
       system: `You are a senior fleet safety analyst writing an executive summary. Be specific — name drivers, cite exact numbers, state dollar amounts. Write 3-5 sentences suitable for text-to-speech (a fleet manager listening on the go). Use natural number phrasing ("five drivers", "seventy-two thousand dollars"). End with the single most important action to take right now.`,
       prompt: `Mission: ${meta.displayName}\n\nFindings:\n${findingsSummary}\n\nWrite the executive summary:`,
       maxTokens: 350,
