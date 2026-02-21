@@ -43,7 +43,7 @@ FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform bu
 ### Backend Stack
 - **Runtime**: Node.js with ESM modules
 - **Framework**: Express 4.21 + ws 8.18 (WebSocket)
-- **AI**: Vercel AI SDK 4.3 + Anthropic Claude Sonnet 4.5
+- **AI**: Vercel AI SDK 4.3 + Anthropic Claude Opus 4.6
 - **Voice**: Smallest AI Pulse (STT) + Waves (TTS)
 - **Build**: TypeScript 5.7, tsx for dev
 - **Dev command**: `npm run dev` (tsx watch)
