@@ -32,6 +32,7 @@ import {
   getDriverMessages,
   getDriverLeaderboard,
   getDriverActionItems,
+  getAllDriverActionItems,
   addDriverActionItem,
   completeDriverActionItem,
   dismissDriverActionItem,
@@ -844,6 +845,62 @@ app.post('/api/driver/:id/actions/:actionId/dismiss', (req, res) => {
     res.json(item);
   } catch (error) {
     res.status(500).json({ error: 'Failed to dismiss action item' });
+  }
+});
+
+// --- Driver Training (mission-synced coaching programs) ---
+app.get('/api/driver/:id/training', (req, res) => {
+  try {
+    const driverId = req.params.id;
+    const missions = getAllMissions();
+    const programs: Array<Record<string, unknown>> = [];
+
+    for (const mission of missions.completed) {
+      if (mission.status !== 'complete') continue;
+
+      if (mission.type === 'coaching_sweep') {
+        const plans = (mission.data.driverPlans as Array<Record<string, unknown>>) || [];
+        const driverPlan = plans.find(p => p.driverId === driverId);
+        if (driverPlan) {
+          programs.push({
+            missionId: mission.missionId,
+            missionType: mission.type,
+            source: mission.displayName,
+            completedAt: mission.completedAt,
+            driverName: driverPlan.driverName,
+            riskScore: driverPlan.riskScore,
+            tier: driverPlan.tier,
+            topIssues: driverPlan.topIssues,
+            coachingActions: driverPlan.coachingActions,
+            timeline: driverPlan.timeline,
+            expectedImprovement: driverPlan.expectedImprovement,
+            estimatedSavings: driverPlan.estimatedSavings,
+            wellnessScore: driverPlan.wellnessScore,
+            burnoutRisk: driverPlan.burnoutRisk,
+          });
+        }
+      } else if (mission.type === 'safety_investigation' && mission.data.driverId === driverId) {
+        programs.push({
+          missionId: mission.missionId,
+          missionType: mission.type,
+          source: mission.displayName,
+          completedAt: mission.completedAt,
+          driverName: mission.data.driverName,
+          riskScore: mission.data.riskScore,
+          rootCauses: mission.data.rootCauses,
+          coachingActions: mission.recommendations,
+          timeline: [],
+          expectedImprovement: `Focus on root causes for measurable improvement`,
+          estimatedSavings: '',
+        });
+      }
+    }
+
+    // Sort newest first
+    programs.sort((a, b) => new Date(b.completedAt as string).getTime() - new Date(a.completedAt as string).getTime());
+    res.json(programs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get training programs' });
   }
 });
 

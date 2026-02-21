@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'events';
 import type { MissionProgress, MissionFinding, MissionResult } from './mission-types.js';
+import { addDriverActionItem } from '../data/driver-session.js';
 
 // ─── Bridge Registry (per mission) ──────────────────────────
 
@@ -78,6 +79,62 @@ export function completeActiveMission(missionId: string, result: MissionResult):
   if (completedMissions.size > 50) {
     const oldest = completedMissions.keys().next().value;
     if (oldest) completedMissions.delete(oldest);
+  }
+  // Sync mission results to driver action items
+  if (result.status === 'complete') {
+    syncMissionToDrivers(result);
+  }
+}
+
+function syncMissionToDrivers(result: MissionResult): void {
+  try {
+    if (result.type === 'coaching_sweep') {
+      const plans = (result.data.driverPlans as Array<Record<string, unknown>>) || [];
+      for (const plan of plans) {
+        const driverId = plan.driverId as string;
+        const actions = (plan.coachingActions as string[]) || [];
+        const tier = plan.tier as string;
+        const priority = tier === 'critical' ? 'urgent' as const : tier === 'high' ? 'high' as const : 'medium' as const;
+        for (const action of actions) {
+          addDriverActionItem(driverId, action, 'mission', {
+            category: 'coaching', priority, missionId: result.missionId,
+          });
+        }
+      }
+    } else if (result.type === 'wellness_check') {
+      for (const finding of result.findings) {
+        if (finding.category === 'burnout_critical' || finding.category === 'burnout_moderate') {
+          const data = finding.data as Record<string, unknown> | undefined;
+          const driverId = data?.driverId as string;
+          const interventions = (data?.interventions as string[]) || [];
+          const isCritical = finding.category === 'burnout_critical';
+          if (driverId) {
+            if (interventions.length > 0) {
+              for (const intervention of interventions) {
+                addDriverActionItem(driverId, intervention, 'mission', {
+                  category: 'wellness', priority: isCritical ? 'urgent' : 'high', missionId: result.missionId,
+                });
+              }
+            } else {
+              addDriverActionItem(driverId, finding.detail, 'mission', {
+                category: 'wellness', priority: isCritical ? 'urgent' : 'high', missionId: result.missionId,
+              });
+            }
+          }
+        }
+      }
+    } else if (result.type === 'safety_investigation') {
+      const driverId = result.data.driverId as string;
+      if (driverId && result.recommendations.length > 0) {
+        for (const rec of result.recommendations) {
+          addDriverActionItem(driverId, rec, 'mission', {
+            category: 'safety', priority: 'high', missionId: result.missionId,
+          });
+        }
+      }
+    }
+  } catch {
+    // Don't let sync failures break mission completion
   }
 }
 

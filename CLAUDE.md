@@ -79,7 +79,8 @@ FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform bu
 
 ### Frontend
 - `src/app/page.tsx` - Landing page
-- `src/app/driver-portal/page.tsx` - Driver Voice AI Portal
+- `src/app/driver-portal/page.tsx` - Driver portal tab orchestrator (~260 lines)
+- `src/components/driver/` - 11 driver portal components (tabs, overlays, gauges)
 - `src/app/operator/` - Operator Portal (12 sub-pages)
   - `page.tsx` - Operator Dashboard
   - `assistant/page.tsx` - Tasha AI Assistant (full-screen, voice + text)
@@ -100,6 +101,18 @@ FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform bu
   - `MissionTracker.tsx` - Live mission progress + rich report renderer
 - `src/components/chat/ChatPanel.tsx` - AI chat panel (sidebar, used on legacy pages)
 - `src/components/dashboard/` - Dashboard components (KPICards, ScoreCard, etc.)
+- `src/components/driver/` - Driver portal tab components
+  - `HomeTab.tsx` - Dashboard home with score gauge, briefing, challenge
+  - `TrainingTab.tsx` - Training programs from missions + action items
+  - `VoiceTab.tsx` - Voice AI with animated orb, transcript, text input
+  - `LoadTab.tsx` - Load details, dispatch actions, messages
+  - `LeaderboardTab.tsx` - Leaderboard, badges, rewards, points history
+  - `DriverTopBar.tsx` - Top bar with driver info, level, streak
+  - `DriverTabBar.tsx` - Bottom tab bar (Home|Training|Voice|Load|Rank)
+  - `FloatingMicButton.tsx` - Floating voice trigger on all tabs except Voice
+  - `ScoreGauge.tsx` - SVG circular safety score gauge
+  - `DispatchCallOverlay.tsx` - Tasha-Mike dispatch call modal
+  - `BadgeDetailModal.tsx` - Badge inspection modal
 - `src/components/layout/` - Layout components
   - `AppShell.tsx` - Main layout wrapper + mission notification bell system
   - `Sidebar.tsx` - Navigation sidebar
@@ -146,7 +159,14 @@ Each page follows the same structure:
 - Has its own layout (no sidebar) - detected via pathname in `AppShell.tsx`
 - Dark theme (slate-900 background)
 - Full-screen experience for truck-mounted tablets
+- Tab-based layout: Home | Training | **Voice** (centered, larger) | Load | Rank
+- 11 components in `src/components/driver/` — page.tsx is a slim ~260-line orchestrator
+- Floating mic button on all tabs except Voice (taps to switch & start listening)
 - Voice AI via WebSocket connection to backend
+- 30-second polling for action items and training programs
+- Mission-to-driver sync: operator missions create action items for specific drivers
+- Training endpoint: `GET /api/driver/:id/training` returns programs from completed missions
+- Test scenarios documented in `DRIVER_PORTAL_TEST_SCENARIOS.md`
 
 ### Assistant Page
 - Full-screen layout (no sidebar) - detected via pathname in `AppShell.tsx`
@@ -167,6 +187,7 @@ They return typed objects and don't have side effects. The mission system calls 
 - Progress streams via EventEmitter bridge → SSE/WebSocket
 - Global mission store for cross-page retrieval
 - MissionTracker.tsx renders live progress + rich completion reports
+- **Mission-to-Driver sync**: coaching_sweep, wellness_check, safety_investigation auto-create action items for affected drivers via `syncMissionToDrivers()` in mission-bridge.ts
 
 ## AI Agent Tools (17 total)
 | Tool | File | Description |

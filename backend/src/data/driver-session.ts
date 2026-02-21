@@ -50,10 +50,13 @@ export interface DispatchMessage {
 export interface ActionItem {
   id: string;
   text: string;
-  source: 'voice' | 'tool' | 'system';
+  source: 'voice' | 'tool' | 'system' | 'mission';
   status: 'pending' | 'completed' | 'dismissed';
+  category: 'coaching' | 'wellness' | 'safety' | 'general';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   createdAt: string;
   completedAt?: string;
+  missionId?: string;
 }
 
 // ─── In-memory stores ───────────────────────────────────────
@@ -418,17 +421,13 @@ export function initDriverSessions(): void {
 
   // Generate initial action items for drivers
   for (const driver of seedDrivers) {
-    const items: string[] = [];
     if (driver.riskProfile === 'high' || driver.riskProfile === 'critical') {
-      items.push('Complete defensive driving refresher course');
-      items.push('Review safety event footage from this week');
+      addDriverActionItem(driver.id, 'Complete defensive driving refresher course', 'system', { category: 'coaching', priority: 'high' });
+      addDriverActionItem(driver.id, 'Review safety event footage from this week', 'system', { category: 'safety', priority: 'high' });
     }
-    items.push('Submit daily vehicle inspection report');
+    addDriverActionItem(driver.id, 'Submit daily vehicle inspection report', 'system', { category: 'general', priority: 'medium' });
     if (Math.random() > 0.5) {
-      items.push('Update emergency contact information');
-    }
-    for (const text of items) {
-      addDriverActionItem(driver.id, text, 'system');
+      addDriverActionItem(driver.id, 'Update emergency contact information', 'system', { category: 'general', priority: 'low' });
     }
   }
 
@@ -548,18 +547,30 @@ export function getDriverActionItems(driverId: string): ActionItem[] {
   return (driverActionItems.get(driverId) || []).filter(a => a.status === 'pending');
 }
 
-export function addDriverActionItem(driverId: string, text: string, source: ActionItem['source'] = 'system'): ActionItem {
+export function addDriverActionItem(
+  driverId: string,
+  text: string,
+  source: ActionItem['source'] = 'system',
+  opts?: { category?: ActionItem['category']; priority?: ActionItem['priority']; missionId?: string },
+): ActionItem {
   const item: ActionItem = {
     id: `action-${actionIdCounter++}`,
     text,
     source,
     status: 'pending',
+    category: opts?.category ?? 'general',
+    priority: opts?.priority ?? 'medium',
     createdAt: new Date().toISOString(),
+    missionId: opts?.missionId,
   };
   const existing = driverActionItems.get(driverId) || [];
   existing.unshift(item);
   driverActionItems.set(driverId, existing);
   return item;
+}
+
+export function getAllDriverActionItems(driverId: string): ActionItem[] {
+  return driverActionItems.get(driverId) || [];
 }
 
 export function completeDriverActionItem(driverId: string, actionId: string): ActionItem | null {

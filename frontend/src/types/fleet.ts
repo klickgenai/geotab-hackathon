@@ -427,10 +427,31 @@ export interface PreShiftBriefing {
 export interface ActionItem {
   id: string;
   text: string;
-  source: 'voice' | 'tool' | 'system';
+  source: 'voice' | 'tool' | 'system' | 'mission';
   status: 'pending' | 'completed' | 'dismissed';
+  category: 'coaching' | 'wellness' | 'safety' | 'general';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   createdAt: string;
   completedAt?: string;
+  missionId?: string;
+}
+
+export interface DriverTrainingProgram {
+  missionId: string;
+  missionType: string;
+  source: string;
+  completedAt: string;
+  driverName: string;
+  riskScore: number;
+  tier?: string;
+  topIssues?: { type: string; count: number }[];
+  coachingActions: string[];
+  timeline: string[];
+  expectedImprovement: string;
+  estimatedSavings: string;
+  wellnessScore?: number;
+  burnoutRisk?: string;
+  rootCauses?: string[];
 }
 
 // --- Sustainability / Green Fleet ---

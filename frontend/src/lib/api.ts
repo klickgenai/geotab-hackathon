@@ -5,7 +5,8 @@ import type {
   GPSTrailPoint, SpeedingHotspot, FleetROI, BeforeAfterComparison,
   WhatIfScenario, WhatIfResult, DriverSession, DriverRanking,
   GamificationState, Badge, PointTransaction, RewardItem, DailyChallenge,
-  PreShiftBriefing, ActionItem, GreenFleetDashboard, DriverGreenScore, EVReadinessReport,
+  PreShiftBriefing, ActionItem, DriverTrainingProgram,
+  GreenFleetDashboard, DriverGreenScore, EVReadinessReport,
 } from '@/types/fleet';
 
 const API_BASE = '';
@@ -156,6 +157,9 @@ export const api = {
   driverActions: (id: string) => fetchJSON<ActionItem[]>(`/api/driver/${id}/actions`),
   completeAction: (driverId: string, actionId: string) => postJSON<ActionItem>(`/api/driver/${driverId}/actions/${actionId}/complete`, {}),
   dismissAction: (driverId: string, actionId: string) => postJSON<ActionItem>(`/api/driver/${driverId}/actions/${actionId}/dismiss`, {}),
+
+  // Driver Training Programs
+  driverTraining: (id: string) => fetchJSON<DriverTrainingProgram[]>(`/api/driver/${id}/training`),
 
   // Missions
   missionsActive: () => fetchJSON<{ active: unknown[]; completed: unknown[] }>('/api/missions/active'),

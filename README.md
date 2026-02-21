@@ -144,16 +144,54 @@ How it works:
 - Customizable report parameters
 
 ### Driver Voice AI Portal (`/driver-portal`)
-- Personal dashboard with animated safety score gauge
-- Current load assignment with status management (picked up, in transit, delivered)
+Tab-based mobile-first layout designed for truck-mounted tablets with 5 tabs and a floating mic button.
+
+**Home Tab** — Personal dashboard at a glance
+- Animated safety score gauge (large, centered)
+- Pre-shift briefing card with risk level and focus areas
+- Daily challenge card with progress bar
+- Quick stats row (streak, rank, today's events)
+- Top 3 pending action items with "View all" link to Training tab
+
+**Training Tab** — Coaching & action items (synced from operator missions)
+- Training programs from operator missions (coaching sweep, safety investigation)
+  - Source badge, risk tier, expandable coaching actions with checkboxes
+  - Timeline, expected improvement, estimated savings
+- Pending action items with category badges (coaching/wellness/safety/general)
+- Priority dots: red=urgent, orange=high, yellow=medium, gray=low
+- Complete/dismiss buttons on each item
+- Notification badge on tab when new programs arrive from operator missions
+
+**Voice Tab** (centered, larger icon — primary interaction)
+- Full-screen animated orb with state-specific colors (listening=green, thinking=amber, speaking=blue, dispatching=gold)
 - Voice AI assistant via WebSocket (Smallest AI STT/TTS)
-  - Hands-free interaction for truck-mounted tablets
-  - Quick action chips: "My Score", "Load Status", "Report Issue", "Call Dispatch"
-  - Real-time transcript display
-- Autonomous dispatch delegation (Tasha delegates to Mike the dispatcher)
-- Leaderboard showing top 15 drivers
-- Message center with dispatch notifications
-- AI-powered dispatcher call simulation with conversation history
+- Quick action buttons when idle, real-time transcript with auto-scroll
+- Text input bar + mic toggle for text-only interaction
+
+**Load Tab** — Current load & dispatch
+- Full load card (origin → destination, commodity, weight, distance, rate)
+- Broker contact info, pickup/delivery times
+- Quick dispatch buttons (ETA update, Report issue, Route info, Load change)
+- "Call Dispatch" button triggers autonomous Tasha ↔ Mike dispatch conversation
+- Recent dispatch messages, empty state with "Ask Tasha" prompt
+
+**Leaderboard (Rank) Tab** — Competition & rewards
+- Full driver leaderboard with current driver highlighted in amber
+- Badge gallery (earned/locked grid, tap to inspect)
+- Rewards catalog with point costs
+- Weekly stats card, recent points history
+- Level progress bar with points-to-next indicator
+
+**Floating Mic Button** — Always-accessible voice trigger
+- Amber mic button visible on all tabs except Voice tab
+- Tap to switch to Voice tab and start listening immediately
+- Animated pulse when voice is active
+
+**Mission-to-Driver Sync** — Operator missions flow to drivers automatically
+- Operator runs coaching sweep → per-driver coaching plans created as action items
+- Driver portal polls every 30 seconds for new items
+- Training tab shows notification badge when new programs arrive
+- Drivers mark coaching steps as complete → gamification points awarded
 
 ---
 
@@ -368,6 +406,18 @@ fleetshield-ai/
 │   │   │   │   ├── KPICards.tsx              # KPI metric cards
 │   │   │   │   ├── ScoreCard.tsx             # Score display card
 │   │   │   │   └── WellnessCard.tsx          # Wellness indicator card
+│   │   │   ├── driver/                       # Driver portal components (11)
+│   │   │   │   ├── BadgeDetailModal.tsx      # Badge inspection modal
+│   │   │   │   ├── DispatchCallOverlay.tsx   # Tasha-Mike dispatch call modal
+│   │   │   │   ├── DriverTabBar.tsx          # Bottom tab bar (5 tabs)
+│   │   │   │   ├── DriverTopBar.tsx          # Fixed top bar with driver info
+│   │   │   │   ├── FloatingMicButton.tsx     # Floating voice trigger button
+│   │   │   │   ├── HomeTab.tsx               # Dashboard home tab
+│   │   │   │   ├── LeaderboardTab.tsx        # Leaderboard & rewards tab
+│   │   │   │   ├── LoadTab.tsx               # Load & dispatch tab
+│   │   │   │   ├── ScoreGauge.tsx            # SVG circular score gauge
+│   │   │   │   ├── TrainingTab.tsx           # Training & coaching tab
+│   │   │   │   └── VoiceTab.tsx              # Voice AI tab
 │   │   │   ├── layout/
 │   │   │   │   ├── AppShell.tsx              # Layout + mission notifications
 │   │   │   │   ├── Sidebar.tsx               # Navigation sidebar
@@ -386,6 +436,7 @@ fleetshield-ai/
 │   └── next.config.ts                        # API proxy configuration
 ├── CLAUDE.md                                 # AI development guide
 ├── COMPETITION.md                            # Hackathon competition details
+├── DRIVER_PORTAL_TEST_SCENARIOS.md           # Driver portal test scenarios & demo flow
 └── README.md                                 # This file
 ```
 
@@ -610,6 +661,8 @@ Operator confirms → deployMission tool (fire-and-forget)
 | GET | `/api/driver/:id/load` | Current load assignment |
 | PUT | `/api/driver/:id/load/status` | Update load status |
 | GET | `/api/driver/:id/messages` | Driver messages |
+| GET | `/api/driver/:id/actions` | Driver action items (with category/priority) |
+| GET | `/api/driver/:id/training` | Training programs from operator missions |
 | GET | `/api/driver/leaderboard` | Driver rankings |
 | POST | `/api/driver/:id/dispatch-call` | Initiate dispatcher call |
 
