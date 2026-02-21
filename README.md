@@ -8,8 +8,8 @@ FleetShield AI transforms raw fleet telematics data into actionable safety intel
 
 ## What Makes FleetShield AI Different
 
+- **Autonomous AI Employees**: Not a chatbot answering questions — an AI workforce that takes tasks, executes, and reports back. Say "Run a wellness check across my fleet" and a Mission Agent goes to work in the background, analyzes every driver, crunches the telematics, and delivers a full report while you focus on running operations.
 - **Dual AI Assistants**: Tasha (operator-facing) and Ava/Mike (driver-facing) each with specialized tools and voice capabilities
-- **Autonomous Mission Agents**: Background agents that run coaching sweeps, wellness checks, safety investigations, insurance optimizations, and pre-shift risk assessments without blocking the operator
 - **Dual Geotab API Integration**: MyGeotab API for vehicle/trip/diagnostic data AND Geotab Ace API for conversational fleet analytics
 - **Real-Time Voice AI**: Full voice pipelines with STT, TTS, VAD, and barge-in support for hands-free operation
 - **Quantified ROI**: Every recommendation comes with dollar-quantified impact projections
@@ -25,7 +25,7 @@ FleetShield AI transforms raw fleet telematics data into actionable safety intel
 | 1 | **Insurance Premium Optimization** | AI-driven fleet scoring (0-100) with detailed component breakdown, what-if simulator, and savings projections |
 | 2 | **Predictive Safety Analytics** | Pre-shift risk scoring, driver deterioration detection, dangerous corridor identification, 7-day forecasting |
 | 3 | **Smart Incident Prevention** | AI alert triage with urgency scoring, pattern detection, and recommended interventions |
-| 4 | **Autonomous Mission Agents** | Background AI agents for coaching sweeps, wellness checks, safety investigations, insurance optimization, and pre-shift sweeps |
+| 4 | **Autonomous Mission Agents** | AI employees that take tasks, execute autonomously, and report back — doing the work of an analyst in hours, delivered in minutes |
 | 5 | **Operator AI Assistant (Tasha)** | Full-screen voice + text assistant with 17+ tools, mission deployment, and rich visual reports |
 | 6 | **Driver Voice AI Portal** | Personal driver dashboard with voice AI assistant, dispatch delegation, load management, and leaderboard |
 | 7 | **Live Fleet Map** | Real-time vehicle tracking with risk-colored markers, speeding hotspot overlay, and GPS trails |
@@ -55,24 +55,27 @@ FleetShield AI transforms raw fleet telematics data into actionable safety intel
 - Voice mode with waveform visualization, real-time transcripts, and TTS
 - Cross-page notification system for completed missions
 
-### Autonomous Mission Agents
-Background AI agents that Tasha deploys on behalf of the operator:
+### Autonomous Mission Agents — AI Employees for Your Fleet
 
-| Mission Type | What It Does |
-|-------------|-------------|
-| **Coaching Sweep** | Analyzes top riskiest drivers, builds individualized coaching plans with timelines and interventions |
-| **Wellness Check** | Scans all drivers for burnout risk, fatigue patterns, and retention flags |
-| **Safety Investigation** | Deep-dives a driver's safety events, identifies patterns, root causes, and corrective actions |
-| **Insurance Optimization** | Analyzes score components, identifies quick wins, estimates premium savings |
-| **Pre-Shift Sweep** | Assesses real-time risk for all drivers before shifts, flags high-risk situations |
+Not a chatbot answering questions. An AI workforce that takes tasks, executes, and reports back.
 
-Each mission:
-- Runs in the background without blocking conversation
-- Streams live progress updates (step-by-step)
-- Generates findings with severity levels (info/warning/critical)
-- Produces an executive summary via Claude AI
-- Delivers rich visual reports with expandable findings, stat cards, and action plans
-- Supports cross-page notifications (bell icon with badge count)
+Say *"Run a wellness check across my fleet"* — a Mission Agent goes to work in the background, analyzes every driver, crunches the telematics, and comes back with a full report while you focus on running operations. Five mission types today, each doing the work of an analyst in hours — delivered in minutes.
+
+| Mission Type | What It Does | What an Analyst Would Spend |
+|-------------|-------------|---------------------------|
+| **Coaching Sweep** | Analyzes top riskiest drivers, builds individualized coaching plans with timelines, interventions, and dollar impact | 4-6 hours |
+| **Wellness Check** | Scans every driver for burnout risk, fatigue patterns, retention flags, and generates intervention priorities | 3-4 hours |
+| **Safety Investigation** | Deep-dives a driver's safety events, identifies patterns, root causes, correlates with wellness and pre-shift risk | 2-3 hours |
+| **Insurance Optimization** | Analyzes every score component, finds the quick wins, estimates premium savings, and builds an improvement roadmap | 4-5 hours |
+| **Pre-Shift Sweep** | Assesses real-time risk for all drivers before shifts, flags who shouldn't be on the road today | 1-2 hours |
+
+How it works:
+- You ask Tasha (or just say it in voice mode) — she confirms and deploys the agent
+- The agent runs autonomously in the background — you keep chatting or navigate away
+- Live progress streams in real-time ("Analyzing driver 3 of 5: Marcus Chen...")
+- When done, a notification appears anywhere in the app (bell icon with badge count)
+- Click to see the full report: executive summary, expandable findings with severity levels, stat cards, and a prioritized action plan
+- Tasha reads the summary aloud if voice is enabled
 
 ### Predictive Safety (`/operator/predictive`)
 - 7-day fleet forecast with predicted event counts
@@ -477,36 +480,72 @@ The FleetShield AI assistant (Tasha) has access to 17 specialized tools:
 
 ## Autonomous Mission Agent System
 
+### The Vision: AI Employees, Not Chatbots
+
+Traditional fleet AI answers questions. FleetShield's Mission Agents **do work**. They're autonomous AI employees that take an assignment, execute a multi-step analysis across your entire fleet's telematics data, and come back with a comprehensive report — findings, root causes, action items, dollar impact, and an executive summary.
+
+The operator stays productive. The agent does the analyst's job.
+
 ### How It Works
 
 ```
-1. Operator asks: "Which drivers need coaching?"
-2. Tasha answers the immediate question using existing tools
-3. Tasha detects this could benefit from deeper analysis
-4. Tasha offers: "I can deploy a coaching sweep agent for a thorough
-   analysis. Want me to kick that off?"
-5. Operator confirms
-6. Tasha calls deployMission → returns immediately
-7. Mission runs in background (scoring engines + Claude summary)
-8. Live progress streams into chat (SSE or WebSocket)
-9. On completion → notification bell appears (works cross-page)
-10. Operator clicks → rich visual report with findings + action plan
+1. Operator: "Which drivers need coaching?"
+2. Tasha answers the immediate question (using real-time tools)
+3. Tasha recognizes this needs deeper analysis and offers:
+   "I can deploy a coaching sweep agent to do a thorough analysis
+   of your riskiest drivers. Want me to kick that off?"
+4. Operator: "Do it"
+5. Mission Agent deployed → runs autonomously in the background
+6. Agent crunches telematics: risk scores, wellness, events, trends
+7. Live progress streams to the operator's screen
+8. Agent finishes → notification appears (works from any page)
+9. Operator clicks → full visual report + Tasha reads the summary
 ```
 
-### Mission Architecture
-- Missions call **scoring engine functions directly** (not AI sub-agents)
-- Only the final summary uses one Claude `generateText` call
-- Each mission emits progress, findings, and completion via EventEmitter bridge
-- Results stored in-memory for cross-page retrieval
-- Supports multiple concurrent missions
+### What Makes This Different from a Chat Tool
 
-### Progress Streaming
-- **In-page (SSE/WebSocket)**: Live MissionTracker card with animated progress
-- **Cross-page (global notifications)**: Bell icon with badge count, toast notifications
-- **Click-to-reveal**: Navigate to assistant with full report + TTS narration
+| | Traditional Fleet Chatbot | FleetShield Mission Agent |
+|--|--------------------------|--------------------------|
+| **Interaction** | You ask, it answers | You assign, it executes |
+| **Scope** | One question at a time | Multi-step analysis across entire fleet |
+| **Blocking** | Waits for response | Runs in background, you keep working |
+| **Output** | Text response | Rich report with findings, stats, action plan |
+| **Depth** | Surface-level lookup | Calls 9 scoring engines, cross-references data |
+| **Notification** | None | Cross-page bell icon, toast, TTS narration |
 
-### TTS Mutex
-Audio playback uses a generation-counter pattern to prevent overlapping voices. Each `speakAsync` call gets a unique generation ID checked at every async boundary.
+### Architecture
+
+Missions call **scoring engine functions directly** — not AI sub-agents, not prompt chains. This makes them fast, deterministic, and cheap. Only the final executive summary uses one Claude Opus 4.6 `generateText` call to produce natural language from the collected data.
+
+```
+Operator confirms → deployMission tool (fire-and-forget)
+                         │
+               mission-runner.ts (pure TypeScript)
+                         │
+         ┌───────────────┼───────────────┐
+         │               │               │
+   9 Scoring Engines  Seed/Geotab    EventEmitter Bridge
+   (direct calls,     Data           (progress → SSE/WS)
+    no LLM needed)
+         │                               │
+         └─── Collect findings ──────────┤
+                                         │
+                           ONE Claude Opus 4.6 call
+                           for executive summary
+                                         │
+                                   MissionResult
+                            (findings + summary + data)
+                                         │
+                              ┌──────────┼──────────┐
+                              │          │          │
+                         MissionTracker  Bell     TTS
+                         (rich report)  (notify) (speak)
+```
+
+- Supports **multiple concurrent missions** — each gets a unique ID and EventEmitter bridge
+- Results stored in-memory for **cross-page retrieval** (navigate away, come back, report is still there)
+- **SSE streaming** (text mode) and **WebSocket** (voice mode) for live progress
+- **Generation-counter TTS mutex** prevents overlapping audio when mission reports complete
 
 ---
 
