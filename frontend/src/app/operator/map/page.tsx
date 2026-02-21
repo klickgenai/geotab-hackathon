@@ -184,7 +184,7 @@ export default function MapPage() {
     <>
       <PageHeader title="Live Fleet Map" subtitle={`${vehicles.length} vehicles tracked`} onRefresh={load} />
 
-      <div className="flex" style={{ height: 'calc(100vh - 65px)' }}>
+      <div className="flex" style={{ height: 'calc(100vh - 72px)' }}>
         {/* Side Panel */}
         <div className="w-[280px] border-r border-[#E5E2DC] bg-white flex flex-col flex-shrink-0">
           {/* Search */}

@@ -56,7 +56,7 @@ export default function VehiclesPage() {
     <>
       <PageHeader title="Fleet Vehicles" subtitle={`${vehicles.length} vehicles in fleet`} onRefresh={loadData} />
 
-      <div className="p-8 space-y-6 max-w-[1520px]">
+      <div className="p-6 space-y-5">
         {/* Stats */}
         <div className="grid grid-cols-4 gap-6">
           {[

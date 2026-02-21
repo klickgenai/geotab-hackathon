@@ -92,7 +92,7 @@ export default function SafetyEventsPage() {
     <>
       <PageHeader title="Safety Events" subtitle={`${events.length} events in last 30 days`} onRefresh={loadData} />
 
-      <div className="p-8 space-y-6 max-w-[1520px]">
+      <div className="p-6 space-y-5">
         {/* Severity summary */}
         <div className="grid grid-cols-4 gap-6">
           {(['critical', 'high', 'medium', 'low'] as const).map((sev) => {

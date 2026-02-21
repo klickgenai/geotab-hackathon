@@ -103,7 +103,7 @@ export default function SustainabilityPage() {
         onRefresh={loadData}
       />
 
-      <div className="p-8 space-y-8 max-w-[1520px]">
+      <div className="p-6 space-y-6">
 
         {/* Hero Row: Green Score + Carbon Footprint */}
         <div className="grid grid-cols-12 gap-6">

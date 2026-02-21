@@ -102,7 +102,7 @@ export default function ROIPage() {
     <>
       <PageHeader title="ROI Dashboard" subtitle="Quantified value of your safety investment" onRefresh={load} />
 
-      <div className="p-8 space-y-8 max-w-[1520px]">
+      <div className="p-6 space-y-6">
         {/* Hero Banner */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-[#18202F] to-[#2D3748] rounded-2xl p-6 text-white">

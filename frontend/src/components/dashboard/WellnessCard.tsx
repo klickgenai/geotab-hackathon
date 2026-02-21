@@ -16,10 +16,10 @@ export default function WellnessCard({ wellness, onDriverClick }: WellnessCardPr
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.45, duration: 0.5 }}
-      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6"
+      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 h-full"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.5px]">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.5px]">
           Wellness & Retention
         </h2>
         <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center">

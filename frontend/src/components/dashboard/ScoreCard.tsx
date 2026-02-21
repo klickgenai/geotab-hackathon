@@ -27,21 +27,21 @@ export default function ScoreCard({ score }: ScoreCardProps) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
-      className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-6 text-white relative overflow-hidden"
+      className="bg-gradient-to-br from-[#18202F] to-[#2D3748] rounded-2xl p-5 text-white relative overflow-hidden h-full"
     >
       {/* Background decoration */}
       <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/[0.03]" />
       <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-white/[0.02]" />
 
-      <h2 className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-[0.5px] mb-5 relative">
+      <h2 className="flex items-center gap-1 text-[11px] font-semibold text-white/50 uppercase tracking-[0.5px] mb-4 relative">
         Fleet Insurability Score
         <InsightTooltip metricKey="dashboard.scoreGauge" variant="dark" />
       </h2>
 
       {/* Score ring + metadata */}
-      <div className="flex items-center gap-6 mb-5 relative">
+      <div className="flex items-center gap-5 mb-4 relative">
         {/* Ring */}
-        <div className="relative w-[140px] h-[140px] flex-shrink-0">
+        <div className="relative w-[130px] h-[130px] flex-shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
             <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
             <motion.circle
@@ -58,7 +58,7 @@ export default function ScoreCard({ score }: ScoreCardProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <motion.span
-              className="text-5xl font-mono-kpi font-extrabold leading-none tracking-tighter"
+              className="text-[42px] font-mono-kpi font-extrabold leading-none tracking-tighter"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
@@ -66,7 +66,7 @@ export default function ScoreCard({ score }: ScoreCardProps) {
               {score.overallScore}
             </motion.span>
             <span
-              className="mt-1 px-2.5 py-0.5 rounded text-sm font-bold"
+              className="mt-1 px-2.5 py-0.5 rounded text-[13px] font-bold"
               style={{ backgroundColor: `${gradeColor}22`, color: gradeColor }}
             >
               {score.grade}
@@ -82,7 +82,7 @@ export default function ScoreCard({ score }: ScoreCardProps) {
             { label: 'Premium Impact', value: `${score.premiumImpact.percentChange > 0 ? '+' : ''}${score.premiumImpact.percentChange}%`, tooltipKey: 'dashboard.premiumImpact' },
             { label: 'Annual Savings', value: `$${score.premiumImpact.estimatedAnnualSavings.toLocaleString()}`, tooltipKey: 'dashboard.annualSavings' },
           ].map((row) => (
-            <div key={row.label} className="flex justify-between items-center py-[7px] border-b border-white/[0.06] last:border-0 text-sm">
+            <div key={row.label} className="flex justify-between items-center py-[6px] border-b border-white/[0.06] last:border-0 text-[13px]">
               <span className="flex items-center gap-1 text-white/45">
                 {row.label}
                 <InsightTooltip metricKey={row.tooltipKey} variant="dark" />
@@ -94,13 +94,13 @@ export default function ScoreCard({ score }: ScoreCardProps) {
       </div>
 
       {/* Components */}
-      <div className="grid grid-cols-2 gap-2.5 relative">
+      <div className="grid grid-cols-2 gap-2 relative">
         {components.map((comp, i) => {
           const barColor = comp.data.score >= 80 ? '#10b981' :
                           comp.data.score >= 60 ? '#f59e0b' : '#ef4444';
           return (
-            <div key={comp.label} className="bg-white/[0.05] rounded-lg p-3">
-              <div className="flex items-center gap-1 text-xs font-medium text-white/40 uppercase tracking-[0.3px] mb-1.5">
+            <div key={comp.label} className="bg-white/[0.05] rounded-lg p-2.5">
+              <div className="flex items-center gap-1 text-[10px] font-medium text-white/40 uppercase tracking-[0.3px] mb-1.5">
                 {comp.label} · {Math.round(comp.data.weight * 100)}%
                 <InsightTooltip metricKey={comp.tooltipKey} variant="dark" position="bottom" />
               </div>
@@ -113,8 +113,8 @@ export default function ScoreCard({ score }: ScoreCardProps) {
                   transition={{ delay: 0.8 + i * 0.15, duration: 1, ease: [0.34, 1.56, 0.64, 1] }}
                 />
               </div>
-              <span className="text-base font-bold">{comp.data.score}</span>
-              <span className="text-xs text-white/30 ml-1">/100</span>
+              <span className="text-[15px] font-bold">{comp.data.score}</span>
+              <span className="text-[11px] text-white/30 ml-1">/100</span>
             </div>
           );
         })}

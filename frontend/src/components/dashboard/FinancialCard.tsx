@@ -30,10 +30,10 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.5 }}
-      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6"
+      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 h-full"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.5px]">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.5px]">
           Financial Impact
         </h2>
         <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
@@ -42,16 +42,16 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
       </div>
 
       {/* Hero number */}
-      <div className="text-center py-4 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl mb-4">
+      <div className="text-center py-4 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl mb-3">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.7, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-          className="text-4xl font-mono-kpi font-extrabold text-emerald-700 tracking-tight leading-none"
+          className="text-[36px] font-mono-kpi font-extrabold text-emerald-700 tracking-tight leading-none"
         >
           ${total.toLocaleString()}
         </motion.div>
-        <div className="text-xs text-emerald-600 font-medium mt-1 flex items-center justify-center gap-1">
+        <div className="text-[12px] text-emerald-600 font-medium mt-1 flex items-center justify-center gap-1">
           <TrendingUp className="w-3.5 h-3.5" />
           Total Annual Savings Potential
           <InsightTooltip metricKey="dashboard.financialSavings" />
@@ -59,10 +59,10 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
       </div>
 
       {/* Breakdown bars */}
-      <div className="space-y-3 mb-4">
+      <div className="space-y-2.5 mb-3">
         {bars.map((bar, i) => (
           <div key={bar.label} className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-sm font-medium text-gray-500 w-[130px] shrink-0">
+            <span className="flex items-center gap-1 text-[13px] font-medium text-gray-500 w-[130px] shrink-0">
               {bar.label}
               <InsightTooltip metricKey={bar.tooltipKey} />
             </span>
@@ -73,7 +73,7 @@ export default function FinancialCard({ score, wellness, risks, onGenerateReport
                 animate={{ width: `${Math.max(bar.pct, 15)}%` }}
                 transition={{ delay: 0.8 + i * 0.15, duration: 1, ease: [0.34, 1.56, 0.64, 1] }}
               >
-                <span className="text-xs font-semibold text-white whitespace-nowrap">
+                <span className="text-[11px] font-semibold text-white whitespace-nowrap">
                   ${bar.value.toLocaleString()}
                 </span>
               </motion.div>

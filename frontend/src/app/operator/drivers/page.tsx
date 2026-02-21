@@ -101,7 +101,7 @@ export default function DriversPage() {
     <>
       <PageHeader title="Driver Risk Analysis" subtitle={`${risks.length} drivers monitored`} onRefresh={loadData} />
 
-      <div className="p-8 space-y-6 max-w-[1520px]">
+      <div className="p-6 space-y-5">
         {/* Summary cards */}
         <div className="grid grid-cols-4 gap-6">
           {(['critical', 'high', 'moderate', 'low'] as const).map((tier) => {

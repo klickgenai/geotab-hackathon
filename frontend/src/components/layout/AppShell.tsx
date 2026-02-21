@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
-import ChatPanel from '@/components/chat/ChatPanel';
+
 import { api } from '@/lib/api';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -22,10 +22,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#F5F3EF]">
       <Sidebar geotabConfigured={geotabConfigured} />
-      <main className="ml-[260px] flex-1 min-h-screen">
+      <main className="ml-[240px] flex-1 min-h-screen">
         {children}
       </main>
-      <ChatPanel />
+
     </div>
   );
 }

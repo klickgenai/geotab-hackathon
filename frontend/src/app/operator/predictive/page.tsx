@@ -86,7 +86,7 @@ export default function PredictivePage() {
     <>
       <PageHeader title="Predictive Safety" subtitle="Pre-shift risk intelligence & driver trends" onRefresh={load} />
 
-      <div className="p-8 space-y-8 max-w-[1520px]">
+      <div className="p-6 space-y-6">
         {/* Forecast Banner */}
         {forecast && (
           <motion.div

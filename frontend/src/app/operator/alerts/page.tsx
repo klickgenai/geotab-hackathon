@@ -85,7 +85,7 @@ export default function AlertsPage() {
     <>
       <PageHeader title="Alert Triage" subtitle="AI-prioritized safety alerts" onRefresh={load} />
 
-      <div className="p-8 space-y-8 max-w-[1520px]">
+      <div className="p-6 space-y-6">
         {/* Briefing Banner */}
         {briefing && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}

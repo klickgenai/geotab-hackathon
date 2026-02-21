@@ -24,13 +24,13 @@ export default function DriverTable({ risks, onDriverClick }: DriverTableProps) 
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.35, duration: 0.5 }}
-      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden"
+      className="bg-white rounded-2xl border border-[#E5E2DC] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden h-full"
     >
-      <div className="px-6 pt-6 pb-3 flex justify-between items-center">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-[0.5px]">
+      <div className="px-5 pt-5 pb-3 flex justify-between items-center">
+        <h2 className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.5px]">
           Driver Risk Analysis
         </h2>
-        <span className="text-xs text-gray-400">{risks.length} drivers</span>
+        <span className="text-[12px] text-gray-400">{risks.length} drivers</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -38,7 +38,7 @@ export default function DriverTable({ risks, onDriverClick }: DriverTableProps) 
           <thead>
             <tr className="border-y border-[#F0EDE7]">
               {['Driver', 'Risk Score', 'Tier', 'Annual Cost', 'Top Issue'].map((h) => (
-                <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-[0.5px] px-4 py-2.5">
+                <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-[0.5px] px-4 py-2.5">
                   {h}
                 </th>
               ))}
@@ -59,36 +59,36 @@ export default function DriverTable({ risks, onDriverClick }: DriverTableProps) 
                 >
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2.5">
-                      <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white', cfg.avatar)}>
+                      <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white', cfg.avatar)}>
                         {initials}
                       </div>
-                      <span className="text-sm font-medium text-gray-800">{r.driverName}</span>
+                      <span className="text-[13px] font-medium text-gray-800">{r.driverName}</span>
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className={clsx('h-full rounded-full', cfg.bar)}
                           style={{ width: `${r.riskScore}%` }}
                         />
                       </div>
-                      <span className="text-sm font-semibold text-gray-700 tabular-nums">{r.riskScore}</span>
+                      <span className="text-[13px] font-semibold text-gray-700 tabular-nums">{r.riskScore}</span>
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <span className={clsx(
-                      'inline-block px-2 py-0.5 rounded-full text-xs font-semibold capitalize',
+                      'inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize',
                       cfg.bg, cfg.text,
                       r.tier === 'critical' && 'animate-pulse'
                     )}>
                       {r.tier}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-sm font-medium text-gray-600 tabular-nums">
+                  <td className="px-4 py-2.5 text-[13px] font-medium text-gray-600 tabular-nums">
                     ${r.annualizedCost.toLocaleString()}
                   </td>
-                  <td className="px-4 py-2.5 text-sm text-gray-400 max-w-[200px] truncate">
+                  <td className="px-4 py-2.5 text-[13px] text-gray-400 max-w-[220px] truncate">
                     {r.recommendations?.[0] || '—'}
                   </td>
                 </motion.tr>

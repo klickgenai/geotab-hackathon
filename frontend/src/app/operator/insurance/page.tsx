@@ -195,7 +195,7 @@ export default function InsurancePage() {
     <>
       <PageHeader title="Insurance Intelligence" subtitle="Your fleet's insurance-readiness score and optimization paths" onRefresh={load} />
 
-      <div className="p-8 space-y-8 max-w-[1520px]">
+      <div className="p-6 space-y-6">
         {/* Hero: Score + Premium Impact */}
         <div className="grid grid-cols-12 gap-6">
           <motion.div

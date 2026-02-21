@@ -8,7 +8,7 @@ import ScoreCard from '@/components/dashboard/ScoreCard';
 import DriverTable from '@/components/dashboard/DriverTable';
 import WellnessCard from '@/components/dashboard/WellnessCard';
 import FinancialCard from '@/components/dashboard/FinancialCard';
-import AceInsights from '@/components/dashboard/AceInsights';
+
 import { Shield, Loader2, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -17,7 +17,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   const handleGenerateReport = useCallback(() => {
-    window.open('/api/reports/latest', '_blank');
+    window.open('/api/reports/generate', '_blank');
   }, []);
 
   const handleDriverClick = useCallback((driverId: string) => {
@@ -78,10 +78,10 @@ export default function Dashboard() {
         }
       />
 
-      <div className="p-8 space-y-8 max-w-[1520px]">
+      <div className="p-6 space-y-5">
         <KPICards overview={overview} score={score} />
 
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-12 gap-5">
           <div className="col-span-5">
             <ScoreCard score={score} />
           </div>
@@ -90,7 +90,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-12 gap-5">
           <div className="col-span-5">
             <WellnessCard wellness={wellness} onDriverClick={handleDriverClick} />
           </div>
@@ -103,9 +103,6 @@ export default function Dashboard() {
             />
           </div>
         </div>
-
-        {/* Geotab Ace AI Insights */}
-        <AceInsights />
       </div>
     </>
   );

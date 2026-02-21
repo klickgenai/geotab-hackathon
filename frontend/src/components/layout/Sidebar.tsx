@@ -47,11 +47,11 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[260px] bg-[#18202F] text-white flex flex-col z-50">
+    <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#18202F] text-white flex flex-col z-50">
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-white/[0.08]">
+      <div className="px-5 py-4 border-b border-white/[0.08]">
         <Link href="/operator" className="flex items-center gap-2.5">
-          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" className="flex-shrink-0">
+          <svg width="36" height="36" viewBox="0 0 48 48" fill="none" className="flex-shrink-0">
             <path d="M24 4L6 12v12c0 11.1 7.7 21.5 18 24 10.3-2.5 18-12.9 18-24V12L24 4z" fill="url(#sGrad)" stroke="url(#sStroke)" strokeWidth="1" />
             <path d="M24 8L10 14.5v9.5c0 9.2 6.3 17.8 14 19.8V8z" fill="rgba(255,255,255,0.06)" />
             <g stroke="#FBAF1A" strokeWidth="2" strokeLinecap="round" opacity="0.9"><path d="M17 24h3l2-6 3 12 2.5-8 2.5 4h3" /></g>
@@ -72,10 +72,10 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2.5 py-3 overflow-y-auto">
+      <nav className="flex-1 px-2 py-2 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.title}>
-            <div className="text-[10px] font-semibold text-white/25 uppercase tracking-[1.5px] px-3 pt-4 pb-1.5">
+            <div className="text-[10px] font-semibold text-white/25 uppercase tracking-[1.5px] px-3 pt-4 pb-1">
               {section.title}
             </div>
             {section.items.map((item) => {
@@ -86,13 +86,13 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    'flex items-center gap-2.5 w-full px-3 py-[10px] rounded-xl text-[13px] font-medium transition-all duration-200 my-0.5',
+                    'flex items-center gap-2.5 w-full px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-200 my-[1px]',
                     isActive
                       ? 'bg-[#FBAF1A]/15 text-[#FBAF1A]'
                       : 'text-white/50 hover:bg-white/[0.06] hover:text-white/80'
                   )}
                 >
-                  <Icon className={clsx('w-[18px] h-[18px]', isActive && 'text-[#FBAF1A]')} />
+                  <Icon className={clsx('w-[17px] h-[17px]', isActive && 'text-[#FBAF1A]')} />
                   <span>{item.label}</span>
                   {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FBAF1A]" />}
                 </Link>
@@ -103,9 +103,9 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-white/[0.08]">
+      <div className="px-3 py-3 border-t border-white/[0.08]">
         <div className={clsx(
-          'flex items-center gap-2.5 px-3 py-2.5 rounded-xl',
+          'flex items-center gap-2.5 px-3 py-2 rounded-xl',
           geotabConfigured ? 'bg-emerald-500/10' : 'bg-[#FBAF1A]/10'
         )}>
           <div className={clsx(
@@ -113,7 +113,7 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
             geotabConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-[#FBAF1A]'
           )} />
           <div>
-            <div className={clsx('text-xs font-semibold', geotabConfigured ? 'text-emerald-400' : 'text-[#FBAF1A]')}>
+            <div className={clsx('text-[11px] font-semibold', geotabConfigured ? 'text-emerald-400' : 'text-[#FBAF1A]')}>
               {geotabConfigured ? 'Geotab Connected' : 'Seed Data Mode'}
             </div>
             <div className="text-[10px] text-white/20">
