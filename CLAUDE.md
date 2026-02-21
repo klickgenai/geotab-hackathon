@@ -63,12 +63,12 @@ FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform bu
 - `src/index.ts` - Main server, 50+ API routes, WebSocket handler, SSE streaming
 - `src/agents/fleetshield-agent.ts` - Claude AI agent config + system prompt + 17 tools
 - `src/data/seed-data.ts` - 30 drivers, 25 vehicles, 1000+ safety events
-- `src/data/driver-session.ts` - Driver portal state management
+- `src/data/driver-session.ts` - Driver portal state management, ActionItem (with category/priority/missionId), action item CRUD
 - `src/data/dispatcher-ai.ts` - Claude-powered dispatcher call simulation
 - `src/data/fleet-data-provider.ts` - Geotab/seed data abstraction layer
 - `src/missions/` - Autonomous mission agent system
   - `mission-types.ts` - Type definitions and metadata for 5 mission types
-  - `mission-bridge.ts` - EventEmitter bridge + global mission store
+  - `mission-bridge.ts` - EventEmitter bridge + global mission store + syncMissionToDrivers() hook
   - `mission-runner.ts` - Mission execution engine (calls scoring engines directly)
   - `index.ts` - Barrel exports
 - `src/reports/fleet-report.ts` - PDF report generation
@@ -141,6 +141,19 @@ All fleet API routes follow: `GET /api/fleet/{domain}/{action}`
 - `POST /api/tts/synthesize` - Text-to-speech synthesis
 - `WS /ws` - WebSocket for voice mode (both operator and driver)
 
+### Driver Portal API Routes
+- `POST /api/driver/login` - Driver authentication (employeeNo + pin)
+- `GET /api/driver/:id/dashboard` - Driver dashboard data (score, briefing, challenge, HOS, load, gamification)
+- `GET /api/driver/:id/actions` - Action items with category/priority fields
+- `PUT /api/driver/:id/actions/:actionId` - Update action item status (complete/dismiss)
+- `GET /api/driver/:id/training` - Training programs from completed operator missions
+- `GET /api/driver/:id/load` - Current load assignment
+- `PUT /api/driver/:id/load/status` - Update load status
+- `GET /api/driver/:id/messages` - Driver messages
+- `GET /api/driver/leaderboard` - Driver rankings
+- `POST /api/driver/:id/dispatch-call` - Initiate AI dispatcher call
+- `GET /api/driver/:id/gamification` - Gamification state (badges, rewards, points, level)
+
 ### Frontend Page Pattern
 Each page follows the same structure:
 1. Import `api` from `@/lib/api`
@@ -188,6 +201,24 @@ They return typed objects and don't have side effects. The mission system calls 
 - Global mission store for cross-page retrieval
 - MissionTracker.tsx renders live progress + rich completion reports
 - **Mission-to-Driver sync**: coaching_sweep, wellness_check, safety_investigation auto-create action items for affected drivers via `syncMissionToDrivers()` in mission-bridge.ts
+
+### Operator → Driver Data Flow
+```
+Operator asks Tasha → mission runs (e.g. coaching sweep)
+  → mission-runner generates per-driver coaching plans
+  → mission-bridge.completeActiveMission() fires
+  → syncMissionToDrivers() creates action items per driver (category, priority, missionId)
+  → Driver portal polls /api/driver/:id/actions every 30s
+  → Training tab shows new coaching program with notification badge
+  → Driver marks coaching steps complete → item updates
+```
+
+### Driver Portal Test Credentials
+| Employee # | PIN | Notes |
+|-----------|------|-------|
+| `141` | `1073` | Default test driver |
+
+Full test scenarios (voice questions, tab navigation, dispatch calls, mission sync): `DRIVER_PORTAL_TEST_SCENARIOS.md`
 
 ## AI Agent Tools (17 total)
 | Tool | File | Description |
@@ -255,6 +286,11 @@ cd frontend && npm run build   # Next.js production build
 - The MyGeotab add-in is in `backend/addin/` (iframe bridge pattern)
 - TTS uses generation-counter mutex to prevent double-voice issues
 - React 19 strict mode double-fires effects — guard refs prevent duplicate fetches
+- Driver portal page.tsx is a slim orchestrator (~260 lines) — all UI is in `components/driver/`
+- Driver portal polls backend every 30s for action items and training programs
+- ActionItem type has `category` (coaching/wellness/safety/general), `priority` (low/medium/high/urgent), and optional `missionId`
+- Completed operator missions (coaching_sweep, wellness_check, safety_investigation) auto-sync action items to affected drivers
+- `DRIVER_PORTAL_TEST_SCENARIOS.md` has comprehensive test scenarios, voice questions, and a recommended 3-min demo flow
 
 ## Geotab Vibe Guide Reference
 The official competition guide repo: https://github.com/fhoffa/geotab-vibe-guide
