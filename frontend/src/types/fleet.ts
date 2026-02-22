@@ -410,6 +410,30 @@ export interface RewardItem {
   levelRequired: number;
 }
 
+// --- HOS (Hours of Service) ---
+export interface HOSStatus {
+  driveTimeRemaining: number;    // minutes
+  onDutyTimeRemaining: number;   // minutes
+  cycleTimeRemaining: number;    // minutes (70hr/8day)
+  nextBreakRequired: number;     // minutes until 30-min break needed
+  lastBreakTime: string;         // ISO timestamp
+  currentDutyStatus: 'driving' | 'on_duty' | 'sleeper' | 'off_duty';
+  violations: string[];
+}
+
+// --- Wellness Check-In ---
+export interface WellnessCheckIn {
+  mood: 'great' | 'ok' | 'tired' | 'stressed' | 'not_good';
+  timestamp: string;
+  note?: string;
+}
+
+export interface WellnessTrend {
+  checkins: WellnessCheckIn[];
+  weeklyAverage: 'positive' | 'neutral' | 'concerning';
+  suggestion?: string;
+}
+
 export interface PreShiftBriefing {
   riskLevel: 'low' | 'elevated' | 'high' | 'critical';
   riskScore: number;

@@ -10,8 +10,10 @@ FleetShield AI transforms raw fleet telematics data into actionable safety intel
 
 - **Autonomous AI Employees**: Not a chatbot answering questions — an AI workforce that takes tasks, executes, and reports back. Say "Run a wellness check across my fleet" and a Mission Agent goes to work in the background, analyzes every driver, crunches the telematics, and delivers a full report while you focus on running operations.
 - **Dual AI Assistants**: Tasha (operator-facing) and Ava/Mike (driver-facing) each with specialized tools and voice capabilities
+- **Real Twilio Phone Calls**: Tasha can call a real dispatcher phone, have a multi-turn AI-mediated conversation via Twilio Media Streams, and relay results back to the driver
 - **Dual Geotab API Integration**: MyGeotab API for vehicle/trip/diagnostic data AND Geotab Ace API for conversational fleet analytics
 - **Real-Time Voice AI**: Full voice pipelines with STT, TTS, VAD, and barge-in support for hands-free operation
+- **Driver Wellness & HOS**: Proactive wellness check-ins and real-time Hours of Service compliance gauges
 - **Quantified ROI**: Every recommendation comes with dollar-quantified impact projections
 
 ---
@@ -27,7 +29,7 @@ FleetShield AI transforms raw fleet telematics data into actionable safety intel
 | 3 | **Smart Incident Prevention** | AI alert triage with urgency scoring, pattern detection, and recommended interventions |
 | 4 | **Autonomous Mission Agents** | AI employees that take tasks, execute autonomously, and report back — doing the work of an analyst in hours, delivered in minutes |
 | 5 | **Operator AI Assistant (Tasha)** | Full-screen voice + text assistant with 17+ tools, mission deployment, and rich visual reports |
-| 6 | **Driver Voice AI Portal** | Personal driver dashboard with voice AI assistant, dispatch delegation, load management, and leaderboard |
+| 6 | **Driver Voice AI Portal** | Personal driver dashboard with voice AI, real Twilio dispatch calls, HOS compliance, wellness check-ins, load management, and leaderboard |
 | 7 | **Live Fleet Map** | Real-time vehicle tracking with risk-colored markers, speeding hotspot overlay, and GPS trails |
 | 8 | **ROI & Sustainability Dashboards** | Before/after comparisons, dollar-quantified savings, retention risk, green fleet scoring, and what-if scenarios |
 
@@ -148,10 +150,11 @@ Tab-based mobile-first layout designed for truck-mounted tablets with 5 tabs and
 
 **Home Tab** — Personal dashboard at a glance
 - Animated safety score gauge (large, centered)
+- HOS (Hours of Service) compliance gauges — drive time and duty time remaining with color-coded status (green/amber/red)
+- AI Wellness check-in — "How are you feeling?" mood selector with supportive response and weekly trend
 - Pre-shift briefing card with risk level and focus areas
 - Daily challenge card with progress bar
 - Quick stats row (streak, rank, today's events)
-- Top 3 pending action items with "View all" link to Training tab
 
 **Training Tab** — Coaching & action items (synced from operator missions)
 - Training programs from operator missions (coaching sweep, safety investigation)
@@ -166,20 +169,21 @@ Tab-based mobile-first layout designed for truck-mounted tablets with 5 tabs and
 - Full-screen animated orb with state-specific colors (listening=green, thinking=amber, speaking=blue, dispatching=gold)
 - Voice AI assistant via WebSocket (Smallest AI STT/TTS)
 - Quick action buttons when idle, real-time transcript with auto-scroll
+- Mute/unmute mic and End Voice controls
 - Text input bar + mic toggle for text-only interaction
 
 **Load Tab** — Current load & dispatch
 - Full load card (origin → destination, commodity, weight, distance, rate)
 - Broker contact info, pickup/delivery times
 - Quick dispatch buttons (ETA update, Report issue, Route info, Load change)
-- "Call Dispatch" button triggers autonomous Tasha ↔ Mike dispatch conversation
+- "Call Dispatch" — triggers a **real Twilio phone call** to dispatch (when configured) or AI-simulated call
+- Real-time call overlay showing live transcript as Tasha talks to the dispatcher
+- Call summary saved to driver messages after completion
 - Recent dispatch messages, empty state with "Ask Tasha" prompt
 
-**Leaderboard (Rank) Tab** — Competition & rewards
+**Leaderboard (Rank) Tab** — Competition & badges
 - Full driver leaderboard with current driver highlighted in amber
 - Badge gallery (earned/locked grid, tap to inspect)
-- Rewards catalog with point costs
-- Weekly stats card, recent points history
 - Level progress bar with points-to-next indicator
 
 **Floating Mic Button** — Always-accessible voice trigger
@@ -279,6 +283,7 @@ Tab-based mobile-first layout designed for truck-mounted tablets with 5 tabs and
 | Smallest AI Pulse | Speech-to-Text (STT) |
 | Smallest AI Waves | Text-to-Speech (TTS) |
 | Custom VAD | Energy-based Voice Activity Detection |
+| Twilio | Outbound phone calls + Media Streams for real dispatch |
 
 ### Geotab APIs
 | API | Purpose |
@@ -325,6 +330,7 @@ fleetshield-ai/
 │   │   │   ├── geotab-ace.ts                 # Ace Analytics integration
 │   │   │   ├── geotab-data-connector.ts      # Data connector layer
 │   │   │   ├── live-fleet.ts                 # GPS simulation service
+│   │   │   ├── twilio-ai-dispatch.ts        # Real Twilio AI dispatch calls (Media Streams)
 │   │   │   └── twilio-dispatch-service.ts    # Dispatch call service
 │   │   ├── tools/                            # 17 Claude agent tools
 │   │   │   ├── index.ts                      # Tool registry
@@ -663,8 +669,18 @@ Operator confirms → deployMission tool (fire-and-forget)
 | GET | `/api/driver/:id/messages` | Driver messages |
 | GET | `/api/driver/:id/actions` | Driver action items (with category/priority) |
 | GET | `/api/driver/:id/training` | Training programs from operator missions |
+| GET | `/api/driver/:id/hos` | Hours of Service compliance status |
+| POST | `/api/driver/:id/wellness-checkin` | Submit wellness mood check-in |
+| GET | `/api/driver/:id/wellness-trend` | Wellness check-in history and trends |
 | GET | `/api/driver/leaderboard` | Driver rankings |
-| POST | `/api/driver/:id/dispatch-call` | Initiate dispatcher call |
+| POST | `/api/driver/:id/dispatch-call` | Initiate dispatcher call (Twilio or simulated) |
+| GET | `/api/driver/:id/dispatch-call/:callId/status` | Poll Twilio AI call status |
+
+### Twilio Webhooks
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/twilio/call-status` | Twilio call status webhook |
+| WS | `/twilio-media` | Twilio Media Streams WebSocket (mulaw audio) |
 
 ### AI & Voice
 | Method | Endpoint | Description |
@@ -704,7 +720,45 @@ AudioContext (24kHz) → Speaker Playback
 - Barge-in support (interrupt during playback)
 - Binary PCM16 for mic data, base64 for playback
 - Dual voice clients: operator (Tasha) and driver (Ava/Mike)
+- Mute/unmute and End Voice controls
 - Mission progress streaming via WebSocket
+
+### Real Twilio Dispatch Calls
+
+When Twilio credentials are configured, Tasha can place **real phone calls** to a human dispatcher and have a multi-turn AI-mediated conversation:
+
+```
+Driver: "I have a flat tire, call dispatch"
+  → Tasha: "I'll call dispatch right now."
+  → Twilio outbound call to dispatcher's phone (real phone rings)
+  → Dispatcher picks up, hears Tasha's voice (Smallest AI TTS)
+  → Tasha: "Hi, this is Tasha from FleetShield calling about driver James..."
+  → Dispatcher responds naturally (mulaw 8kHz → STT → text)
+  → Claude AI generates contextual response → TTS → dispatcher hears reply
+  → 3-4 exchange conversation with real human dispatcher
+  → Call wraps up → AI summary generated
+  → Tasha returns to driver: "I spoke with dispatch. They're sending help in 30 minutes."
+  → Summary saved to driver's message feed
+```
+
+**Audio Pipeline:**
+```
+Dispatcher's Phone (real human)
+        ↕ Twilio Media Streams (mulaw 8kHz WebSocket)
+        ↕
+┌─── Backend /twilio-media WebSocket ───┐
+│  mulaw → mulawToLinear16() (decode)   │
+│  PCM 8kHz → resample → 16kHz         │
+│  → Batch STT (Pulse) per utterance    │
+│  → Silence detection (1.2s)           │
+│  → Claude AI (dispatch system prompt) │
+│  → TTS (Waves) → PCM 24kHz           │
+│  → resample → 8kHz → mulaw encode    │
+│  → Twilio WebSocket → phone speaker   │
+└───────────────────────────────────────┘
+```
+
+Falls back to AI-simulated dispatch when Twilio is not configured.
 
 ---
 
@@ -798,9 +852,15 @@ cd frontend && npm run build   # Next.js optimized build
 | `GEOTAB_SERVER` | No | Geotab server (default: my.geotab.com) |
 | `ANTHROPIC_API_KEY` | Yes* | Claude AI (required for AI assistant, missions, dispatcher) |
 | `SMALLEST_API_KEY` | Yes* | Voice STT/TTS (required for voice features) |
+| `TWILIO_ACCOUNT_SID` | No | Twilio account SID (for real dispatch phone calls) |
+| `TWILIO_AUTH_TOKEN` | No | Twilio auth token |
+| `TWILIO_PHONE_NUMBER` | No | Twilio outbound phone number |
+| `DISPATCH_PHONE_NUMBER` | No | Dispatcher's phone number to call |
+| `NGROK_URL` | No | ngrok public URL for Twilio webhooks (dev only) |
 | `PORT` | No | Backend port (default: 3000) |
 
 *Required only for AI-powered features. Core analytics and dashboards work without API keys.
+Twilio variables are optional — dispatch calls fall back to AI simulation when not configured.
 
 ---
 

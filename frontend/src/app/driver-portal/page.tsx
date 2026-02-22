@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { VoiceClient, type VoiceState, type DispatchProgressEvent, type DispatchPhase } from '@/lib/voice-client';
 import type {
   DriverSession, DriverRanking, GamificationState, PreShiftBriefing, ActionItem,
-  DriverTrainingProgram,
+  DriverTrainingProgram, HOSStatus, WellnessCheckIn,
 } from '@/types/fleet';
 import { Shield, Loader2, User } from 'lucide-react';
 
@@ -40,6 +40,9 @@ export default function DriverPortalPage() {
   const [allActionItems, setAllActionItems] = useState<ActionItem[]>([]);
   const [trainingPrograms, setTrainingPrograms] = useState<DriverTrainingProgram[]>([]);
   const [trainingBadge, setTrainingBadge] = useState(0);
+  const [hos, setHos] = useState<HOSStatus | null>(null);
+  const [wellnessCheckins, setWellnessCheckins] = useState<WellnessCheckIn[]>([]);
+  const [wellnessMessage, setWellnessMessage] = useState<string | null>(null);
 
   // ─── Voice State ──────────────────────────────────
   const [voiceState, setVoiceState] = useState<VoiceState>('disconnected');
@@ -47,12 +50,18 @@ export default function DriverPortalPage() {
   const voiceClientRef = useRef<VoiceClient | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [chatStreaming, setChatStreaming] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   // ─── Dispatch State ───────────────────────────────
   const [dispatchCallActive, setDispatchCallActive] = useState(false);
   const [dispatchMessages, setDispatchMessages] = useState<{ role: string; text: string }[]>([]);
   const [dispatchSummary, setDispatchSummary] = useState('');
   const [dispatchPhase, setDispatchPhase] = useState<DispatchPhase | null>(null);
+  const [dispatchMode, setDispatchMode] = useState<'simulated' | 'twilio'>('simulated');
+  const [aiCallState, setAiCallState] = useState<string | undefined>(undefined);
+  const [aiCallTranscript, setAiCallTranscript] = useState<{ role: string; text: string; timestamp?: string }[]>([]);
+  const [aiCallSummary, setAiCallSummary] = useState<string | undefined>(undefined);
+  const dispatchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Polling ref for tracking previous count ──────
   const prevActionCountRef = useRef(0);
@@ -66,12 +75,14 @@ export default function DriverPortalPage() {
     try {
       const sess = await api.driverLoginWithPin(employeeNumber.trim(), pinInput.trim());
       setSession(sess);
-      const [lb, gam, brief, acts, training] = await Promise.all([
+      const [lb, gam, brief, acts, training, hosData, wellnessTrend] = await Promise.all([
         api.driverLeaderboard(),
         api.driverGamification(sess.driverId).catch(() => null),
         api.preShiftBriefing(sess.driverId).catch(() => null),
         api.driverActions(sess.driverId).catch(() => []),
         api.driverTraining(sess.driverId).catch(() => []),
+        api.driverHOS(sess.driverId).catch(() => null),
+        api.wellnessTrend(sess.driverId).catch(() => null),
       ]);
       setLeaderboard(lb);
       if (gam) setGamification(gam);
@@ -83,6 +94,8 @@ export default function DriverPortalPage() {
       const trainingList = training as DriverTrainingProgram[];
       setTrainingPrograms(trainingList);
       prevTrainingCountRef.current = trainingList.length;
+      if (hosData) setHos(hosData);
+      if (wellnessTrend) setWellnessCheckins((wellnessTrend as any).checkins ?? []);
     } catch (err) {
       setLoginError((err as Error).message || 'Login failed');
     }
@@ -106,6 +119,10 @@ export default function DriverPortalPage() {
     setAllActionItems([]);
     setTrainingPrograms([]);
     setTrainingBadge(0);
+    setHos(null);
+    setWellnessCheckins([]);
+    setWellnessMessage(null);
+    setIsMuted(false);
     setActiveTab('home');
   };
 
@@ -174,6 +191,11 @@ export default function DriverPortalPage() {
             if (event.phase === 'connecting') {
               setDispatchMessages([]);
               setDispatchSummary('');
+              // Detect if this is a Twilio call by checking the message
+              const msg = (event as any).message || '';
+              if (msg.includes('Calling') || msg.includes('Phone')) {
+                setDispatchMode('twilio');
+              }
             }
           }
         }
@@ -241,18 +263,71 @@ export default function DriverPortalPage() {
     setDispatchCallActive(true);
     setDispatchMessages([]);
     setDispatchSummary('');
+    setAiCallState(undefined);
+    setAiCallTranscript([]);
+    setAiCallSummary(undefined);
 
     try {
-      const result = await api.dispatchCall(session.driverId, intent) as any;
-      if (result.messages) {
-        for (let i = 0; i < result.messages.length; i++) {
-          await new Promise((r) => setTimeout(r, 800));
-          setDispatchMessages((prev) => [...prev, result.messages[i]]);
+      const result = await api.dispatchCall(session.driverId, intent);
+      const mode = result.mode || 'simulated';
+      setDispatchMode(mode as 'simulated' | 'twilio');
+
+      if (mode === 'twilio' && result.callId) {
+        // Start polling for Twilio AI call status
+        setAiCallState('ringing');
+        const callId = result.callId;
+        dispatchPollRef.current = setInterval(async () => {
+          try {
+            const status = await api.dispatchCallStatus(session.driverId, callId);
+            setAiCallState(status.state);
+            setAiCallTranscript(status.transcript || []);
+            if (status.summary) setAiCallSummary(status.summary);
+            if (status.state === 'complete' || status.state === 'failed') {
+              if (dispatchPollRef.current) {
+                clearInterval(dispatchPollRef.current);
+                dispatchPollRef.current = null;
+              }
+            }
+          } catch {
+            // Polling error, continue
+          }
+        }, 2000);
+      } else {
+        // Simulated mode - stream messages
+        if (result.messages) {
+          for (let i = 0; i < result.messages.length; i++) {
+            await new Promise((r) => setTimeout(r, 800));
+            setDispatchMessages((prev) => [...prev, result.messages![i]]);
+          }
         }
+        setDispatchSummary(result.summary || 'Call completed.');
       }
-      setDispatchSummary(result.summary || 'Call completed.');
     } catch {
+      setDispatchMode('simulated');
       setDispatchSummary('Failed to connect to dispatch.');
+    }
+  };
+
+  // Clean up poll on unmount
+  useEffect(() => {
+    return () => {
+      if (dispatchPollRef.current) {
+        clearInterval(dispatchPollRef.current);
+      }
+    };
+  }, []);
+
+  // ─── Wellness Check-In Handler ───────────────
+  const handleWellnessCheckIn = async (mood: WellnessCheckIn['mood']) => {
+    if (!session) return;
+    try {
+      const result = await api.wellnessCheckIn(session.driverId, mood) as any;
+      setWellnessMessage(result.message || 'Thanks for checking in!');
+      setWellnessCheckins(prev => [{ mood, timestamp: new Date().toISOString() }, ...prev]);
+      setTimeout(() => setWellnessMessage(null), 8000);
+    } catch {
+      setWellnessMessage('Thanks for checking in!');
+      setTimeout(() => setWellnessMessage(null), 8000);
     }
   };
 
@@ -344,8 +419,10 @@ export default function DriverPortalPage() {
             session={session}
             gamification={gamification}
             briefing={briefing}
-            actionItems={actionItems}
-            onGoToTraining={() => setActiveTab('training')}
+            hos={hos}
+            wellnessCheckins={wellnessCheckins}
+            onWellnessCheckIn={handleWellnessCheckIn}
+            wellnessMessage={wellnessMessage}
           />
         )}
         {activeTab === 'training' && (
@@ -363,9 +440,16 @@ export default function DriverPortalPage() {
             transcripts={transcripts}
             chatInput={chatInput}
             chatStreaming={chatStreaming}
+            isMuted={isMuted}
             onChatInputChange={setChatInput}
             onSendChat={sendChat}
             onToggleVoice={toggleVoice}
+            onToggleMute={() => {
+              if (voiceClientRef.current) {
+                voiceClientRef.current.toggleMute();
+                setIsMuted(voiceClientRef.current.isMuted);
+              }
+            }}
           />
         )}
         {activeTab === 'load' && (
@@ -410,10 +494,21 @@ export default function DriverPortalPage() {
       {/* Dispatch Call Overlay */}
       <DispatchCallOverlay
         active={dispatchCallActive}
+        mode={dispatchMode}
         messages={dispatchMessages}
         summary={dispatchSummary}
         phase={dispatchPhase}
-        onClose={() => { setDispatchCallActive(false); setDispatchPhase(null); }}
+        aiState={aiCallState as any}
+        aiTranscript={aiCallTranscript}
+        aiSummary={aiCallSummary}
+        onClose={() => {
+          setDispatchCallActive(false);
+          setDispatchPhase(null);
+          if (dispatchPollRef.current) {
+            clearInterval(dispatchPollRef.current);
+            dispatchPollRef.current = null;
+          }
+        }}
       />
     </div>
   );

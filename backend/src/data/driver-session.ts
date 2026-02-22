@@ -59,6 +59,32 @@ export interface ActionItem {
   missionId?: string;
 }
 
+// ─── HOS (Hours of Service) Types ────────────────────────────
+
+export interface HOSStatus {
+  driveTimeRemaining: number;    // minutes
+  onDutyTimeRemaining: number;   // minutes
+  cycleTimeRemaining: number;    // minutes (70hr/8day)
+  nextBreakRequired: number;     // minutes until 30-min break needed
+  lastBreakTime: string;         // ISO timestamp
+  currentDutyStatus: 'driving' | 'on_duty' | 'sleeper' | 'off_duty';
+  violations: string[];
+}
+
+// ─── Wellness Check-In Types ────────────────────────────────
+
+export interface WellnessCheckIn {
+  mood: 'great' | 'ok' | 'tired' | 'stressed' | 'not_good';
+  timestamp: string;
+  note?: string;
+}
+
+export interface WellnessTrend {
+  checkins: WellnessCheckIn[];
+  weeklyAverage: 'positive' | 'neutral' | 'concerning';
+  suggestion?: string;
+}
+
 // ─── In-memory stores ───────────────────────────────────────
 
 const activeSessions = new Map<string, DriverSession>();
@@ -67,6 +93,7 @@ const driverMessages = new Map<string, DispatchMessage[]>();
 let messageIdCounter = 1;
 const driverActionItems = new Map<string, ActionItem[]>();
 let actionIdCounter = 1;
+const driverWellnessCheckins = new Map<string, WellnessCheckIn[]>();
 
 // ─── Seed Data: Realistic city pairs ────────────────────────
 
@@ -590,4 +617,146 @@ export function dismissDriverActionItem(driverId: string, actionId: string): Act
   if (!item) return null;
   item.status = 'dismissed';
   return item;
+}
+
+// ─── HOS (Hours of Service) ─────────────────────────────────
+
+export function getDriverHOS(driverId: string): HOSStatus | null {
+  const driver = seedDrivers.find((d) => d.id === driverId);
+  if (!driver) return null;
+
+  // Calculate from today's trip data
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const todayTrips = seedTripDays.filter(
+    (t) => t.driverId === driverId && new Date(t.date) >= todayStart,
+  );
+
+  // Sum today's driving hours
+  const todayDrivingMinutes = todayTrips.reduce((sum, t) => sum + t.drivingHours * 60, 0);
+  // If no today data, simulate based on current hour
+  const hour = new Date().getHours();
+  const simulatedDrivingMinutes = todayDrivingMinutes > 0
+    ? todayDrivingMinutes
+    : Math.min(hour * 30 + Math.floor(Math.random() * 60), 600); // up to 10hrs
+
+  // Federal HOS limits
+  const MAX_DRIVE_MINUTES = 11 * 60;    // 11 hours
+  const MAX_DUTY_MINUTES = 14 * 60;     // 14 hours
+  const MAX_CYCLE_MINUTES = 70 * 60;    // 70 hours / 8 days
+  const BREAK_INTERVAL_MINUTES = 8 * 60; // 30-min break required every 8 hours
+
+  // On-duty is driving + ~20% other duties (fueling, loading, inspections)
+  const onDutyMinutes = Math.floor(simulatedDrivingMinutes * 1.2);
+
+  // Cycle: sum last 7 days of driving + today
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+  const weekTrips = seedTripDays.filter(
+    (t) => t.driverId === driverId && new Date(t.date) >= sevenDaysAgo,
+  );
+  const weekDrivingMinutes = weekTrips.reduce((sum, t) => sum + t.drivingHours * 60, 0) + simulatedDrivingMinutes;
+
+  const driveTimeRemaining = Math.max(0, MAX_DRIVE_MINUTES - simulatedDrivingMinutes);
+  const onDutyTimeRemaining = Math.max(0, MAX_DUTY_MINUTES - onDutyMinutes);
+  const cycleTimeRemaining = Math.max(0, MAX_CYCLE_MINUTES - weekDrivingMinutes);
+
+  // Next break calculation
+  const minutesSinceLastBreak = Math.min(simulatedDrivingMinutes, BREAK_INTERVAL_MINUTES);
+  const nextBreakRequired = Math.max(0, BREAK_INTERVAL_MINUTES - minutesSinceLastBreak);
+
+  // Last break time (simulated)
+  const lastBreakMs = Date.now() - minutesSinceLastBreak * 60000;
+  const lastBreakTime = new Date(lastBreakMs).toISOString();
+
+  // Current duty status based on time of day
+  let currentDutyStatus: HOSStatus['currentDutyStatus'] = 'off_duty';
+  if (hour >= 6 && hour < 20) {
+    if (simulatedDrivingMinutes > 0 && driveTimeRemaining > 0) {
+      currentDutyStatus = 'driving';
+    } else {
+      currentDutyStatus = 'on_duty';
+    }
+  } else if (hour >= 20 || hour < 6) {
+    currentDutyStatus = 'sleeper';
+  }
+
+  // Check for violations
+  const violations: string[] = [];
+  if (driveTimeRemaining <= 0) violations.push('11-hour driving limit reached');
+  if (onDutyTimeRemaining <= 0) violations.push('14-hour duty window exceeded');
+  if (cycleTimeRemaining <= 0) violations.push('70-hour/8-day cycle limit reached');
+  if (nextBreakRequired <= 0 && simulatedDrivingMinutes >= BREAK_INTERVAL_MINUTES) {
+    violations.push('30-minute break required');
+  }
+
+  return {
+    driveTimeRemaining,
+    onDutyTimeRemaining,
+    cycleTimeRemaining,
+    nextBreakRequired,
+    lastBreakTime,
+    currentDutyStatus,
+    violations,
+  };
+}
+
+// ─── Wellness Check-In ──────────────────────────────────────
+
+export function submitWellnessCheckIn(driverId: string, mood: WellnessCheckIn['mood'], note?: string): { message: string; checkin: WellnessCheckIn } {
+  const checkin: WellnessCheckIn = {
+    mood,
+    timestamp: new Date().toISOString(),
+    note,
+  };
+
+  const existing = driverWellnessCheckins.get(driverId) || [];
+  existing.unshift(checkin);
+  driverWellnessCheckins.set(driverId, existing);
+
+  // Generate supportive message based on mood
+  const messages: Record<WellnessCheckIn['mood'], string> = {
+    great: 'Awesome! That positive energy keeps you sharp on the road. Keep it up!',
+    ok: 'Steady and focused - that\'s a great mindset for driving. Have a good shift!',
+    tired: 'Thanks for being honest. Consider a short break or a coffee stop soon. Your safety comes first.',
+    stressed: 'We hear you. Take a few deep breaths. If you need to talk, Tasha is here anytime.',
+    not_good: 'Your wellbeing matters most. If you need support, talk to Tasha or call the driver assistance line at 1-800-555-0199.',
+  };
+
+  return { message: messages[mood], checkin };
+}
+
+export function getWellnessTrend(driverId: string): WellnessTrend {
+  const checkins = driverWellnessCheckins.get(driverId) || [];
+
+  // Get last 7 days of check-ins
+  const weekAgo = Date.now() - 7 * 86400000;
+  const weekCheckins = checkins.filter((c) => new Date(c.timestamp).getTime() >= weekAgo);
+
+  // Calculate weekly average mood
+  const moodScores: Record<WellnessCheckIn['mood'], number> = {
+    great: 5, ok: 4, tired: 2, stressed: 2, not_good: 1,
+  };
+  const avgScore = weekCheckins.length > 0
+    ? weekCheckins.reduce((sum, c) => sum + moodScores[c.mood], 0) / weekCheckins.length
+    : 4; // default to neutral
+
+  let weeklyAverage: WellnessTrend['weeklyAverage'] = 'neutral';
+  let suggestion: string | undefined;
+
+  if (avgScore >= 4) {
+    weeklyAverage = 'positive';
+  } else if (avgScore >= 3) {
+    weeklyAverage = 'neutral';
+  } else {
+    weeklyAverage = 'concerning';
+    suggestion = 'Your recent check-ins suggest you may be going through a tough time. Consider talking to Tasha or reaching out to your support network.';
+  }
+
+  return { checkins: checkins.slice(0, 14), weeklyAverage, suggestion };
+}
+
+export function getLatestWellnessCheckIn(driverId: string): WellnessCheckIn | null {
+  const checkins = driverWellnessCheckins.get(driverId) || [];
+  return checkins[0] || null;
 }

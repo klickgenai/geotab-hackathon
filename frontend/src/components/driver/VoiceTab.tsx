@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mic, MicOff, Loader2, MessageCircle, Shield, Send, X } from 'lucide-react';
+import { Mic, MicOff, Loader2, MessageCircle, Shield, Send, X, VolumeX } from 'lucide-react';
 import type { VoiceState } from '@/lib/voice-client';
 
 interface VoiceTabProps {
@@ -10,9 +10,11 @@ interface VoiceTabProps {
   transcripts: { role: 'user' | 'assistant'; text: string }[];
   chatInput: string;
   chatStreaming: boolean;
+  isMuted: boolean;
   onChatInputChange: (val: string) => void;
   onSendChat: (text: string) => void;
   onToggleVoice: () => void;
+  onToggleMute: () => void;
 }
 
 const quickActions = [
@@ -25,8 +27,8 @@ const quickActions = [
 ];
 
 export function VoiceTab({
-  voiceState, transcripts, chatInput, chatStreaming,
-  onChatInputChange, onSendChat, onToggleVoice,
+  voiceState, transcripts, chatInput, chatStreaming, isMuted,
+  onChatInputChange, onSendChat, onToggleVoice, onToggleMute,
 }: VoiceTabProps) {
   const transcriptsEndRef = useRef<HTMLDivElement>(null);
 
@@ -46,47 +48,69 @@ export function VoiceTab({
             <div className="text-xs text-gray-500 mt-3 text-center">Tap to talk to Tasha</div>
           </button>
         ) : (
-          <div className="relative w-28 h-28">
-            {(voiceState === 'listening' || voiceState === 'dispatching') && (
-              <motion.div
-                className={`absolute inset-0 rounded-full border-2 ${voiceState === 'dispatching' ? 'border-[#FBAF1A]/40' : 'border-emerald-400/40'}`}
-                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            )}
-            <motion.div
-              className={`w-28 h-28 rounded-full flex items-center justify-center ${
-                voiceState === 'listening' ? 'bg-emerald-500/20 border-2 border-emerald-400/50' :
-                voiceState === 'thinking' ? 'bg-amber-500/20 border-2 border-amber-400/50' :
-                voiceState === 'speaking' ? 'bg-blue-500/20 border-2 border-blue-400/50' :
-                voiceState === 'dispatching' ? 'bg-[#FBAF1A]/20 border-2 border-[#FBAF1A]/50' :
-                'bg-gray-500/20 border-2 border-gray-400/50'
-              }`}
-              animate={
-                voiceState === 'thinking' ? { rotate: 360 } :
-                voiceState === 'speaking' ? { scale: [1, 1.05, 1] } :
-                {}
-              }
-              transition={
-                voiceState === 'thinking' ? { duration: 2, repeat: Infinity, ease: 'linear' } :
-                voiceState === 'speaking' ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' } :
-                {}
-              }
-            >
-              {voiceState === 'thinking' ? (
-                <Loader2 className="w-12 h-12 text-amber-400 animate-spin" />
-              ) : voiceState === 'dispatching' ? (
-                <MessageCircle className="w-12 h-12 text-[#FBAF1A]" />
-              ) : voiceState === 'speaking' ? (
-                <MessageCircle className="w-12 h-12 text-blue-400" />
-              ) : (
-                <Mic className="w-12 h-12 text-emerald-400" />
+          <div className="flex flex-col items-center">
+            <div className="relative w-28 h-28">
+              {(voiceState === 'listening' || voiceState === 'dispatching') && (
+                <motion.div
+                  className={`absolute inset-0 rounded-full border-2 ${voiceState === 'dispatching' ? 'border-[#FBAF1A]/40' : 'border-emerald-400/40'}`}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                />
               )}
-            </motion.div>
+              <motion.div
+                className={`w-28 h-28 rounded-full flex items-center justify-center ${
+                  voiceState === 'listening' ? 'bg-emerald-500/20 border-2 border-emerald-400/50' :
+                  voiceState === 'thinking' ? 'bg-amber-500/20 border-2 border-amber-400/50' :
+                  voiceState === 'speaking' ? 'bg-blue-500/20 border-2 border-blue-400/50' :
+                  voiceState === 'dispatching' ? 'bg-[#FBAF1A]/20 border-2 border-[#FBAF1A]/50' :
+                  'bg-gray-500/20 border-2 border-gray-400/50'
+                }`}
+                animate={
+                  voiceState === 'thinking' ? { rotate: 360 } :
+                  voiceState === 'speaking' ? { scale: [1, 1.05, 1] } :
+                  {}
+                }
+                transition={
+                  voiceState === 'thinking' ? { duration: 2, repeat: Infinity, ease: 'linear' } :
+                  voiceState === 'speaking' ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' } :
+                  {}
+                }
+              >
+                {voiceState === 'thinking' ? (
+                  <Loader2 className="w-12 h-12 text-amber-400 animate-spin" />
+                ) : voiceState === 'dispatching' ? (
+                  <MessageCircle className="w-12 h-12 text-[#FBAF1A]" />
+                ) : voiceState === 'speaking' ? (
+                  <MessageCircle className="w-12 h-12 text-blue-400" />
+                ) : (
+                  <Mic className="w-12 h-12 text-emerald-400" />
+                )}
+              </motion.div>
+            </div>
             <div className="text-xs text-gray-500 mt-2 text-center capitalize">
               {voiceState === 'dispatching' ? 'Checking with dispatch...' :
                voiceState === 'dispatch_reporting' ? 'Reporting back...' :
                voiceState}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                onClick={onToggleMute}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 transition-all ${
+                  isMuted
+                    ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30'
+                    : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
+                }`}
+              >
+                {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                {isMuted ? 'Muted' : 'Mute'}
+              </button>
+              <button
+                onClick={onToggleVoice}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/30 active:scale-95 transition-all"
+              >
+                <X className="w-3.5 h-3.5" />
+                End Voice
+              </button>
             </div>
           </div>
         )}

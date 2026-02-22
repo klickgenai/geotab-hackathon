@@ -18,6 +18,7 @@ import {
 import { runDispatcherDelegation } from '../data/dispatcher-ai.js';
 import { makeDispatchProgressCallbacks } from '../voice/dispatch-bridge.js';
 import { seedDrivers } from '../data/seed-data.js';
+import { TwilioAIDispatchCall } from '../services/twilio-ai-dispatch.js';
 
 export const getDriverDashboard = tool({
   description:
@@ -154,6 +155,122 @@ export const initiateDispatcherCall = tool({
       ? makeDispatchProgressCallbacks(sessionId)
       : { onStatus: () => {}, onMessage: () => {}, onOutcome: () => {} };
 
+    // Check if Twilio is configured for real phone calls
+    const useTwilio = !!(process.env.TWILIO_ACCOUNT_SID && process.env.NGROK_URL);
+
+    if (useTwilio) {
+      // Real Twilio phone call to dispatch
+      callbacks.onStatus('connecting', 'Calling dispatch...');
+
+      const session = getDriverSession(resolvedId);
+      const loadDetails = load
+        ? `Load ${load.id}: ${load.origin?.city || 'Unknown'} → ${load.destination?.city || 'Unknown'} (${(load as LoadAssignment).commodity || 'general'})`
+        : 'No active load';
+
+      // Track how many transcript entries we've already sent to the bridge
+      let lastSentTranscriptIndex = 0;
+
+      const aiCall = new TwilioAIDispatchCall(
+        intent,
+        {
+          driverName: driver.name,
+          employeeNo: driver.employeeNumber,
+          vehicleName: session?.vehicleName || driver.vehicleId,
+          safetyScore: session?.safetyScore || 85,
+          loadDetails,
+          driverId: resolvedId, // Pass driverId so messages are saved
+        },
+        (result) => {
+          // Bridge Twilio call state to dispatch bridge events
+          if (result.state === 'ringing') {
+            callbacks.onStatus('connecting', 'Phone is ringing...');
+          } else if (result.state === 'greeting' || result.state === 'on_call') {
+            callbacks.onStatus('on_call', 'Tasha is talking to dispatch');
+            // Only send NEW transcript entries (not all of them every time)
+            for (let i = lastSentTranscriptIndex; i < result.transcript.length; i++) {
+              const entry = result.transcript[i];
+              callbacks.onMessage(
+                entry.role === 'tasha' ? 'ava' : 'dispatcher',
+                entry.text,
+                i + 1,
+              );
+            }
+            lastSentTranscriptIndex = result.transcript.length;
+          } else if (result.state === 'wrapping_up') {
+            callbacks.onStatus('wrapping_up', 'Wrapping up the call...');
+            // Send any remaining transcript entries
+            for (let i = lastSentTranscriptIndex; i < result.transcript.length; i++) {
+              const entry = result.transcript[i];
+              callbacks.onMessage(
+                entry.role === 'tasha' ? 'ava' : 'dispatcher',
+                entry.text,
+                i + 1,
+              );
+            }
+            lastSentTranscriptIndex = result.transcript.length;
+          } else if (result.state === 'complete') {
+            // Send any final transcript entries
+            for (let i = lastSentTranscriptIndex; i < result.transcript.length; i++) {
+              const entry = result.transcript[i];
+              callbacks.onMessage(
+                entry.role === 'tasha' ? 'ava' : 'dispatcher',
+                entry.text,
+                i + 1,
+              );
+            }
+            callbacks.onStatus('complete', 'Call complete');
+            callbacks.onOutcome('resolved', result.summary || 'Call completed.', {});
+          } else if (result.state === 'failed') {
+            callbacks.onStatus('error', 'Call failed');
+            callbacks.onOutcome('failed', result.summary || 'Could not reach dispatch.', {});
+          }
+        },
+      );
+
+      try {
+        const { callId } = await aiCall.startCall();
+
+        // Wait for call to complete (up to 2.5 minutes to match max call duration)
+        const startWait = Date.now();
+        while (Date.now() - startWait < 150000) {
+          const result = aiCall.getResult();
+          if (result.state === 'complete' || result.state === 'failed') {
+            return {
+              callId,
+              duration: Math.floor((result.duration || 0) / 1000),
+              durationFormatted: `${Math.floor((result.duration || 0) / 60000)}m ${Math.floor(((result.duration || 0) % 60000) / 1000)}s`,
+              outcome: result.state === 'complete' ? 'resolved' : 'failed',
+              summary: result.summary || 'Call ended.',
+              conversation: result.transcript.map(t => ({ role: t.role === 'tasha' ? 'ava' : 'dispatcher', text: t.text })),
+              details: {},
+              cancelled: false,
+              mode: 'twilio',
+            };
+          }
+          await new Promise(r => setTimeout(r, 1500));
+        }
+
+        // Timed out — hangup the call
+        aiCall.hangup();
+        const finalResult = aiCall.getResult();
+        return {
+          callId,
+          duration: Math.floor((Date.now() - startWait) / 1000),
+          durationFormatted: '2m 30s',
+          outcome: 'timeout',
+          summary: finalResult.summary || 'The call timed out. Please try again.',
+          conversation: finalResult.transcript.map(t => ({ role: t.role === 'tasha' ? 'ava' : 'dispatcher', text: t.text })),
+          details: {},
+          cancelled: false,
+          mode: 'twilio',
+        };
+      } catch (err) {
+        // Twilio call failed, fall back to simulated
+        callbacks.onStatus('connecting', 'Phone call failed, using AI simulation...');
+      }
+    }
+
+    // Simulated mode fallback
     const result = await runDispatcherDelegation(
       resolvedId,
       intent,

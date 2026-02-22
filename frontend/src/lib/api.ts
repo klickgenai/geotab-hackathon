@@ -7,6 +7,7 @@ import type {
   GamificationState, Badge, PointTransaction, RewardItem, DailyChallenge,
   PreShiftBriefing, ActionItem, DriverTrainingProgram,
   GreenFleetDashboard, DriverGreenScore, EVReadinessReport,
+  HOSStatus, WellnessTrend,
 } from '@/types/fleet';
 
 const API_BASE = '';
@@ -141,7 +142,8 @@ export const api = {
   updateLoadStatus: (id: string, status: string) => putJSON(`/api/driver/${id}/load/status`, { status }),
   driverMessages: (id: string) => fetchJSON<unknown[]>(`/api/driver/${id}/messages`),
   driverLeaderboard: () => fetchJSON<DriverRanking[]>('/api/driver/leaderboard'),
-  dispatchCall: (id: string, intent: string) => postJSON<unknown>(`/api/driver/${id}/dispatch-call`, { intent }),
+  dispatchCall: (id: string, intent: string) => postJSON<{ callId?: string; mode: string; messages?: { role: string; text: string }[]; summary?: string }>(`/api/driver/${id}/dispatch-call`, { intent }),
+  dispatchCallStatus: (id: string, callId: string) => fetchJSON<{ callId: string; state: string; transcript: { role: string; text: string; timestamp: string }[]; summary?: string; duration?: number }>(`/api/driver/${id}/dispatch-call/${callId}/status`),
 
   // Gamification
   driverGamification: (id: string) => fetchJSON<GamificationState>(`/api/driver/${id}/gamification`),
@@ -152,6 +154,13 @@ export const api = {
 
   // Pre-Shift Briefing
   preShiftBriefing: (id: string) => fetchJSON<PreShiftBriefing>(`/api/driver/${id}/pre-shift-briefing`),
+
+  // HOS (Hours of Service)
+  driverHOS: (id: string) => fetchJSON<HOSStatus>(`/api/driver/${id}/hos`),
+
+  // Wellness Check-In
+  wellnessCheckIn: (id: string, mood: string) => postJSON<{ message: string }>(`/api/driver/${id}/wellness-checkin`, { mood }),
+  wellnessTrend: (id: string) => fetchJSON<WellnessTrend>(`/api/driver/${id}/wellness-trend`),
 
   // Action Items
   driverActions: (id: string) => fetchJSON<ActionItem[]>(`/api/driver/${id}/actions`),

@@ -36,6 +36,9 @@ import {
   addDriverActionItem,
   completeDriverActionItem,
   dismissDriverActionItem,
+  getDriverHOS,
+  submitWellnessCheckIn,
+  getWellnessTrend,
 } from './data/driver-session.js';
 import { simulateDispatcherCall } from './data/dispatcher-ai.js';
 import { calculateFleetROI, calculateBeforeAfter, calculateRetentionSavings } from './scoring/roi-engine.js';
@@ -46,6 +49,7 @@ import { geotabAce } from './services/geotab-ace.js';
 import { generateFleetReport } from './reports/fleet-report.js';
 import { isUsingLiveData } from './data/fleet-data-provider.js';
 import { TwilioDispatchSession, getCallSession, getCallSessionByCallSid } from './services/twilio-dispatch-service.js';
+import { TwilioAIDispatchCall, getAICallSession, getAICallSessionByCallSid } from './services/twilio-ai-dispatch.js';
 import { getAllMissions, getCompletedMission, getMissionBridge } from './missions/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -759,6 +763,40 @@ app.get('/api/driver/:id/pre-shift-briefing', (req, res) => {
   }
 });
 
+// --- Driver HOS (Hours of Service) ---
+app.get('/api/driver/:id/hos', (req, res) => {
+  try {
+    const result = getDriverHOS(req.params.id);
+    if (!result) return res.status(404).json({ error: 'Driver not found' });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get HOS status' });
+  }
+});
+
+// --- Driver Wellness Check-In ---
+app.post('/api/driver/:id/wellness-checkin', (req, res) => {
+  try {
+    const { mood, note } = req.body;
+    if (!mood) return res.status(400).json({ error: 'mood is required' });
+    const validMoods = ['great', 'ok', 'tired', 'stressed', 'not_good'];
+    if (!validMoods.includes(mood)) return res.status(400).json({ error: 'Invalid mood' });
+    const result = submitWellnessCheckIn(req.params.id, mood, note);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to submit wellness check-in' });
+  }
+});
+
+app.get('/api/driver/:id/wellness-trend', (req, res) => {
+  try {
+    const trend = getWellnessTrend(req.params.id);
+    res.json(trend);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get wellness trend' });
+  }
+});
+
 // --- Gamification API ---
 app.get('/api/driver/:id/gamification', (req, res) => {
   try {
@@ -1061,9 +1099,21 @@ app.get('/api/fleet/data-source', (_req, res) => {
 // --- Twilio Call Status Webhook ---
 app.post('/api/twilio/call-status', (req, res) => {
   const { CallSid, CallStatus } = req.body;
+  console.log(`[TWILIO-STATUS] SID=${CallSid?.slice(-8)} Status=${CallStatus}`);
+
+  // Check AI dispatch calls first
+  const aiSession = getAICallSessionByCallSid(CallSid);
+  if (aiSession) {
+    aiSession.handleStatusUpdate(CallStatus);
+    return res.sendStatus(200);
+  }
+
+  // Check regular dispatch calls
   const session = getCallSessionByCallSid(CallSid);
   if (session) {
     session.handleStatusUpdate(CallStatus);
+  } else {
+    console.warn(`[TWILIO-STATUS] No session found for CallSid=${CallSid?.slice(-8)}`);
   }
   res.sendStatus(200);
 });
@@ -1078,13 +1128,50 @@ app.post('/api/driver/:id/dispatch-call', async (req, res) => {
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
     const load = getDriverLoad(req.params.id);
+    const session = getDriverSession(req.params.id);
+
+    // If Twilio is configured, use real AI dispatch call
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.NGROK_URL) {
+      try {
+        const aiCall = new TwilioAIDispatchCall(intent, {
+          driverName: driver.name,
+          employeeNo: driver.employeeNumber,
+          vehicleName: session?.vehicleName || driver.vehicleId,
+          safetyScore: session?.safetyScore || 85,
+          loadDetails: load
+            ? `Load ${load.id}: ${load.commodity} from ${load.origin.city} to ${load.destination.city} (${load.status})`
+            : 'No active load',
+        });
+        const callResult = await aiCall.startCall();
+        return res.json({
+          ...callResult,
+          mode: 'twilio',
+        });
+      } catch (err) {
+        // Twilio failed, fall back to simulated
+        console.error('Twilio AI dispatch failed, falling back to simulation:', (err as Error).message);
+      }
+    }
+
+    // Fallback: simulated dispatch call
     const result = await simulateDispatcherCall(req.params.id, intent, {
       currentLoad: load,
       driverName: driver.name,
     });
-    res.json(result);
+    res.json({ ...result, mode: 'simulated' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to simulate dispatch call' });
+    res.status(500).json({ error: 'Failed to process dispatch call' });
+  }
+});
+
+// --- AI Dispatch Call Status Polling ---
+app.get('/api/driver/:id/dispatch-call/:callId/status', (req, res) => {
+  try {
+    const aiCall = getAICallSession(req.params.callId);
+    if (!aiCall) return res.status(404).json({ error: 'Call not found' });
+    res.json(aiCall.getResult());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get call status' });
   }
 });
 
@@ -1097,24 +1184,49 @@ twilioWss.on('connection', (ws) => {
     const raw = data.toString();
     if (linked) return; // Once linked, session handles messages directly
 
-    // Buffer messages until we find the callId in a 'start' event
+    // Cap buffer to prevent unbounded growth (safety measure)
+    if (bufferedMessages.length > 200) {
+      console.warn('[TWILIO-WS] Buffer exceeded 200 messages before linking — clearing old');
+      bufferedMessages.splice(0, bufferedMessages.length - 50);
+    }
+
     bufferedMessages.push(raw);
 
     try {
       const msg = JSON.parse(raw);
       if (msg.event === 'start' && msg.start?.customParameters?.callId) {
         const callId = msg.start.customParameters.callId;
+        const mode = msg.start?.customParameters?.mode;
+        console.log(`[TWILIO-WS] Start event: callId=${callId}, mode=${mode}`);
+
+        // Try AI dispatch call first
+        if (mode === 'ai') {
+          const aiSession = getAICallSession(callId);
+          if (aiSession) {
+            linked = true;
+            console.log(`[TWILIO-WS] Linked to AI dispatch session: ${callId}`);
+            aiSession.handleMediaStream(ws as any, bufferedMessages);
+            return;
+          }
+          console.warn(`[TWILIO-WS] AI session not found for callId=${callId}`);
+        }
+
+        // Fall back to regular dispatch session
         const session = getCallSession(callId);
         if (session) {
           linked = true;
           session.handleMediaStream(ws as any, bufferedMessages);
+        } else {
+          console.warn(`[TWILIO-WS] No session found for callId=${callId}`);
         }
       }
     } catch {}
   });
 
   ws.on('close', () => {
-    // connection closed
+    if (!linked) {
+      console.warn('[TWILIO-WS] Connection closed before linking');
+    }
   });
 });
 

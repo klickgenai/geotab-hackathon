@@ -57,6 +57,7 @@ export class VoiceClient {
   private readonly MAX_RECONNECT_ATTEMPTS = 3;
   private readonly RECONNECT_DELAY = 1000;
   private visibilityHandler: (() => void) | null = null;
+  private muted = false;
   private consecutiveEmptyTranscripts = 0;
   private readonly SILENCE_THRESHOLD = 0.01;
   private readonly SPEECH_START_FRAMES = 3;
@@ -427,6 +428,32 @@ export class VoiceClient {
 
   getState(): VoiceState {
     return this.state;
+  }
+
+  /** Mute mic — keeps session alive but stops sending audio */
+  mute(): void {
+    this.muted = true;
+    if (this.mediaStream) {
+      this.mediaStream.getAudioTracks().forEach(t => { t.enabled = false; });
+    }
+  }
+
+  /** Unmute mic — resume sending audio */
+  unmute(): void {
+    this.muted = false;
+    if (this.mediaStream) {
+      this.mediaStream.getAudioTracks().forEach(t => { t.enabled = true; });
+    }
+  }
+
+  /** Toggle mute state */
+  toggleMute(): boolean {
+    if (this.muted) { this.unmute(); } else { this.mute(); }
+    return this.muted;
+  }
+
+  get isMuted(): boolean {
+    return this.muted;
   }
 
   disconnect() {

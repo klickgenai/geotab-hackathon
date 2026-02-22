@@ -6,6 +6,8 @@ import { TTSWebSocket, type TTSStreamCallbacks } from "./tts-synthesize.js";
 import { extractActionItem, extractTextActions, type ActionItem } from "./action-extractor.js";
 import { streamAgentResponseWithHistory } from "../agents/fleetshield-agent.js";
 import { createDispatchBridge, removeDispatchBridge, type DispatchEvent } from "./dispatch-bridge.js";
+import { getLatestWellnessCheckIn } from "../data/driver-session.js";
+import { seedDrivers } from "../data/seed-data.js";
 
 export type SessionState = "idle" | "listening" | "thinking" | "speaking" | "dispatching" | "dispatch_reporting";
 
@@ -713,6 +715,34 @@ export class VoiceSession {
         ? `Current load: ${dc.currentLoad.id} (${dc.currentLoad.status.replace(/_/g, ' ')}) — ${dc.currentLoad.commodity} from ${dc.currentLoad.origin} to ${dc.currentLoad.destination}.`
         : 'No active load assigned right now.';
 
+      // Inject recent wellness check-in context
+      let wellnessContext = '';
+      try {
+        const matchedDriver = seedDrivers.find(d => d.name === dc.name);
+        if (matchedDriver) {
+          const checkin = getLatestWellnessCheckIn(matchedDriver.id);
+          if (checkin) {
+            const moodMap: Record<string, string> = {
+              great: 'great',
+              ok: 'okay',
+              tired: 'tired',
+              stressed: 'stressed',
+              not_good: 'not doing well',
+            };
+            const moodText = moodMap[checkin.mood] || checkin.mood;
+            const minutesAgo = Math.floor((Date.now() - new Date(checkin.timestamp).getTime()) / 60000);
+            if (minutesAgo < 480) { // Only include if within last 8 hours
+              wellnessContext = `\nWELLNESS CONTEXT: The driver checked in as "${moodText}" ${minutesAgo < 60 ? `${minutesAgo} minutes` : `${Math.floor(minutesAgo / 60)} hours`} ago.`;
+              if (checkin.mood === 'tired' || checkin.mood === 'stressed' || checkin.mood === 'not_good') {
+                wellnessContext += ' Be empathetic and check in on how they\'re doing. Suggest breaks if appropriate.';
+              }
+            }
+          }
+        }
+      } catch {
+        // silently handled - wellness context is optional
+      }
+
       messages.push({
         role: "system",
         content: `You are Tasha, a friendly AI co-driver for FleetShield AI. You are speaking with ${dc.firstName} (full name: ${dc.name}), driving ${dc.vehicleName}.
@@ -727,7 +757,7 @@ Driver profile:
 - Days worked (last 30): ${dc.daysWorked}, Total driving hours: ${dc.totalDrivingHours}h
 ${loadInfo}
 
-${tone}
+${tone}${wellnessContext}
 
 DISPATCH DELEGATION:
 You handle ALL dispatch communication on the driver's behalf. The driver NEVER talks to dispatch directly — you do. When the driver needs dispatch help (load questions, delivery extensions, ETA changes, mechanical issues, schedule changes, route questions), use the initiateDispatcherCall tool. Be PROACTIVE: if the driver mentions a problem that clearly needs dispatch involvement, contact Mike without being asked. Before calling, say something brief like "Let me check with Mike at dispatch for you." After the call completes, summarize the outcome naturally — for example: "Good news — I checked with Mike and he confirmed your delivery extension to 6 PM. The receiver has been notified." Never say "I simulated" or "I generated a call" — you genuinely contacted dispatch. If the driver asks "what did dispatch say?", reference the conversation details from the tool result.

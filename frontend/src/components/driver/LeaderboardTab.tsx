@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Award, Star, Gift, ChevronRight, CheckCircle, TrendingUp } from 'lucide-react';
-import { BadgeDetailModal } from './BadgeDetailModal';
-import type { DriverSession, DriverRanking, GamificationState, Badge } from '@/types/fleet';
+import { Trophy, Award, TrendingUp } from 'lucide-react';
+import type { DriverSession, DriverRanking, GamificationState } from '@/types/fleet';
 
 function levelColor(level: number) {
   if (level >= 8) return 'from-yellow-400 to-amber-600';
@@ -14,16 +12,6 @@ function levelColor(level: number) {
   return 'from-gray-400 to-gray-600';
 }
 
-function timeAgo(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 interface LeaderboardTabProps {
   session: DriverSession;
   leaderboard: DriverRanking[];
@@ -31,11 +19,7 @@ interface LeaderboardTabProps {
 }
 
 export function LeaderboardTab({ session, leaderboard, gamification }: LeaderboardTabProps) {
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
-
-  const badges = gamification?.badges ?? [];
-  const rewards = gamification?.rewards ?? [];
-  const recentPoints = gamification?.recentPoints ?? [];
+  const badges = (gamification?.badges ?? []).filter(b => b.earned).slice(0, 8);
   const level = gamification?.level ?? 1;
   const levelTitle = gamification?.levelTitle ?? 'Rookie';
   const levelProgress = (gamification?.levelProgress ?? 0) * 100;
@@ -123,84 +107,27 @@ export function LeaderboardTab({ session, leaderboard, gamification }: Leaderboa
         </div>
       </motion.div>
 
-      {/* Badge Gallery */}
-      <motion.div
-        initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-        className="bg-[#18202F] rounded-2xl border border-white/10 p-4"
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <Award className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm font-semibold">Badges</span>
-          <span className="ml-auto text-[10px] text-gray-500">{badges.filter(b => b.earned).length}/{badges.length} earned</span>
-        </div>
-        <div className="grid grid-cols-5 gap-2">
-          {badges.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setSelectedBadge(b)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                b.earned ? 'hover:bg-white/5' : 'opacity-40 hover:opacity-60'
-              }`}
-            >
-              <span className="text-2xl">{b.icon}</span>
-              <span className="text-[9px] text-gray-500 truncate w-full text-center">{b.name}</span>
-            </button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Rewards Catalog */}
-      {rewards.length > 0 && (
+      {/* Earned Badges */}
+      {badges.length > 0 && (
         <motion.div
-          initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}
+          initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
           className="bg-[#18202F] rounded-2xl border border-white/10 p-4"
         >
           <div className="flex items-center gap-2 mb-3">
-            <Gift className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-semibold">Rewards</span>
+            <Award className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-semibold">Earned Badges</span>
+            <span className="ml-auto text-[10px] text-gray-500">{badges.length} earned</span>
           </div>
-          <div className="space-y-2">
-            {rewards.slice(0, 6).map((r) => (
-              <div key={r.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${
-                r.available ? 'bg-[#0F1520]' : 'bg-[#0F1520]/50 opacity-50'
-              }`}>
-                <span className="text-xl">{r.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white truncate">{r.name}</div>
-                  <div className="text-[10px] text-gray-500">Lv{r.levelRequired}+ &middot; {r.category}</div>
-                </div>
-                <div className="flex items-center gap-0.5 text-xs">
-                  <Star className="w-3 h-3 text-[#FBAF1A]" />
-                  <span className="font-bold text-[#FBAF1A]">{r.pointsCost}</span>
-                </div>
+          <div className="grid grid-cols-4 gap-3">
+            {badges.map((b) => (
+              <div key={b.id} className="flex flex-col items-center gap-1 p-2 rounded-xl">
+                <span className="text-2xl">{b.icon}</span>
+                <span className="text-[9px] text-gray-500 truncate w-full text-center">{b.name}</span>
               </div>
             ))}
           </div>
         </motion.div>
       )}
-
-      {/* Recent Points History */}
-      {recentPoints.length > 0 && (
-        <motion.div
-          initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-          className="bg-[#18202F] rounded-2xl border border-white/10 p-4"
-        >
-          <h3 className="text-sm font-semibold mb-3">Recent Points</h3>
-          <div className="space-y-1.5">
-            {recentPoints.slice(0, 8).map((p) => (
-              <div key={p.id} className="flex items-center gap-2 text-xs">
-                <span className={`font-bold ${p.points > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {p.points > 0 ? '+' : ''}{p.points}
-                </span>
-                <span className="text-gray-400 flex-1 truncate">{p.reason}</span>
-                <span className="text-gray-600">{timeAgo(p.timestamp)}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      <BadgeDetailModal badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
     </div>
   );
 }
