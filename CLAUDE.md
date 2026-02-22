@@ -669,6 +669,77 @@ cd frontend && npm run build   # Next.js production build
 - Completed operator missions (coaching_sweep, wellness_check, safety_investigation) auto-sync action items to affected drivers
 - `DRIVER_PORTAL_TEST_SCENARIOS.md` has comprehensive test scenarios, voice questions, and a recommended 3-min demo flow
 
+## Production Deployment (Vercel + Local Backend + ngrok)
+
+The frontend is deployed on **Vercel** at `https://fleetshieldai.vercel.app/`.
+The backend runs **locally** and is exposed via **ngrok**.
+
+### Architecture
+```
+Browser → fleetshieldai.vercel.app (Vercel)
+  → /api/* requests hit middleware (frontend/src/middleware.ts)
+  → middleware rewrites to NEXT_PUBLIC_API_URL (ngrok URL)
+  → ngrok tunnel → localhost:3000 (local backend)
+```
+
+### How It Works
+- `frontend/src/middleware.ts` intercepts all `/api/*` requests
+- When `NEXT_PUBLIC_API_URL` is set, middleware rewrites requests to that URL
+- It adds `ngrok-skip-browser-warning: true` header to bypass ngrok interstitial
+- When `NEXT_PUBLIC_API_URL` is NOT set (local dev), `next.config.ts` rewrites to `localhost:3000`
+
+### Deployment Steps (Run These Exact Commands)
+
+**Step 1: Start the backend**
+```bash
+cd backend && npm run dev
+# Verify: curl http://localhost:3000/api/fleet/data-source
+```
+
+**Step 2: Start ngrok tunnel**
+```bash
+ngrok http 3000
+# Note the https URL (e.g., https://xxxx-xx-xx-xx-xx.ngrok-free.app)
+```
+
+**Step 3: Get the ngrok URL programmatically**
+```bash
+curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; t=json.load(sys.stdin)['tunnels']; print(t[0]['public_url'])"
+```
+
+**Step 4: Verify ngrok tunnel works**
+```bash
+curl -s -H "ngrok-skip-browser-warning: true" <NGROK_URL>/api/fleet/data-source
+# Should return: {"isLiveData":true,"geotabConfigured":true,"database":"demo_my_geo_trucks"}
+```
+
+**Step 5: Update Vercel env var and redeploy**
+```bash
+cd frontend
+vercel env rm NEXT_PUBLIC_API_URL production -y
+echo "<NGROK_URL>" | vercel env add NEXT_PUBLIC_API_URL production
+vercel --prod
+```
+
+**Step 6: Verify end-to-end**
+```bash
+curl -s https://fleetshieldai.vercel.app/api/fleet/data-source
+# Should return same JSON as Step 4
+```
+
+### Important Notes
+- ngrok URL **changes every restart** — repeat Steps 2-5 each time
+- The Vercel project is linked in `frontend/` directory (run vercel commands from there)
+- Keep both `ngrok` and `backend` running during demos
+- Vercel project name: `frontend` under `klickgenais-projects`
+- Frontend local dev (port 3001) is independent — it uses `next.config.ts` rewrites to `localhost:3000`
+
+### Quick One-Liner for Repeat Deployments
+After ngrok is already running:
+```bash
+NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; t=json.load(sys.stdin)['tunnels']; print(t[0]['public_url'])") && cd frontend && vercel env rm NEXT_PUBLIC_API_URL production -y && echo "$NGROK_URL" | vercel env add NEXT_PUBLIC_API_URL production && vercel --prod
+```
+
 ## Geotab Vibe Guide Reference
 The official competition guide repo: https://github.com/fhoffa/geotab-vibe-guide
 Key resources for AI agents:

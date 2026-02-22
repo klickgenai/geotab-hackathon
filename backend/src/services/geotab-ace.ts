@@ -1,89 +1,115 @@
 /**
  * Geotab Ace API (Natural Language Analytics) Wrapper
- * Uses 3-step polling: create-chat -> send-prompt -> poll for result.
+ * Uses GetAceResults JSON-RPC method via the MyGeotab API.
+ * 3-step polling: create-chat -> send-prompt -> get-message-group.
  */
 
 import { geotabAuth } from './geotab-auth.js';
 
-const ACE_BASE = 'https://ace.geotab.com/api/v1';
-
 export class GeotabAce {
-  private async getHeaders(): Promise<Record<string, string>> {
-    const session = await geotabAuth.authenticate();
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.sessionId}`,
-    };
-  }
+  /** Make a GetAceResults JSON-RPC call */
+  private async callAce(functionName: string, functionParameters: Record<string, unknown> = {}): Promise<unknown> {
+    const sessionCreds = await geotabAuth.getSessionCredentials();
+    const apiUrl = await geotabAuth.getApiUrl();
 
-  /** Create a new Ace chat session */
-  async createChat(): Promise<string> {
-    const headers = await this.getHeaders();
-    const creds = geotabAuth.getCredentials();
-    if (!creds) throw new Error('Geotab credentials not configured');
-
-    const res = await fetch(`${ACE_BASE}/chats`, {
+    const res = await fetch(apiUrl, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        database: creds.database,
-        customerData: true,
+        method: 'GetAceResults',
+        params: {
+          credentials: sessionCreds,
+          serviceName: 'dna-planet-orchestration',
+          functionName,
+          customerData: true,
+          functionParameters,
+        },
       }),
     });
 
-    if (!res.ok) throw new Error(`Ace createChat failed: ${res.status}`);
-    const data = await res.json() as { chatId?: string; id?: string };
-    return data.chatId || data.id || '';
+    if (!res.ok) throw new Error(`Ace ${functionName} failed: ${res.status}`);
+    const data = await res.json() as { result?: unknown; error?: { message: string } };
+    if (data.error) throw new Error(`Ace ${functionName}: ${data.error.message}`);
+    return data.result;
   }
 
-  /** Send a natural language prompt to an Ace chat */
+  /** Extract the first result from the nested Ace response structure */
+  private extractResult(raw: unknown): Record<string, unknown> {
+    const r = raw as { apiResult?: { results?: Record<string, unknown>[] } };
+    return r?.apiResult?.results?.[0] || (raw as Record<string, unknown>) || {};
+  }
+
+  /** Step 1: Create a new Ace chat session */
+  async createChat(): Promise<string> {
+    const raw = await this.callAce('create-chat', {});
+    const result = this.extractResult(raw);
+    return (result.chat_id || result.chatId || '') as string;
+  }
+
+  /** Step 2: Send a natural language prompt */
   async sendPrompt(chatId: string, prompt: string): Promise<string> {
-    const headers = await this.getHeaders();
-
-    const res = await fetch(`${ACE_BASE}/chats/${chatId}/messages`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ content: prompt }),
-    });
-
-    if (!res.ok) throw new Error(`Ace sendPrompt failed: ${res.status}`);
-    const data = await res.json() as { messageId?: string; id?: string };
-    return data.messageId || data.id || '';
+    const raw = await this.callAce('send-prompt', { chat_id: chatId, prompt });
+    const result = this.extractResult(raw);
+    // message_group_id can be at result.message_group.id or result.message_group_id
+    const mg = result.message_group as Record<string, unknown> | undefined;
+    return (mg?.id || result.message_group_id || result.messageGroupId || '') as string;
   }
 
-  /** Poll for Ace response with exponential backoff */
-  async pollResult(chatId: string, messageId: string, maxWaitMs: number = 30000): Promise<AceResult> {
-    const headers = await this.getHeaders();
+  /** Step 3: Poll for result with exponential backoff */
+  async pollResult(chatId: string, messageGroupId: string, maxWaitMs: number = 60000): Promise<AceResult> {
     const startTime = Date.now();
-    let delay = 1000;
+    let delay = 3000;
 
     while (Date.now() - startTime < maxWaitMs) {
-      const res = await fetch(`${ACE_BASE}/chats/${chatId}/messages/${messageId}`, {
-        headers,
-      });
+      const raw = await this.callAce('get-message-group', { chat_id: chatId, message_group_id: messageGroupId });
+      const result = this.extractResult(raw) as Record<string, unknown>;
 
-      if (!res.ok) throw new Error(`Ace poll failed: ${res.status}`);
-      const data = await res.json() as { status?: string; state?: string; content?: string; text?: string; data?: unknown; result?: unknown; charts?: unknown[]; error?: string };
+      // Response is nested: result.message_group.status.status
+      const messageGroup = result.message_group as Record<string, unknown> | undefined;
+      const statusObj = messageGroup?.status as Record<string, unknown> | undefined;
+      const status = ((statusObj?.status || '') as string).toUpperCase();
 
-      if (data.status === 'completed' || data.state === 'completed') {
-        return {
-          text: data.content || data.text || '',
-          data: data.data || data.result || null,
-          charts: data.charts || [],
-          status: 'completed',
-        };
+      if (status === 'DONE' || status === 'COMPLETED') {
+        // Messages is an object keyed by ID — find the UserDataReference or assistant message
+        const messages = messageGroup?.messages as Record<string, Record<string, unknown>> | undefined;
+        let text = '';
+        let data: unknown = null;
+
+        if (messages) {
+          const msgValues = Object.values(messages);
+          // Find the data reference message (has reasoning + preview_array)
+          const dataMsg = msgValues.find(m => m.type === 'UserDataReference');
+          if (dataMsg) {
+            const reasoning = dataMsg.reasoning as string || '';
+            const preview = dataMsg.preview_array as unknown[];
+            const insight = dataMsg.insight as string || '';
+            // Build a readable response from the structured data
+            const parts: string[] = [];
+            if (reasoning) parts.push(reasoning);
+            if (insight) parts.push(insight);
+            if (preview?.length) parts.push('\nData: ' + JSON.stringify(preview, null, 2));
+            text = parts.join('\n\n') || 'Analysis complete';
+            data = preview || null;
+          } else {
+            // Fallback: find assistant message
+            const assistantMsg = msgValues.find(m => m.role === 'assistant');
+            text = (assistantMsg?.content || assistantMsg?.text || 'Analysis complete') as string;
+          }
+        }
+
+        return { text, data, charts: [], status: 'completed' };
       }
 
-      if (data.status === 'failed' || data.state === 'failed') {
+      if (status === 'FAILED' || status === 'ERROR') {
         return {
-          text: data.error || 'Ace query failed',
+          text: (statusObj?.message || 'Ace query failed') as string,
           data: null,
           charts: [],
           status: 'failed',
         };
       }
 
-      // Wait with exponential backoff
+      // Wait with exponential backoff (3s → 4.5s → 5s max)
       await new Promise((resolve) => setTimeout(resolve, delay));
       delay = Math.min(delay * 1.5, 5000);
     }
@@ -95,8 +121,12 @@ export class GeotabAce {
   async query(prompt: string): Promise<AceResult> {
     try {
       const chatId = await this.createChat();
-      const messageId = await this.sendPrompt(chatId, prompt);
-      return await this.pollResult(chatId, messageId);
+      if (!chatId) throw new Error('Failed to create Ace chat session');
+
+      const messageGroupId = await this.sendPrompt(chatId, prompt);
+      if (!messageGroupId) throw new Error('Failed to send prompt to Ace');
+
+      return await this.pollResult(chatId, messageGroupId);
     } catch (error) {
       return {
         text: `Ace query error: ${error instanceof Error ? error.message : String(error)}`,
