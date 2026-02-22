@@ -59,6 +59,58 @@ Every insight comes with dollar-quantified projections. Not "you should reduce s
 
 ---
 
+## Competitive Landscape — How We Compare to Top YC & Industry Players
+
+The fleet management and logistics space has attracted billions in venture funding. Here's how FleetShield AI differentiates from the top YC-backed companies and industry leaders:
+
+### Comparison Matrix
+
+| Company | YC Batch | Focus | What They Do | What FleetShield Does Differently |
+|---------|----------|-------|-------------|----------------------------------|
+| **[Samsara](https://www.samsara.com)** | — | Fleet hardware + software | AI dashcams, GPS tracking, ELD, driver monitoring via computer vision. Hardware-first ($35-50/vehicle/month). Surveillance-heavy — cameras watch drivers. | **Software-only, no hardware cost.** Works with existing Geotab telematics. Privacy-respecting wellness (mood check-ins, not cameras). Drivers coached, not surveilled. |
+| **[Motive](https://gomotive.com)** (KeepTruckin) | — | ELD + fleet management | ELD compliance, dashcams with collision alerts, fuel management. 120K+ companies. Uses invasive dashcam fatigue detection. | **Proactive AI prevention vs reactive camera alerts.** Predictive safety forecasts risk *before* shifts. AI wellness check-ins replace invasive dashcam monitoring. Voice-first UX for drivers. |
+| **[Flexport](https://www.flexport.com)** | W14 | Global supply chain | Full-service logistics platform for freight forwarding. AI-powered "Flexport Intelligence" for supply chain queries. Global trade focus. | **Trucking fleet-specific, not global freight.** Deep telematics intelligence (9 scoring engines) vs supply chain visibility. Quantified insurance ROI, not just shipment tracking. |
+| **[FleetWorks](https://www.fleetworks.ai)** | S23 | AI freight marketplace | AI agents match trucks to cargo, replacing phone calls and emails. $17M raised. Broker-to-carrier marketplace. | **Fleet operator tool, not marketplace.** We optimize the fleet *internally* (safety, insurance, coaching) vs matching external loads. Our AI calls real dispatchers, not brokers. |
+| **[Palace](https://www.palace.so)** | — | Dispatch automation | AI-native planning and dispatch. Automates load assignment, scheduling, driver communication. Back-office efficiency. | **Safety + insurance intelligence, not just dispatch.** Palace optimizes operations; we optimize *safety outcomes* and quantify the dollar impact. Mission agents do analyst work, not scheduling. |
+| **[Lanesurf](https://www.lanesurf.com)** | S25 | Voice AI for freight | Voice AI negotiates rates with carriers across 96+ parallel calls. Built for freight brokers. Self-improving voice stack. | **Voice AI for drivers and operators, not brokers.** Our voice pipeline serves the people *in* the truck (hands-free safety coaching, dispatch calls) not the people booking loads. Twilio Media Streams for real phone calls. |
+| **[Terminal](https://www.withterminal.com)** | S23 | Telematics API | "Plaid for telematics" — universal API to access GPS, speeding, vehicle stats across ELD providers. Infrastructure layer. | **Intelligence layer, not infrastructure.** Terminal normalizes data; we *analyze* it. 9 scoring engines, predictive safety, AI missions, and voice AI built on top of telematics data (Geotab). |
+| **[Carma](https://www.joincarma.com)** | W24 | Fleet maintenance | Marketplace for commercial fleet repairs. Same-day service from vetted centers. Transparent pricing. | **Prevention over repair.** Carma fixes vehicles after problems; we predict and prevent incidents before they happen. Our wellness and safety scores identify risks upstream. |
+| **[Fleetline](https://www.ycombinator.com/companies/fleetline)** | — | Load planning | Algorithmic load planner for mid-large trucking fleets. LLM-powered optimization for routing and scheduling. | **Safety and insurance ROI, not load optimization.** Fleetline maximizes revenue-per-mile; we maximize safety-per-driver and minimize insurance cost. Complementary, not competing. |
+
+### The Gap We Fill
+
+```
+                    OPERATIONS                          SAFETY & INSURANCE
+                    ──────────                          ──────────────────
+
+    Palace ──── Dispatch automation          FleetShield AI ──── Predictive safety
+    Fleetline ── Load planning                                    Insurance optimization
+    FleetWorks ─ Marketplace matching                             Driver wellness & HOS
+                                                                  AI mission agents
+    BROKER SIDE                                                   Voice-first coaching
+    ───────────                              HARDWARE-FIRST       Real dispatch calls
+    Lanesurf ─── Rate negotiation            ──────────────       Quantified ROI
+    Flexport ─── Supply chain               Samsara ─── Dashcams
+                                            Motive ──── ELD + cameras
+    INFRASTRUCTURE
+    ──────────────
+    Terminal ─── Data normalization
+    Carma ────── Maintenance
+```
+
+**No one in the YC ecosystem or industry combines all of these in one platform:**
+1. **Predictive safety analytics** with 9 scoring engines and 7-day forecasting
+2. **Quantified insurance ROI** — every recommendation has a dollar figure
+3. **Autonomous AI mission agents** that do analyst work in the background
+4. **Real phone calls to dispatch** via Twilio Media Streams (not simulated)
+5. **Voice-first driver wellness** — proactive, privacy-respecting, not surveillance
+6. **Dual Geotab API integration** — both MyGeotab telematics AND Ace conversational analytics
+7. **Driver + Operator dual portals** with specialized AI assistants for each role
+
+The closest competitors (Samsara, Motive) are **hardware-first** — they sell cameras and ELD devices. FleetShield is **intelligence-first** — we turn existing Geotab telematics into actionable safety insights, insurance savings, and an AI workforce that replaces manual analyst work.
+
+---
+
 ## Technical Architecture
 
 ```
