@@ -59,6 +59,51 @@ Every insight comes with dollar-quantified projections. Not "you should reduce s
 
 ---
 
+## The Massive Market Opportunity — Why Transportation AI Is Wide Open
+
+According to [Garry's List analysis of the AI agent market](https://garryslist.org/posts/half-the-ai-agent-market-is-one-category-the-rest-is-wide-open), **49.7% of all AI agent activity is concentrated in software engineering** — nearly half the entire market in a single category. The remaining 50.3% is spread thin across 16 verticals, with travel and logistics representing just **~0.8%** of AI agent market share.
+
+This isn't a crowded space. It's a **greenfield**.
+
+### Why This Matters for FleetShield AI
+
+The North American trucking industry is a **$940 billion** sector that runs on razor-thin margins (3-6% net). It employs 3.5 million truck drivers and powers the physical economy. Yet it has almost zero AI agent penetration. The few tools that exist are either:
+- **Hardware-first** (Samsara, Motive) — selling cameras and ELD devices, not intelligence
+- **Broker-focused** (Lanesurf, FleetWorks) — optimizing freight markets, not fleet operations
+- **Infrastructure layers** (Terminal) — normalizing data, not analyzing it
+
+Nobody is building **AI employees for fleet operations** — agents that autonomously investigate safety events, optimize insurance premiums, coach drivers, and coordinate across swarms of specialized workers. That's the gap FleetShield AI fills.
+
+### Our Vision: Agent-to-Agent Autonomous Communication
+
+FleetShield AI isn't just a fleet safety platform — it's the foundation for an **autonomous agent ecosystem** in transportation. Here's where we're heading:
+
+**Today (v1 — this hackathon):**
+- 5 autonomous Mission Agents (coaching sweep, wellness check, safety investigation, insurance optimization, pre-shift sweep)
+- Each agent calls 9 scoring engines, synthesizes findings, and delivers action plans
+- Agents create action items for drivers automatically (mission-to-driver sync)
+- A single orchestrator (Tasha) delegates work to specialized agents
+
+**Tomorrow (v2 — the platform):**
+- **Agent-to-Agent Communication**: Mission agents that discover findings hand off to other agents for follow-up. A safety investigation agent detects a fatigue pattern → triggers a wellness agent → which triggers a coaching agent → which dispatches training to the driver. No human in the loop needed for the chain.
+- **Self-Evolving Agents**: Agents that learn from outcomes. Did a coaching intervention reduce a driver's risk score? The coaching agent absorbs that signal and adjusts its recommendations for the next driver. Feedback loops, not static rules.
+- **Secure Agent Marketplace**: Other platforms (insurance underwriters, maintenance providers, broker networks) can consume FleetShield's agents via secure APIs. An insurance company's pricing agent can request a real-time risk assessment from FleetShield's scoring agents. Work gets distributed across a **swarm of specialized agents** — each doing what it does best.
+- **Swarm Intelligence for Low-Margin Industries**: Trucking's thin margins mean every dollar of efficiency matters. A swarm of autonomous agents — each handling one piece of the puzzle (route optimization, fuel efficiency, driver wellness, compliance, insurance negotiation) — can collectively extract savings that no single tool or human analyst could. The compound effect of 50 agents each saving 1% is transformative for a 3-6% margin business.
+
+### Why Agents Will Disrupt Transportation & Logistics
+
+The transportation industry is uniquely suited for AI agent disruption because:
+
+1. **Massive data, minimal intelligence**: Millions of Geotab devices generate billions of data points daily. Less than 1% gets analyzed. Agents turn raw telematics into decisions.
+2. **Time-critical decisions**: A pre-shift risk assessment is useless if it takes 2 hours. Agents deliver it in seconds.
+3. **Distributed workforce**: 3.5 million drivers spread across the continent can't walk into an office for coaching. Voice AI agents go to them.
+4. **Compound savings**: In a low-margin industry, the compound effect of AI agents working across safety, insurance, fuel, retention, and compliance simultaneously is the difference between a fleet surviving and thriving.
+5. **Regulatory complexity**: HOS rules, FMCSA compliance, DOT audits — agents handle the tedium so operators focus on strategy.
+
+> **Bottom line**: Half the AI agent market is fighting over one category (software engineering). We're building for an industry that moves $940 billion and has almost no AI agents. The opportunity isn't just big — it's barely been touched.
+
+---
+
 ## Competitive Landscape — How We Compare to Top YC & Industry Players
 
 The fleet management and logistics space has attracted billions in venture funding. Here's how FleetShield AI differentiates from the top YC-backed companies and industry leaders:
