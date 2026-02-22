@@ -356,6 +356,10 @@ export class TwilioAIDispatchCall {
   /**
    * Process accumulated audio buffer through STT (batch approach).
    * Creates a fresh STT pipeline per utterance for reliability.
+   *
+   * KEY FIX: Audio must be paced (not burst-sent) so Pulse has time to
+   * start processing before the "end" signal. Without pacing, short
+   * utterances (< 4s) produce zero interims and empty transcripts.
    */
   private async processBufferedAudio(): Promise<void> {
     if (this.processingAudio) return;
@@ -387,14 +391,41 @@ export class TwilioAIDispatchCall {
       return;
     }
 
+    // Try STT — retry once on empty result if we had significant voiced audio
+    let transcribedText = await this.attemptSTT(combined, durationSec, apiKey, 1);
+
+    if (!transcribedText && chunkCount > 20) {
+      log(this.callId, `Retry: no transcript despite ${chunkCount} voiced chunks — retrying with slower pacing...`);
+      transcribedText = await this.attemptSTT(combined, durationSec, apiKey, 2);
+    }
+
+    if (transcribedText && transcribedText.length > 0) {
+      await this.handleDispatcherSpeech(transcribedText);
+    } else {
+      log(this.callId, 'No speech detected in audio — resuming listening');
+    }
+
+    this.processingAudio = false;
+    this.loggedAudioStart = false;
+  }
+
+  /**
+   * Single STT attempt with paced audio sending.
+   * @param attempt 1 = normal pacing, 2 = slower retry pacing
+   */
+  private async attemptSTT(combined: Buffer, durationSec: string, apiKey: string, attempt: number): Promise<string> {
     try {
       let transcribedText = '';
+      let gotInterim = false;
 
-      log(this.callId, 'Creating STT pipeline...');
+      log(this.callId, `STT attempt ${attempt}: creating pipeline...`);
 
       const pipeline = new PulseSTTPipeline(apiKey, {
         onInterim: (text: string) => {
-          if (text.trim()) log(this.callId, `STT interim: "${text.trim()}"`);
+          if (text.trim()) {
+            gotInterim = true;
+            log(this.callId, `STT interim: "${text.trim()}"`);
+          }
         },
         onFinal: (text: string) => {
           if (text.trim()) {
@@ -417,19 +448,37 @@ export class TwilioAIDispatchCall {
 
       pipeline.resetUtterance();
 
-      // Send audio in 100ms chunks
+      // ── PACED SENDING ──
+      // Send audio in 100ms chunks with delays to simulate near-real-time streaming.
+      // Without pacing, Pulse receives all audio as a burst and may not process
+      // it before the "end" signal arrives (especially for short utterances).
       const sendChunkSize = 3200; // 100ms at 16kHz 16-bit
+      const pacingDelayMs = attempt === 1 ? 8 : 15; // ms delay every N chunks
+      const pacingInterval = attempt === 1 ? 3 : 2; // delay every N chunks
       let chunksSent = 0;
+
       for (let i = 0; i < combined.length; i += sendChunkSize) {
         const chunk = combined.subarray(i, Math.min(i + sendChunkSize, combined.length));
         pipeline.sendAudio(chunk);
         chunksSent++;
-      }
-      log(this.callId, `Sent ${chunksSent} chunks to STT`);
 
-      // Get final transcript (with timeout scaled by audio duration)
-      const sttTimeout = Math.max(5000, Math.min(15000, parseFloat(durationSec) * 2000));
-      log(this.callId, `Waiting for STT endUtterance (timeout ${(sttTimeout / 1000).toFixed(0)}s)...`);
+        // Pace: small delay every few chunks so Pulse can start processing
+        if (chunksSent % pacingInterval === 0) {
+          await new Promise(r => setTimeout(r, pacingDelayMs));
+        }
+      }
+      log(this.callId, `Sent ${chunksSent} chunks to STT (pacing: ${pacingDelayMs}ms every ${pacingInterval} chunks)`);
+
+      // ── POST-SEND WAIT ──
+      // Give Pulse time to finish processing the audio before sending "end".
+      // Scale wait by audio duration: at least 800ms, up to 2500ms.
+      const postSendWait = Math.max(800, Math.min(2500, parseFloat(durationSec) * 300));
+      log(this.callId, `Waiting ${postSendWait.toFixed(0)}ms for STT processing before endUtterance...`);
+      await new Promise(r => setTimeout(r, postSendWait));
+
+      // ── END UTTERANCE ──
+      const sttTimeout = Math.max(8000, Math.min(20000, parseFloat(durationSec) * 2500));
+      log(this.callId, `Calling endUtterance (timeout ${(sttTimeout / 1000).toFixed(0)}s)...`);
       const endPromise = pipeline.endUtterance();
       const timeoutPromise = new Promise<string>((resolve) => setTimeout(() => resolve(''), sttTimeout));
       const finalText = await Promise.race([endPromise, timeoutPromise]);
@@ -437,24 +486,15 @@ export class TwilioAIDispatchCall {
         transcribedText = finalText.trim();
       }
 
-      // Clean up this pipeline instance
+      // Clean up
       try { pipeline.disconnect(); } catch {}
 
-      log(this.callId, `STT result: "${transcribedText}"`);
-
-      if (transcribedText.length > 0) {
-        // Process through Claude and respond
-        await this.handleDispatcherSpeech(transcribedText);
-      } else {
-        log(this.callId, 'No speech detected in audio — resuming listening');
-      }
+      log(this.callId, `STT attempt ${attempt} result: "${transcribedText}" (gotInterim=${gotInterim})`);
+      return transcribedText;
     } catch (err) {
-      log(this.callId, `STT processing error: ${err}`);
+      log(this.callId, `STT attempt ${attempt} error: ${err}`);
+      return '';
     }
-
-    this.processingAudio = false;
-    // Reset for next utterance
-    this.loggedAudioStart = false;
   }
 
   /**

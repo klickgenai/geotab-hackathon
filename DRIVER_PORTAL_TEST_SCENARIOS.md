@@ -1,10 +1,11 @@
-# Driver Portal - Test Scenarios
+# Driver Portal — Test Scenarios
 
 ## Login Credentials
 
-| Employee # | PIN | Driver |
-|-----------|------|--------|
-| `141` | `1073` | Default test driver |
+| Mode | Employee # | PIN | Driver | Notes |
+|------|-----------|------|--------|-------|
+| **Seed data** (no Geotab) | `241` | `1847` | James Wilson | Default when Geotab credentials not configured |
+| **Geotab connected** | `141` | `1073` | Default test driver | When GEOTAB_DATABASE is set in .env |
 
 ---
 
@@ -12,45 +13,58 @@
 
 ### Test 1: Basic Tab Navigation
 1. Open **http://localhost:3001/driver-portal**
-2. Login with employee `141` / PIN `1073`
+2. Login with the appropriate credentials (see table above)
 3. Verify all **5 tabs** render: Home | Training | **Voice** (centered, larger) | Load | Rank
 4. Tap each tab — content should switch smoothly
 5. Verify the **floating amber mic button** appears on all tabs except Voice
 
 ### Test 2: Home Tab Content
-- Safety score gauge (large, centered)
-- Pre-shift briefing card with risk level
+- Safety score gauge (large, centered, animated)
+- **HOS compliance gauges** — drive time and duty time remaining
+  - Color-coded: green (>4hrs), amber (2-4hrs), red (<2hrs)
+  - "Next break in Xhr Xmin" text
+- **AI Wellness check-in** — "How are you feeling?" with 5 mood buttons
+  - After selecting mood: supportive response message
+  - Weekly trend indicator
+- Pre-shift briefing card with risk level and focus areas
 - Daily challenge card with progress bar
-- Action items preview with "View all" link
-- Quick stats row (streak, rank, today events)
+- Quick stats row (streak, rank, today's events)
 
 ### Test 3: Training Tab
 - Pending action items with category badges (coaching/wellness/safety/general)
 - Priority dots: red=urgent, orange=high, yellow=medium, gray=low
 - Complete/dismiss buttons on each item
-- Training programs section (empty until a mission is run from operator portal)
+- Training programs section (populated after running missions from operator portal)
 - Completed items section at bottom
+- **Notification badge** on tab when new programs arrive from operator missions
 
 ### Test 4: Load Tab
 - Full load card with route (origin → destination), commodity, weight, distance, rate
 - Broker contact info
 - "Quick Dispatch" buttons (ETA update, Report issue, Route info, Load change)
-- "Call Dispatch" button triggers dispatch call overlay
-- Recent messages list
+- **"Call Dispatch"** button triggers dispatch call:
+  - **Twilio mode** (when TWILIO_ACCOUNT_SID configured): Real phone call to dispatcher
+  - **Simulated mode** (fallback): AI-simulated Tasha ↔ Mike conversation
+- Dispatch call overlay showing:
+  - Call state: Initiating → Ringing → Greeting → On Call → Wrapping Up → Complete
+  - Live transcript as messages arrive (auto-scrolling)
+  - "LIVE CALL" indicator during Twilio calls
+  - Call summary on completion
+- Recent dispatch messages
 - Empty state ("No Load Assigned") with "Ask Tasha" button if no load
 
 ### Test 5: Leaderboard (Rank) Tab
 - Full driver leaderboard — current driver highlighted in amber
 - Badge gallery (earned/locked grid, tap any badge to inspect)
-- Rewards catalog with point costs
-- Weekly stats card (points earned, challenges completed, badges earned)
-- Recent points history
+- Level progress bar with points-to-next indicator
 
 ### Test 6: Voice Tab
 - Tap the large mic orb to start voice session
 - Or type a message in the text input bar
 - Quick action buttons visible when transcript is empty
 - Animated orb states: listening=green, thinking=amber, speaking=blue, dispatching=gold
+- **Mute/unmute** button during active voice session
+- **End Voice** button to disconnect
 
 ### Test 7: Floating Mic Button
 1. While on the Home tab, tap the floating mic button (bottom-right)
@@ -100,19 +114,26 @@
 | "What's the rate?" | Load rate |
 | "I've loaded" / "I'm at the pickup" | Load status update |
 
-### 5. Dispatch Calls (Tasha calls "Mike" autonomously)
+### 5. Dispatch Calls
 
-The dispatch overlay should appear with a live Tasha ↔ Mike conversation.
+The dispatch overlay should appear with a live conversation.
 
 | Question | What it tests |
 |----------|--------------|
-| "Ask dispatch about my load" | Dispatch call overlay, Tasha-Mike conversation |
+| "Ask dispatch about my load" | Dispatch call overlay, conversation |
 | "I'm going to be late" | ETA extension request |
 | "My truck has a problem" | Issue reporting to dispatch |
 | "Can I get a different load?" | Load change request |
 | "Call dispatch for me" | General dispatch check-in |
 | "I need roadside assistance" | Emergency dispatch contact |
-| "Check the pickup time with dispatch" | Pickup coordination |
+| "I'm stuck in snow, call dispatch" | Multi-turn real phone call (Twilio mode) |
+
+**Twilio dispatch tests** (when configured):
+- Real phone should ring within 5 seconds
+- Tasha introduces herself with driver name and issue
+- 3-4 exchange multi-turn conversation with real human
+- Transcript appears in overlay in real-time
+- Call summary generated and saved to driver messages
 
 ### 6. Hours of Service (HOS)
 
@@ -124,7 +145,14 @@ The dispatch overlay should appear with a live Tasha ↔ Mike conversation.
 | "Can I keep driving?" | Drive time remaining |
 | "Am I close to my cycle limit?" | 70-hour cycle check |
 
-### 7. Incident Reporting
+### 7. Wellness
+
+| Question | What it tests |
+|----------|--------------|
+| "How am I feeling?" | Wellness status and recent check-ins |
+| "I'm feeling tired" | Wellness acknowledgment + supportive response |
+
+### 8. Incident Reporting
 
 | Question | What it tests |
 |----------|--------------|
@@ -133,7 +161,7 @@ The dispatch overlay should appear with a live Tasha ↔ Mike conversation.
 | "There's debris on the road" | Hazard reporting |
 | "My truck broke down" | Mechanical issue report |
 
-### 8. Leaderboard
+### 9. Leaderboard
 
 | Question | What it tests |
 |----------|--------------|
@@ -175,33 +203,58 @@ Operator asks Tasha → coaching sweep mission runs
 
 ---
 
-## Recommended Demo Flow (3-minute video sequence)
+## Twilio Dispatch Call Test (End-to-End)
 
-This is the ideal sequence to show all features in a demo:
+### Prerequisites:
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` set in `.env`
+- `DISPATCH_PHONE_NUMBER` set to a real phone number you can answer
+- `NGROK_URL` set to your ngrok public URL (run `ngrok http 3000`)
 
-1. **Login** — employee `141` / PIN `1073`
-2. **Home tab** — show safety score gauge, briefing, daily challenge
+### Steps:
+1. Login to driver portal
+2. Go to **Voice tab** → say: **"I'm stuck in snow at Highway 401, call dispatch"**
+3. Dispatch call overlay should appear with "Initiating call..." state
+4. Your phone (DISPATCH_PHONE_NUMBER) should ring
+5. Pick up — you should hear Tasha's voice introducing herself
+6. Respond naturally — Tasha should reply contextually
+7. Have 2-3 exchanges — Tasha asks follow-up questions
+8. Call wraps up automatically after 3-4 exchanges (or 2 minutes max)
+9. Driver portal shows call summary in overlay
+10. Close overlay → summary saved as message in Load tab
+
+### Fallback Test:
+- Remove `TWILIO_ACCOUNT_SID` from `.env` → restart backend
+- Repeat the dispatch call → should fall back to AI-simulated conversation
+- Same UI, same overlay, just AI-generated Mike responses instead of real phone
+
+---
+
+## Recommended Demo Flow (3-Minute Video)
+
+1. **Login** — use appropriate credentials for your data source
+2. **Home tab** — show safety score gauge, HOS compliance gauges, tap a wellness mood
 3. **Voice tab** — tap mic orb, say: **"Give me my pre-shift briefing"**
 4. Wait for response, then say: **"Tell me about my load"**
 5. Say: **"I'm going to be late, can you check with dispatch?"** — watch dispatch overlay
 6. After dispatch closes, say: **"How can I improve my driving?"**
-7. Say: **"How many hours do I have left?"**
+7. Say: **"How many hours do I have left?"** (HOS)
 8. **Load tab** — show full load card, tap "Call Dispatch"
 9. **Rank tab** — show leaderboard with driver highlighted, badge gallery
 10. **Training tab** — show action items (if coaching sweep was run from operator portal)
 
-This covers voice AI, dispatch calls, all 5 tabs, and the mission sync pipeline.
+This covers: voice AI, real dispatch calls, all 5 tabs, HOS, wellness, and the mission sync pipeline.
 
 ---
 
-## Quick Text Chat Test (no microphone needed)
+## Quick Text Chat Test (No Microphone Needed)
 
-If voice/microphone isn't available, use the text input at the bottom of the Voice tab:
+Use the text input at the bottom of the Voice tab:
 
 1. Type: `What's my safety score?` → press Enter
 2. Type: `Give me my pre-shift briefing` → press Enter
 3. Type: `Tell me about my load` → press Enter
-4. Type: `Give me safety coaching tips` → press Enter
-5. Type: `Show me the leaderboard` → press Enter
+4. Type: `How many hours do I have left?` → press Enter
+5. Type: `Give me safety coaching tips` → press Enter
+6. Type: `Show me the leaderboard` → press Enter
 
 Each should stream a response in the chat transcript area.
