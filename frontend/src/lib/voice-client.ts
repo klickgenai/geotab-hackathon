@@ -168,9 +168,25 @@ export class VoiceClient {
     }
   }
 
+  private buildWsUrl(): string {
+    // Use explicit WS URL if set
+    const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (envWsUrl) return envWsUrl;
+
+    // Derive from API URL if set (replace http(s) with ws(s), append /ws)
+    const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envApiUrl) {
+      return envApiUrl.replace(/^http/, 'ws') + '/ws';
+    }
+
+    // Local dev fallback
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${protocol}://${window.location.hostname}:3000/ws`;
+  }
+
   private async connectWebSocket(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:3000/ws`;
+      const wsUrl = this.buildWsUrl();
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
