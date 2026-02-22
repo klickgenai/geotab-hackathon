@@ -74,33 +74,33 @@ The North American trucking industry is a **$940 billion** sector that runs on r
 
 Nobody is building **AI employees for fleet operations** — agents that autonomously investigate safety events, optimize insurance premiums, coach drivers, and coordinate across swarms of specialized workers. That's the gap FleetShield AI fills.
 
-### Our Vision: Agent-to-Agent Autonomous Communication
+### What We're Building Next
 
-FleetShield AI isn't just a fleet safety platform — it's the foundation for an **autonomous agent ecosystem** in transportation. Here's where we're heading:
+What you see today — 5 autonomous Mission Agents, 9 scoring engines, voice AI that places real phone calls — is **v1**. The foundation.
 
-**Today (v1 — this hackathon):**
-- 5 autonomous Mission Agents (coaching sweep, wellness check, safety investigation, insurance optimization, pre-shift sweep)
-- Each agent calls 9 scoring engines, synthesizes findings, and delivers action plans
-- Agents create action items for drivers automatically (mission-to-driver sync)
-- A single orchestrator (Tasha) delegates work to specialized agents
+**v2 is something different entirely.**
 
-**Tomorrow (v2 — the platform):**
-- **Agent-to-Agent Communication**: Mission agents that discover findings hand off to other agents for follow-up. A safety investigation agent detects a fatigue pattern → triggers a wellness agent → which triggers a coaching agent → which dispatches training to the driver. No human in the loop needed for the chain.
-- **Self-Evolving Agents**: Agents that learn from outcomes. Did a coaching intervention reduce a driver's risk score? The coaching agent absorbs that signal and adjusts its recommendations for the next driver. Feedback loops, not static rules.
-- **Secure Agent Marketplace**: Other platforms (insurance underwriters, maintenance providers, broker networks) can consume FleetShield's agents via secure APIs. An insurance company's pricing agent can request a real-time risk assessment from FleetShield's scoring agents. Work gets distributed across a **swarm of specialized agents** — each doing what it does best.
-- **Swarm Intelligence for Low-Margin Industries**: Trucking's thin margins mean every dollar of efficiency matters. A swarm of autonomous agents — each handling one piece of the puzzle (route optimization, fuel efficiency, driver wellness, compliance, insurance negotiation) — can collectively extract savings that no single tool or human analyst could. The compound effect of 50 agents each saving 1% is transformative for a 3-6% margin business.
+We're building toward a world where fleet AI agents don't just execute tasks — they **coordinate autonomously**, **learn from outcomes**, and **compound each other's intelligence** across organizational boundaries. The architecture for this is already embedded in v1's design. We're not bolting it on later — it's been the plan from day one.
 
-### Why Agents Will Disrupt Transportation & Logistics
+Here's what we'll say publicly:
+- Agents that **talk to other agents** — not just humans
+- Agents that **get better every time they run** — without retraining
+- A secure protocol that lets **external systems consume fleet intelligence** on demand
+- A compounding effect designed specifically for **low-margin industries** where every fraction of a percent matters
 
-The transportation industry is uniquely suited for AI agent disruption because:
+The specifics — the coordination protocol, the learning architecture, the security model, the swarm topology — stay with us. What we can tell you is that **the primitives are already live in this demo**.
 
-1. **Massive data, minimal intelligence**: Millions of Geotab devices generate billions of data points daily. Less than 1% gets analyzed. Agents turn raw telematics into decisions.
-2. **Time-critical decisions**: A pre-shift risk assessment is useless if it takes 2 hours. Agents deliver it in seconds.
-3. **Distributed workforce**: 3.5 million drivers spread across the continent can't walk into an office for coaching. Voice AI agents go to them.
-4. **Compound savings**: In a low-margin industry, the compound effect of AI agents working across safety, insurance, fuel, retention, and compliance simultaneously is the difference between a fleet surviving and thriving.
-5. **Regulatory complexity**: HOS rules, FMCSA compliance, DOT audits — agents handle the tedium so operators focus on strategy.
+### Why Transportation Is Uniquely Ready for This
 
-> **Bottom line**: Half the AI agent market is fighting over one category (software engineering). We're building for an industry that moves $940 billion and has almost no AI agents. The opportunity isn't just big — it's barely been touched.
+| Factor | Why It Matters |
+|--------|---------------|
+| **Billions of data points, almost none analyzed** | Millions of Geotab devices generating data daily. Less than 1% turns into a decision. |
+| **Decisions are time-critical** | A pre-shift risk assessment delivered 2 hours late is worthless. Agents deliver in seconds. |
+| **3.5 million drivers, zero offices** | You can't walk a distributed workforce through coaching. Voice AI goes to them. |
+| **3-6% net margins** | The compound effect of many agents each saving a fraction is the difference between surviving and thriving. |
+| **Regulatory maze** | HOS, FMCSA, DOT — agents handle the tedium so humans focus on strategy. |
+
+> **Bottom line**: Half the AI agent market is fighting over one category (software engineering). We're building for a **$940 billion industry** with almost no AI agents — and we have a roadmap the market hasn't seen yet.
 
 ---
 
