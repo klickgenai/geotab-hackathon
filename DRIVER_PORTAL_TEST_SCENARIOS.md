@@ -1,4 +1,4 @@
-# Driver Portal — Test Scenarios
+# Driver Portal  - Test Scenarios
 
 ## Login Credentials
 
@@ -15,15 +15,15 @@
 1. Open **http://localhost:3001/driver-portal**
 2. Login with the appropriate credentials (see table above)
 3. Verify all **5 tabs** render: Home | Training | **Voice** (centered, larger) | Load | Rank
-4. Tap each tab — content should switch smoothly
+4. Tap each tab  - content should switch smoothly
 5. Verify the **floating amber mic button** appears on all tabs except Voice
 
 ### Test 2: Home Tab Content
 - Safety score gauge (large, centered, animated)
-- **HOS compliance gauges** — drive time and duty time remaining
+- **HOS compliance gauges**  - drive time and duty time remaining
   - Color-coded: green (>4hrs), amber (2-4hrs), red (<2hrs)
   - "Next break in Xhr Xmin" text
-- **AI Wellness check-in** — "How are you feeling?" with 5 mood buttons
+- **AI Wellness check-in**  - "How are you feeling?" with 5 mood buttons
   - After selecting mood: supportive response message
   - Weekly trend indicator
 - Pre-shift briefing card with risk level and focus areas
@@ -54,7 +54,7 @@
 - Empty state ("No Load Assigned") with "Ask Tasha" button if no load
 
 ### Test 5: Leaderboard (Rank) Tab
-- Full driver leaderboard — current driver highlighted in amber
+- Full driver leaderboard  - current driver highlighted in amber
 - Badge gallery (earned/locked grid, tap any badge to inspect)
 - Level progress bar with points-to-next indicator
 
@@ -69,7 +69,7 @@
 ### Test 7: Floating Mic Button
 1. While on the Home tab, tap the floating mic button (bottom-right)
 2. Should switch to Voice tab and start listening
-3. Say or type something — verify it works
+3. Say or type something  - verify it works
 
 ---
 
@@ -187,7 +187,7 @@ This tests the full pipeline: operator runs a mission → results sync to driver
    - Risk tier badge (critical/high/moderate)
    - Expandable coaching actions with checkboxes
    - Timeline, expected improvement, estimated savings
-8. Mark a coaching action as "Done" — should show a checkmark
+8. Mark a coaching action as "Done"  - should show a checkmark
 9. Verify completed items move to the "Completed" section
 
 ### Data Flow:
@@ -215,9 +215,9 @@ Operator asks Tasha → coaching sweep mission runs
 2. Go to **Voice tab** → say: **"I'm stuck in snow at Highway 401, call dispatch"**
 3. Dispatch call overlay should appear with "Initiating call..." state
 4. Your phone (DISPATCH_PHONE_NUMBER) should ring
-5. Pick up — you should hear Tasha's voice introducing herself
-6. Respond naturally — Tasha should reply contextually
-7. Have 2-3 exchanges — Tasha asks follow-up questions
+5. Pick up  - you should hear Tasha's voice introducing herself
+6. Respond naturally  - Tasha should reply contextually
+7. Have 2-3 exchanges  - Tasha asks follow-up questions
 8. Call wraps up automatically after 3-4 exchanges (or 2 minutes max)
 9. Driver portal shows call summary in overlay
 10. Close overlay → summary saved as message in Load tab
@@ -231,16 +231,16 @@ Operator asks Tasha → coaching sweep mission runs
 
 ## Recommended Demo Flow (3-Minute Video)
 
-1. **Login** — use appropriate credentials for your data source
-2. **Home tab** — show safety score gauge, HOS compliance gauges, tap a wellness mood
-3. **Voice tab** — tap mic orb, say: **"Give me my pre-shift briefing"**
+1. **Login**  - use appropriate credentials for your data source
+2. **Home tab**  - show safety score gauge, HOS compliance gauges, tap a wellness mood
+3. **Voice tab**  - tap mic orb, say: **"Give me my pre-shift briefing"**
 4. Wait for response, then say: **"Tell me about my load"**
-5. Say: **"I'm going to be late, can you check with dispatch?"** — watch dispatch overlay
+5. Say: **"I'm going to be late, can you check with dispatch?"**  - watch dispatch overlay
 6. After dispatch closes, say: **"How can I improve my driving?"**
 7. Say: **"How many hours do I have left?"** (HOS)
-8. **Load tab** — show full load card, tap "Call Dispatch"
-9. **Rank tab** — show leaderboard with driver highlighted, badge gallery
-10. **Training tab** — show action items (if coaching sweep was run from operator portal)
+8. **Load tab**  - show full load card, tap "Call Dispatch"
+9. **Rank tab**  - show leaderboard with driver highlighted, badge gallery
+10. **Training tab**  - show action items (if coaching sweep was run from operator portal)
 
 This covers: voice AI, real dispatch calls, all 5 tabs, HOS, wellness, and the mission sync pipeline.
 

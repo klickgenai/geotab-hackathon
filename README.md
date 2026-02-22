@@ -8,7 +8,7 @@
 
 ## The Problem We're Solving
 
-The North American trucking industry moves **$940 billion** in freight annually — and loses **$38 billion** to preventable accidents, insurance overcharges, driver turnover, and operational inefficiency. The data to prevent all of this already exists in **Geotab telematics devices** installed in millions of vehicles. But fleet operators are drowning in raw data with no way to translate it into:
+The North American trucking industry moves **$940 billion** in freight annually  - and loses **$38 billion** to preventable accidents, insurance overcharges, driver turnover, and operational inefficiency. The data to prevent all of this already exists in **Geotab telematics devices** installed in millions of vehicles. But fleet operators are drowning in raw data with no way to translate it into:
 
 | Pain Point | Scale | Cost |
 |------------|-------|------|
@@ -18,40 +18,40 @@ The North American trucking industry moves **$940 billion** in freight annually 
 | **Driver health crisis** | Life expectancy 61 years (16 below avg) | 25% report chronic loneliness |
 | **Carbon emissions** | 444M metric tons CO2/year from trucking | $521K/fleet in avoidable fuel |
 
-**FleetShield AI** is the intelligence layer that transforms raw Geotab telematics into **money saved**, **lives protected**, and a **planet preserved** — with two AI assistants, autonomous mission agents, and real phone calls to dispatch.
+**FleetShield AI** is the intelligence layer that transforms raw Geotab telematics into **money saved**, **lives protected**, and a **planet preserved**  - with two AI assistants, autonomous mission agents, and real phone calls to dispatch.
 
 ---
 
 ## What Makes FleetShield AI Different
 
 ### 1. AI Employees, Not Chatbots
-Traditional fleet AI answers questions. FleetShield's **Mission Agents** do work. Say *"Run a wellness check across my fleet"* — an autonomous agent analyzes every driver's telematics, crunches 9 scoring engines, and delivers a comprehensive report with findings, root causes, dollar impact, and an action plan. The operator keeps working. The agent does the analyst's job in minutes instead of hours.
+Traditional fleet AI answers questions. FleetShield's **Mission Agents** do work. Say *"Run a wellness check across my fleet"*  - an autonomous agent analyzes every driver's telematics, crunches 9 scoring engines, and delivers a comprehensive report with findings, root causes, dollar impact, and an action plan. The operator keeps working. The agent does the analyst's job in minutes instead of hours.
 
 ### 2. Real Phone Calls to Dispatch
-When a driver says *"I'm stuck in snow, call dispatch"*, Tasha doesn't simulate a response — she places a **real phone call** via Twilio, has a multi-turn AI-mediated conversation with a human dispatcher using speech-to-text and text-to-speech, and relays the outcome back to the driver. This is a working, end-to-end voice AI ↔ telephony bridge.
+When a driver says *"I'm stuck in snow, call dispatch"*, Tasha doesn't simulate a response  - she places a **real phone call** via Twilio, has a multi-turn AI-mediated conversation with a human dispatcher using speech-to-text and text-to-speech, and relays the outcome back to the driver. This is a working, end-to-end voice AI ↔ telephony bridge.
 
-### 3. Tasha — Voice AI Agent with Dual Geotab API Access
-**Tasha** is your fleet's voice-first AI agent. She has 17 specialized tools including direct access to **both Geotab APIs** — MyGeotab for real-time telematics and **Geotab Ace for conversational fleet analytics**. Ask Tasha a question by voice and she'll query Ace to pull live fleet data, analyze it through our scoring engines, and speak the answer back. Operators get analytical, dollar-quantified insights. Drivers get warm, encouraging coaching through a hands-free interface designed for truck-mounted tablets.
+### 3. Tasha  - Voice AI Agent with Dual Geotab API Access
+**Tasha** is your fleet's voice-first AI agent. She has 17 specialized tools including direct access to **both Geotab APIs**  - MyGeotab for real-time telematics and **Geotab Ace for conversational fleet analytics**. Ask Tasha a question by voice and she'll query Ace to pull live fleet data, analyze it through our scoring engines, and speak the answer back. Operators get analytical, dollar-quantified insights. Drivers get warm, encouraging coaching through a hands-free interface designed for truck-mounted tablets.
 
 ### 4. Proactive Driver Wellness
-While competitors use invasive dashcam fatigue detection that drivers hate, FleetShield uses **privacy-respecting wellness check-ins** and **HOS compliance gauges** — giving drivers agency over their own wellbeing and real-time visibility into their remaining drive hours.
+While competitors use invasive dashcam fatigue detection that drivers hate, FleetShield uses **privacy-respecting wellness check-ins** and **HOS compliance gauges**  - giving drivers agency over their own wellbeing and real-time visibility into their remaining drive hours.
 
-### 5. Dual Geotab API Integration — Deeply Woven In
-Uses **both** MyGeotab API (vehicles, trips, diagnostics, GPS, safety events via JSON-RPC) **and** Geotab Ace API (conversational AI queries about fleet data). Ace isn't just a standalone widget — it's integrated as a tool inside Tasha's voice AI agent, so operators can ask fleet questions by voice and get Ace-powered answers spoken back to them. The dashboard also surfaces Ace directly via quick-query chips for instant fleet data lookups.
+### 5. Dual Geotab API Integration  - Deeply Woven In
+Uses **both** MyGeotab API (vehicles, trips, diagnostics, GPS, safety events via JSON-RPC) **and** Geotab Ace API (conversational AI queries about fleet data). Ace isn't just a standalone widget  - it's integrated as a tool inside Tasha's voice AI agent, so operators can ask fleet questions by voice and get Ace-powered answers spoken back to them. The dashboard also surfaces Ace directly via quick-query chips for instant fleet data lookups.
 
 ### 6. Quantified ROI for Every Recommendation
 Every insight comes with dollar-quantified projections. Not "you should reduce speeding" but "reducing speeding by 15% would save $23,400/year in insurance premiums and prevent an estimated 2.3 incidents."
 
 ---
 
-## Platform Overview — 8 Core Pillars
+## Platform Overview  - 8 Core Pillars
 
 | # | Pillar | What It Does |
 |---|--------|--------------|
 | 1 | **Insurance Premium Optimization** | AI-driven fleet scoring (0-100, A-F grade) with component breakdown, what-if simulator, and savings projections |
 | 2 | **Predictive Safety Analytics** | Pre-shift risk scoring, driver deterioration detection, dangerous corridor mapping, 7-day forecasting |
 | 3 | **Smart Incident Prevention** | AI alert triage with urgency scoring (0-100), pattern detection, and prioritized interventions |
-| 4 | **Autonomous Mission Agents** | 5 mission types that run in the background — coaching sweeps, wellness checks, safety investigations, insurance optimization, pre-shift sweeps |
+| 4 | **Autonomous Mission Agents** | 5 mission types that run in the background  - coaching sweeps, wellness checks, safety investigations, insurance optimization, pre-shift sweeps |
 | 5 | **Operator AI Assistant (Tasha)** | Full-screen voice + text assistant with 17 specialized tools, mission deployment, and rich visual reports |
 | 6 | **Driver Voice AI Portal** | Personal dashboard with voice AI, real Twilio dispatch calls, HOS compliance, wellness check-ins, load management, and gamification |
 | 7 | **Live Fleet Map** | Real-time vehicle tracking with risk-colored markers, speeding hotspot overlay, and GPS trails |
@@ -59,36 +59,36 @@ Every insight comes with dollar-quantified projections. Not "you should reduce s
 
 ---
 
-## The Massive Market Opportunity — Why Transportation AI Is Wide Open
+## The Massive Market Opportunity  - Why Transportation AI Is Wide Open
 
-According to [Garry's List analysis of the AI agent market](https://garryslist.org/posts/half-the-ai-agent-market-is-one-category-the-rest-is-wide-open), **49.7% of all AI agent activity is concentrated in software engineering** — nearly half the entire market in a single category. The remaining 50.3% is spread thin across 16 verticals, with travel and logistics representing just **~0.8%** of AI agent market share.
+According to [Garry's List analysis of the AI agent market](https://garryslist.org/posts/half-the-ai-agent-market-is-one-category-the-rest-is-wide-open), **49.7% of all AI agent activity is concentrated in software engineering**  - nearly half the entire market in a single category. The remaining 50.3% is spread thin across 16 verticals, with travel and logistics representing just **~0.8%** of AI agent market share.
 
 This isn't a crowded space. It's a **greenfield**.
 
 ### Why This Matters for FleetShield AI
 
 The North American trucking industry is a **$940 billion** sector that runs on razor-thin margins (3-6% net). It employs 3.5 million truck drivers and powers the physical economy. Yet it has almost zero AI agent penetration. The few tools that exist are either:
-- **Hardware-first** (Samsara, Motive) — selling cameras and ELD devices, not intelligence
-- **Broker-focused** (Lanesurf, FleetWorks) — optimizing freight markets, not fleet operations
-- **Infrastructure layers** (Terminal) — normalizing data, not analyzing it
+- **Hardware-first** (Samsara, Motive)  - selling cameras and ELD devices, not intelligence
+- **Broker-focused** (Lanesurf, FleetWorks)  - optimizing freight markets, not fleet operations
+- **Infrastructure layers** (Terminal)  - normalizing data, not analyzing it
 
-Nobody is building **AI employees for fleet operations** — agents that autonomously investigate safety events, optimize insurance premiums, coach drivers, and coordinate across swarms of specialized workers. That's the gap FleetShield AI fills.
+Nobody is building **AI employees for fleet operations**  - agents that autonomously investigate safety events, optimize insurance premiums, coach drivers, and coordinate across swarms of specialized workers. That's the gap FleetShield AI fills.
 
 ### What We're Building Next
 
-What you see today — 5 autonomous Mission Agents, 9 scoring engines, voice AI that places real phone calls — is **v1**. The foundation.
+What you see today  - 5 autonomous Mission Agents, 9 scoring engines, voice AI that places real phone calls  - is **v1**. The foundation.
 
 **v2 is something different entirely.**
 
-We're building toward a world where fleet AI agents don't just execute tasks — they **coordinate autonomously**, **learn from outcomes**, and **compound each other's intelligence** across organizational boundaries. The architecture for this is already embedded in v1's design. We're not bolting it on later — it's been the plan from day one.
+We're building toward a world where fleet AI agents don't just execute tasks  - they **coordinate autonomously**, **learn from outcomes**, and **compound each other's intelligence** across organizational boundaries. The architecture for this is already embedded in v1's design. We're not bolting it on later  - it's been the plan from day one.
 
-Here's what we'll say publicly:
-- Agents that **talk to other agents** — not just humans
-- Agents that **get better every time they run** — without retraining
+Here's what we're planning for our infrastructure:
+- Agents that **talk to other agents**  - not just humans
+- Agents that **get better every time they run**  - without retraining
 - A secure protocol that lets **external systems consume fleet intelligence** on demand
 - A compounding effect designed specifically for **low-margin industries** where every fraction of a percent matters
 
-The specifics — the coordination protocol, the learning architecture, the security model, the swarm topology — stay with us. What we can tell you is that **the primitives are already live in this demo**.
+The coordination protocol, learning architecture, security model, and swarm topology are actively in development. **The primitives are already live in this demo**.
 
 ### Why Transportation Is Uniquely Ready for This
 
@@ -98,13 +98,13 @@ The specifics — the coordination protocol, the learning architecture, the secu
 | **Decisions are time-critical** | A pre-shift risk assessment delivered 2 hours late is worthless. Agents deliver in seconds. |
 | **3.5 million drivers, zero offices** | You can't walk a distributed workforce through coaching. Voice AI goes to them. |
 | **3-6% net margins** | The compound effect of many agents each saving a fraction is the difference between surviving and thriving. |
-| **Regulatory maze** | HOS, FMCSA, DOT — agents handle the tedium so humans focus on strategy. |
+| **Regulatory maze** | HOS, FMCSA, DOT  - agents handle the tedium so humans focus on strategy. |
 
-> **Bottom line**: Half the AI agent market is fighting over one category (software engineering). We're building for a **$940 billion industry** with almost no AI agents — and we have a roadmap the market hasn't seen yet.
+> **Bottom line**: Half the AI agent market is fighting over one category (software engineering). We're building for a **$940 billion industry** with almost no AI agents  - and we have a roadmap the market hasn't seen yet.
 
 ---
 
-## Competitive Landscape — How We Compare to Top YC & Industry Players
+## Competitive Landscape  - How We Compare to Top YC & Industry Players
 
 The fleet management and logistics space has attracted billions in venture funding. Here's how FleetShield AI differentiates from the top YC-backed companies and industry leaders:
 
@@ -112,15 +112,15 @@ The fleet management and logistics space has attracted billions in venture fundi
 
 | Company | YC Batch | Focus | What They Do | What FleetShield Does Differently |
 |---------|----------|-------|-------------|----------------------------------|
-| **[Samsara](https://www.samsara.com)** | — | Fleet hardware + software | AI dashcams, GPS tracking, ELD, driver monitoring via computer vision. Hardware-first ($35-50/vehicle/month). Surveillance-heavy — cameras watch drivers. | **Software-only, no hardware cost.** Works with existing Geotab telematics. Privacy-respecting wellness (mood check-ins, not cameras). Drivers coached, not surveilled. |
-| **[Motive](https://gomotive.com)** (KeepTruckin) | — | ELD + fleet management | ELD compliance, dashcams with collision alerts, fuel management. 120K+ companies. Uses invasive dashcam fatigue detection. | **Proactive AI prevention vs reactive camera alerts.** Predictive safety forecasts risk *before* shifts. AI wellness check-ins replace invasive dashcam monitoring. Voice-first UX for drivers. |
+| **[Samsara](https://www.samsara.com)** |  - | Fleet hardware + software | AI dashcams, GPS tracking, ELD, driver monitoring via computer vision. Hardware-first ($35-50/vehicle/month). Surveillance-heavy  - cameras watch drivers. | **Software-only, no hardware cost.** Works with existing Geotab telematics. Privacy-respecting wellness (mood check-ins, not cameras). Drivers coached, not surveilled. |
+| **[Motive](https://gomotive.com)** (KeepTruckin) |  - | ELD + fleet management | ELD compliance, dashcams with collision alerts, fuel management. 120K+ companies. Uses invasive dashcam fatigue detection. | **Proactive AI prevention vs reactive camera alerts.** Predictive safety forecasts risk *before* shifts. AI wellness check-ins replace invasive dashcam monitoring. Voice-first UX for drivers. |
 | **[Flexport](https://www.flexport.com)** | W14 | Global supply chain | Full-service logistics platform for freight forwarding. AI-powered "Flexport Intelligence" for supply chain queries. Global trade focus. | **Trucking fleet-specific, not global freight.** Deep telematics intelligence (9 scoring engines) vs supply chain visibility. Quantified insurance ROI, not just shipment tracking. |
 | **[FleetWorks](https://www.fleetworks.ai)** | S23 | AI freight marketplace | AI agents match trucks to cargo, replacing phone calls and emails. $17M raised. Broker-to-carrier marketplace. | **Fleet operator tool, not marketplace.** We optimize the fleet *internally* (safety, insurance, coaching) vs matching external loads. Our AI calls real dispatchers, not brokers. |
-| **[Palace](https://www.palace.so)** | — | Dispatch automation | AI-native planning and dispatch. Automates load assignment, scheduling, driver communication. Back-office efficiency. | **Safety + insurance intelligence, not just dispatch.** Palace optimizes operations; we optimize *safety outcomes* and quantify the dollar impact. Mission agents do analyst work, not scheduling. |
+| **[Palace](https://www.palace.so)** |  - | Dispatch automation | AI-native planning and dispatch. Automates load assignment, scheduling, driver communication. Back-office efficiency. | **Safety + insurance intelligence, not just dispatch.** Palace optimizes operations; we optimize *safety outcomes* and quantify the dollar impact. Mission agents do analyst work, not scheduling. |
 | **[Lanesurf](https://www.lanesurf.com)** | S25 | Voice AI for freight | Voice AI negotiates rates with carriers across 96+ parallel calls. Built for freight brokers. Self-improving voice stack. | **Voice AI for drivers and operators, not brokers.** Our voice pipeline serves the people *in* the truck (hands-free safety coaching, dispatch calls) not the people booking loads. Twilio Media Streams for real phone calls. |
-| **[Terminal](https://www.withterminal.com)** | S23 | Telematics API | "Plaid for telematics" — universal API to access GPS, speeding, vehicle stats across ELD providers. Infrastructure layer. | **Intelligence layer, not infrastructure.** Terminal normalizes data; we *analyze* it. 9 scoring engines, predictive safety, AI missions, and voice AI built on top of telematics data (Geotab). |
+| **[Terminal](https://www.withterminal.com)** | S23 | Telematics API | "Plaid for telematics"  - universal API to access GPS, speeding, vehicle stats across ELD providers. Infrastructure layer. | **Intelligence layer, not infrastructure.** Terminal normalizes data; we *analyze* it. 9 scoring engines, predictive safety, AI missions, and voice AI built on top of telematics data (Geotab). |
 | **[Carma](https://www.joincarma.com)** | W24 | Fleet maintenance | Marketplace for commercial fleet repairs. Same-day service from vetted centers. Transparent pricing. | **Prevention over repair.** Carma fixes vehicles after problems; we predict and prevent incidents before they happen. Our wellness and safety scores identify risks upstream. |
-| **[Fleetline](https://www.ycombinator.com/companies/fleetline)** | — | Load planning | Algorithmic load planner for mid-large trucking fleets. LLM-powered optimization for routing and scheduling. | **Safety and insurance ROI, not load optimization.** Fleetline maximizes revenue-per-mile; we maximize safety-per-driver and minimize insurance cost. Complementary, not competing. |
+| **[Fleetline](https://www.ycombinator.com/companies/fleetline)** |  - | Load planning | Algorithmic load planner for mid-large trucking fleets. LLM-powered optimization for routing and scheduling. | **Safety and insurance ROI, not load optimization.** Fleetline maximizes revenue-per-mile; we maximize safety-per-driver and minimize insurance cost. Complementary, not competing. |
 
 ### The Gap We Fill
 
@@ -145,14 +145,14 @@ The fleet management and logistics space has attracted billions in venture fundi
 
 **No one in the YC ecosystem or industry combines all of these in one platform:**
 1. **Predictive safety analytics** with 9 scoring engines and 7-day forecasting
-2. **Quantified insurance ROI** — every recommendation has a dollar figure
+2. **Quantified insurance ROI**  - every recommendation has a dollar figure
 3. **Autonomous AI mission agents** that do analyst work in the background
 4. **Real phone calls to dispatch** via Twilio Media Streams (not simulated)
-5. **Voice-first driver wellness** — proactive, privacy-respecting, not surveillance
-6. **Dual Geotab API integration** — both MyGeotab telematics AND Ace conversational analytics
+5. **Voice-first driver wellness**  - proactive, privacy-respecting, not surveillance
+6. **Dual Geotab API integration**  - both MyGeotab telematics AND Ace conversational analytics
 7. **Driver + Operator dual portals** with specialized AI assistants for each role
 
-The closest competitors (Samsara, Motive) are **hardware-first** — they sell cameras and ELD devices. FleetShield is **intelligence-first** — we turn existing Geotab telematics into actionable safety insights, insurance savings, and an AI workforce that replaces manual analyst work.
+The closest competitors (Samsara, Motive) are **hardware-first**  - they sell cameras and ELD devices. FleetShield is **intelligence-first**  - we turn existing Geotab telematics into actionable safety insights, insurance savings, and an AI workforce that replaces manual analyst work.
 
 ---
 
@@ -232,7 +232,7 @@ The closest competitors (Samsara, Motive) are **hardware-first** — they sell c
 
 ## Technical Deep Dives
 
-### Real Twilio Dispatch Calls — AI Voice ↔ Telephony Bridge
+### Real Twilio Dispatch Calls  - AI Voice ↔ Telephony Bridge
 
 The most technically ambitious feature. When a driver says "call dispatch", Tasha places a **real outbound phone call** via Twilio, has a multi-turn AI-mediated conversation with a human dispatcher, and relays the results back.
 
@@ -289,13 +289,13 @@ Dispatcher's Phone (real human speaking)
 - **STT retry logic**: If STT returns empty despite significant voiced audio (>20 chunks), the system retries with slower pacing (15ms every 2 chunks) before giving up.
 - **Echo prevention**: TTS playback clears the audio buffer and pauses listening. After playback completes (duration + 300ms network latency), echo buffer is cleared before resuming.
 - **Idempotent state management**: Multiple events can trigger endCall() (WebSocket close, Twilio webhook, timeout). A `callEnded` boolean guard prevents double processing.
-- **Graceful fallback**: When Twilio credentials aren't configured, dispatch calls fall back to AI-simulated conversations — same UI, same user experience.
+- **Graceful fallback**: When Twilio credentials aren't configured, dispatch calls fall back to AI-simulated conversations  - same UI, same user experience.
 
 ---
 
-### Voice AI Pipeline — Dual-Client Architecture
+### Voice AI Pipeline  - Dual-Client Architecture
 
-Two voice clients (operator + driver) share the same backend pipeline but with different AI personas and tool sets. Both have access to **Geotab Ace API** as a tool — operators can ask fleet data questions by voice (e.g., "Which vehicles have faults?") and Tasha queries Ace in real-time, then speaks the results back.
+Two voice clients (operator + driver) share the same backend pipeline but with different AI personas and tool sets. Both have access to **Geotab Ace API** as a tool  - operators can ask fleet data questions by voice (e.g., "Which vehicles have faults?") and Tasha queries Ace in real-time, then speaks the results back.
 
 ```
 Browser Microphone
@@ -325,7 +325,7 @@ Browser Microphone
 
 ### Autonomous Mission Agent System
 
-Not chatbots — autonomous AI workers that take assignments, execute multi-step analyses, and deliver comprehensive reports.
+Not chatbots  - autonomous AI workers that take assignments, execute multi-step analyses, and deliver comprehensive reports.
 
 ```
 Operator: "Run a coaching sweep on my riskiest drivers"
@@ -375,9 +375,9 @@ Operator runs coaching sweep → per-driver coaching plans generated
 
 ---
 
-### 9 Scoring Engines — Pure Functions, No Side Effects
+### 9 Scoring Engines  - Pure Functions, No Side Effects
 
-All scoring engines are pure functions that take typed parameters and return typed results. No side effects, no external state mutation, no API calls. They're called from routes, tools, AND missions — making the system modular and testable.
+All scoring engines are pure functions that take typed parameters and return typed results. No side effects, no external state mutation, no API calls. They're called from routes, tools, AND missions  - making the system modular and testable.
 
 | Engine | Input | Output | Weight/Method |
 |--------|-------|--------|---------------|
@@ -395,7 +395,7 @@ All scoring engines are pure functions that take typed parameters and return typ
 
 ### Geotab Dual-API Integration
 
-**MyGeotab API** (`my.geotab.com` — JSON-RPC):
+**MyGeotab API** (`my.geotab.com`  - JSON-RPC):
 - `DeviceStatusInfo` → Real-time vehicle positions, speed, bearing for live map
 - `ExceptionEvent` → Safety rule violations (speeding, harsh braking, HOS)
 - `Trip` → Daily driving summaries with distance, duration, idling metrics
@@ -416,7 +416,7 @@ All scoring engines are pure functions that take typed parameters and return typ
 
 ---
 
-## Features — Complete List
+## Features  - Complete List
 
 ### Landing Page (`/`)
 - Animated hero with platform value proposition
@@ -453,7 +453,7 @@ Tab-based mobile-first layout designed for truck-mounted tablets with 5 tabs and
 | **Load** | Load card (origin→destination, commodity, weight, rate), broker info, quick dispatch buttons, **"Call Dispatch" → real Twilio phone call**, live call overlay with transcript, call summary saved to messages |
 | **Rank** | Driver leaderboard with current driver highlighted, badge gallery (earned/locked), level progress bar |
 
-**Floating Mic Button**: Always-visible amber button on all tabs except Voice — tap to switch to Voice tab and start listening.
+**Floating Mic Button**: Always-visible amber button on all tabs except Voice  - tap to switch to Voice tab and start listening.
 
 ---
 
@@ -819,7 +819,7 @@ cd frontend && npm run build   # Next.js optimized build
 | `PORT` | No | Backend port (default: 3000) |
 
 *Required for AI-powered features. Core analytics dashboards work without API keys.
-Twilio variables are optional — dispatch calls fall back to AI simulation when not configured.
+Twilio variables are optional  - dispatch calls fall back to AI simulation when not configured.
 
 ### Quick Test
 
@@ -871,20 +871,20 @@ open http://localhost:3001
 
 ---
 
-## Development Process — The Vibe Coding Journey
+## Development Process  - The Vibe Coding Journey
 
 Built in ~10 days using AI-assisted development (Claude Code / Claude Opus 4.6) with a parallel development strategy:
 
-1. **Geotab API Integration** — Connected to MyGeotab for real fleet data + Ace for conversational analytics
-2. **9 Scoring Engines** — Pure functions operating on seed/Geotab data, each independently testable
-3. **50+ API Endpoints** — REST + WebSocket + SSE streaming, all type-safe
-4. **17-Tool AI Agent** — Claude with specialized fleet tools + system prompt engineering
-5. **5 Mission Types** — Autonomous background agents with progress streaming and cross-page notifications
-6. **Voice Pipeline** — Full duplex voice AI with STT, TTS, VAD, barge-in, and filler audio
-7. **Real Twilio Dispatch** — Outbound phone calls with AI-mediated multi-turn conversations
-8. **25+ Frontend Pages** — Consistent patterns (Tailwind, Framer Motion, Recharts)
-9. **Driver Portal** — 11 components, 5 tabs, HOS compliance, wellness check-ins, gamification
-10. **Mission-to-Driver Sync** — Operator missions create action items for drivers automatically
+1. **Geotab API Integration**  - Connected to MyGeotab for real fleet data + Ace for conversational analytics
+2. **9 Scoring Engines**  - Pure functions operating on seed/Geotab data, each independently testable
+3. **50+ API Endpoints**  - REST + WebSocket + SSE streaming, all type-safe
+4. **17-Tool AI Agent**  - Claude with specialized fleet tools + system prompt engineering
+5. **5 Mission Types**  - Autonomous background agents with progress streaming and cross-page notifications
+6. **Voice Pipeline**  - Full duplex voice AI with STT, TTS, VAD, barge-in, and filler audio
+7. **Real Twilio Dispatch**  - Outbound phone calls with AI-mediated multi-turn conversations
+8. **25+ Frontend Pages**  - Consistent patterns (Tailwind, Framer Motion, Recharts)
+9. **Driver Portal**  - 11 components, 5 tabs, HOS compliance, wellness check-ins, gamification
+10. **Mission-to-Driver Sync**  - Operator missions create action items for drivers automatically
 
 ### Quality Assurance
 - TypeScript strict mode (backend + frontend)

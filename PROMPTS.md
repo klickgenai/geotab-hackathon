@@ -1,4 +1,4 @@
-# Vibe Coding Journey — FleetShield AI
+# Vibe Coding Journey  - FleetShield AI
 
 > How Claude Code built a full-stack fleet intelligence platform from scratch in 10 days
 
@@ -6,7 +6,7 @@
 
 ## The Story
 
-FleetShield AI was built entirely through **vibe coding** with **Claude Code** (Claude Opus 4.6). Every line of code — backend, frontend, scoring engines, voice AI pipelines, autonomous mission agents — was generated through natural language conversation with Claude.
+FleetShield AI was built entirely through **vibe coding** with **Claude Code** (Claude Opus 4.6). Every line of code  - backend, frontend, scoring engines, voice AI pipelines, autonomous mission agents  - was generated through natural language conversation with Claude.
 
 The project started from a blank directory on February 12, 2026. By February 22, it had grown into a **33-commit**, **15,000+ line** production application with 15 operator pages, a driver portal, dual voice AI systems, 9 scoring engines, and real Geotab API integration.
 
@@ -37,7 +37,7 @@ No boilerplate generators, no starter templates, no copy-paste from Stack Overfl
 ```
 Build me a fleet safety analytics platform using Express + TypeScript backend
 and Next.js frontend. The backend should have scoring engines that analyze
-driver risk from telematics data — things like harsh braking, speeding,
+driver risk from telematics data  - things like harsh braking, speeding,
 seatbelt compliance, idling. Generate realistic seed data for 30 drivers
 and 25 vehicles with 90 days of safety events.
 ```
@@ -57,7 +57,7 @@ affects their insurance score and premium.
 ### 3. Making Tasha Come Alive
 ```
 Add an AI assistant named Tasha. She should have access to all our scoring
-engines as tools — fleet overview, driver risk, insurance score, wellness,
+engines as tools  - fleet overview, driver risk, insurance score, wellness,
 safety events, financial impact, coaching recommendations. She should be
 analytical with fleet managers but warm with drivers. Use Claude via the
 Vercel AI SDK with streaming.
@@ -65,7 +65,7 @@ Vercel AI SDK with streaming.
 
 **What Claude built**: Full agent system with 17 tools, SSE streaming, rich inline component rendering for tool results, and a context-aware system prompt that adapts between operator and driver modes.
 
-### 4. Voice AI — The Breakthrough Moment
+### 4. Voice AI  - The Breakthrough Moment
 ```
 Make the assistant voice-first. Add speech-to-text using Smallest AI Pulse
 for real-time transcription and Waves for text-to-speech. The operator should
@@ -79,7 +79,7 @@ waveform visualization while she's speaking.
 ```
 I want AI agents that work like employees. When I say "run a coaching sweep",
 an agent should analyze every driver in the fleet, check their risk scores
-and wellness, build personalized coaching plans, and deliver a full report —
+and wellness, build personalized coaching plans, and deliver a full report  -
 all running in the background while I keep chatting with Tasha.
 ```
 
@@ -122,24 +122,24 @@ working together.
 
 ### How We Worked Together
 
-1. **Describe what I want** in natural language — the problem, not the solution
+1. **Describe what I want** in natural language  - the problem, not the solution
 2. **Claude explores** the codebase, reads existing files, understands patterns
 3. **Claude proposes** an approach (or asks clarifying questions)
-4. **Claude implements** — writing TypeScript, creating components, adding routes
-5. **Claude verifies** — running `tsc --noEmit`, checking for type errors
+4. **Claude implements**  - writing TypeScript, creating components, adding routes
+5. **Claude verifies**  - running `tsc --noEmit`, checking for type errors
 6. **I test** in the browser and give feedback
-7. **Iterate** — "The gauge looks great but make the animation smoother" or "Add error handling for when the API is down"
+7. **Iterate**  - "The gauge looks great but make the animation smoother" or "Add error handling for when the API is down"
 
 ### What Made It Effective
 
 - **Context accumulation**: Claude remembered architectural decisions across sessions via `CLAUDE.md` and memory files
 - **Pattern consistency**: Once a pattern was established (e.g., scoring engines are pure functions), Claude applied it consistently to every new engine
 - **Fearless refactoring**: Claude could safely refactor across files because it understood the full dependency graph
-- **Rapid iteration**: What would take hours of manual coding happened in minutes — describe the feature, get working code, refine
+- **Rapid iteration**: What would take hours of manual coding happened in minutes  - describe the feature, get working code, refine
 
 ### The CLAUDE.md Strategy
 
-We maintained a comprehensive `CLAUDE.md` file (500+ lines) that served as the project's "constitution" — coding standards, architecture rules, naming conventions, color palette, common mistakes to avoid. Every Claude Code session loaded this automatically, ensuring consistency even across long sessions.
+We maintained a comprehensive `CLAUDE.md` file (500+ lines) that served as the project's "constitution"  - coding standards, architecture rules, naming conventions, color palette, common mistakes to avoid. Every Claude Code session loaded this automatically, ensuring consistency even across long sessions.
 
 ---
 
@@ -147,20 +147,20 @@ We maintained a comprehensive `CLAUDE.md` file (500+ lines) that served as the p
 
 | Feature | Complexity | Prompt-to-Working |
 |---------|-----------|------------------|
-| 9 scoring engines (pure functions) | High — 2000+ lines of domain logic | ~2 hours |
-| WebSocket voice pipeline with VAD | Very High — real-time audio processing | ~3 hours |
-| 17-tool AI agent with streaming | High — tool orchestration + rendering | ~2 hours |
-| Mission agent system | High — EventEmitter bridge + SSE + sync | ~2 hours |
-| Geotab API integration (3 APIs) | Medium — JSON-RPC + OData + Ace | ~2 hours |
-| 15 operator pages with animations | Medium — consistent patterns | ~4 hours |
-| Driver portal (11 components) | Medium — mobile-first tablet UI | ~3 hours |
-| Gamification engine | Medium — XP, levels, badges, streaks | ~1 hour |
+| 9 scoring engines (pure functions) | High  - 2000+ lines of domain logic | ~2 hours |
+| WebSocket voice pipeline with VAD | Very High  - real-time audio processing | ~3 hours |
+| 17-tool AI agent with streaming | High  - tool orchestration + rendering | ~2 hours |
+| Mission agent system | High  - EventEmitter bridge + SSE + sync | ~2 hours |
+| Geotab API integration (3 APIs) | Medium  - JSON-RPC + OData + Ace | ~2 hours |
+| 15 operator pages with animations | Medium  - consistent patterns | ~4 hours |
+| Driver portal (11 components) | Medium  - mobile-first tablet UI | ~3 hours |
+| Gamification engine | Medium  - XP, levels, badges, streaks | ~1 hour |
 
 ---
 
 ## What "Vibe Coding" Means to Us
 
-Vibe coding isn't about letting AI do everything without thinking. It's about **working at the speed of ideas** — describing what you want in the language of the problem domain ("drivers need to see their burnout risk") rather than the implementation domain ("create a React component with a circular SVG gauge").
+Vibe coding isn't about letting AI do everything without thinking. It's about **working at the speed of ideas**  - describing what you want in the language of the problem domain ("drivers need to see their burnout risk") rather than the implementation domain ("create a React component with a circular SVG gauge").
 
 The developer brings **domain expertise, taste, and judgment**. The AI brings **speed, consistency, and tireless attention to detail**. Together, we built in 10 days what would have taken a team of 3-4 engineers several weeks.
 

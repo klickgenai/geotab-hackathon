@@ -163,7 +163,7 @@ Each page follows the same structure:
 5. Use Tailwind utility classes (no CSS modules)
 
 ### Operator Portal Layout
-- Sidebar navigation with "Tasha — Voice AI Agent" as top-priority button (gold gradient)
+- Sidebar navigation with "Tasha  - Voice AI Agent" as top-priority button (gold gradient)
 - Sidebar footer: Geotab connection status + "Back to Home" logout link
 - AppShell wrapper with mission notification bell + toast (with X dismiss button)
 - Full-width content area (`ml-[240px]`)
@@ -174,7 +174,7 @@ Each page follows the same structure:
 - Dark theme (slate-900 background)
 - Full-screen experience for truck-mounted tablets
 - Tab-based layout: Home | Training | **Voice** (centered, larger) | Load | Rank
-- 11 components in `src/components/driver/` — page.tsx is a slim ~260-line orchestrator
+- 11 components in `src/components/driver/`  - page.tsx is a slim ~260-line orchestrator
 - Floating mic button on all tabs except Voice (taps to switch & start listening)
 - Voice AI via WebSocket connection to backend
 - 30-second polling for action items and training programs
@@ -221,7 +221,7 @@ Operator asks Tasha → mission runs (e.g. coaching sweep)
 
 Full test scenarios (voice questions, tab navigation, dispatch calls, mission sync): `DRIVER_PORTAL_TEST_SCENARIOS.md`
 
-## !!! CODING STANDARDS & ARCHITECTURE RULES — MANDATORY !!!
+## !!! CODING STANDARDS & ARCHITECTURE RULES  - MANDATORY !!!
 
 Every agent session MUST follow these rules. They exist to prevent features from breaking each other, keep the codebase scalable, and maintain demo reliability (judges will test live).
 
@@ -235,18 +235,18 @@ This is the #1 rule. A new feature that breaks an existing one is worse than no 
 - Read the entire file first (not just the section you're changing)
 - Understand what other features depend on it
 - Check who imports it: use grep for the filename across the codebase
-- If a function signature changes, update ALL callers — not just the one you're working on
+- If a function signature changes, update ALL callers  - not just the one you're working on
 
 **High-risk files (touch with extreme care):**
 | File | Why it's dangerous | Who depends on it |
 |------|-------------------|-------------------|
-| `backend/src/index.ts` | 50+ routes, WebSocket, SSE — one bad middleware breaks everything | Every frontend page, voice, missions |
-| `backend/src/data/driver-session.ts` | Driver state, action items — changing shape breaks driver portal + voice + missions | Driver portal, voice sessions, mission sync |
-| `backend/src/agents/fleetshield-agent.ts` | AI system prompt + all 17 tools — changes affect every AI response | Operator assistant, voice AI, missions |
-| `frontend/src/types/fleet.ts` | Central type definitions — type changes cascade everywhere | Every frontend component |
-| `frontend/src/lib/api.ts` | API client — breaking a method breaks every page that calls it | Every frontend page |
-| `frontend/src/components/layout/AppShell.tsx` | Layout wrapper — affects every page's rendering | All pages |
-| `backend/src/missions/mission-bridge.ts` | Mission store + sync — breaking this breaks missions + driver training | Missions, driver portal training tab |
+| `backend/src/index.ts` | 50+ routes, WebSocket, SSE  - one bad middleware breaks everything | Every frontend page, voice, missions |
+| `backend/src/data/driver-session.ts` | Driver state, action items  - changing shape breaks driver portal + voice + missions | Driver portal, voice sessions, mission sync |
+| `backend/src/agents/fleetshield-agent.ts` | AI system prompt + all 17 tools  - changes affect every AI response | Operator assistant, voice AI, missions |
+| `frontend/src/types/fleet.ts` | Central type definitions  - type changes cascade everywhere | Every frontend component |
+| `frontend/src/lib/api.ts` | API client  - breaking a method breaks every page that calls it | Every frontend page |
+| `frontend/src/components/layout/AppShell.tsx` | Layout wrapper  - affects every page's rendering | All pages |
+| `backend/src/missions/mission-bridge.ts` | Mission store + sync  - breaking this breaks missions + driver training | Missions, driver portal training tab |
 
 **Mandatory verification after changes:**
 - Backend compiles: `cd backend && npx tsc --noEmit`
@@ -266,7 +266,7 @@ This is the #1 rule. A new feature that breaks an existing one is worse than no 
 import { calculateDriverRisk } from '../scoring/driver-risk-engine.js';
 import { seedDrivers } from '../data/seed-data.js';
 
-// NEVER omit the extension — it will fail at runtime
+// NEVER omit the extension  - it will fail at runtime
 import { calculateDriverRisk } from '../scoring/driver-risk-engine'; // WRONG
 ```
 
@@ -294,7 +294,7 @@ import { api } from '../../lib/api'; // WRONG
 
 **Exports:**
 - Scoring engines: named function exports (`export function calculateX()`)
-- Components: named exports (`export function HomeTab()`) — no default exports
+- Components: named exports (`export function HomeTab()`)  - no default exports
 - Types: named exports from central `types/fleet.ts`
 - Tools: `export const toolName = tool({ ... })` (Vercel AI SDK pattern)
 - Barrel files: re-export pattern (`export { X } from './x.js'`)
@@ -324,11 +324,11 @@ app.get('/api/fleet/domain/action', (req, res) => {
 });
 ```
 
-**Scoring engines are PURE FUNCTIONS — keep them that way:**
+**Scoring engines are PURE FUNCTIONS  - keep them that way:**
 - No side effects, no external state mutation, no API calls
 - Take typed parameters (usually a driverId string), return typed objects
-- Return `null` on invalid input — never throw for validation
-- They are called from routes, tools, AND missions — breaking their signature breaks 3 things
+- Return `null` on invalid input  - never throw for validation
+- They are called from routes, tools, AND missions  - breaking their signature breaks 3 things
 
 **Adding a new scoring engine:**
 1. Create `backend/src/scoring/your-engine.ts`
@@ -379,7 +379,7 @@ export function MyComponent({ data, onAction }: MyComponentProps) {
 - ALWAYS define a Props interface directly above the component
 - ALWAYS use named exports (not default exports)
 - Import order: React → third-party → internal components → types
-- Keep components focused — one component, one responsibility
+- Keep components focused  - one component, one responsibility
 - If a component exceeds ~200 lines, consider extracting sub-components
 
 **Data fetching pattern:**
@@ -423,9 +423,9 @@ if (error) return (
 ```
 
 **State management rules:**
-- Use `useState` + `useEffect` — no Redux, no Zustand, no Context API (we don't need it)
+- Use `useState` + `useEffect`  - no Redux, no Zustand, no Context API (we don't need it)
 - Prop drilling is acceptable and preferred over adding state management complexity
-- Each page owns its data fetching — no shared global state between pages
+- Each page owns its data fetching  - no shared global state between pages
 - Polling: use `setInterval` in `useEffect` with proper cleanup (`return () => clearInterval(id)`)
 - Use `useRef` guards to prevent React 19 strict mode double-fetch
 
@@ -471,7 +471,7 @@ if (error) return (
 - Operator pages: `<PageHeader>` at top, then `<div className="space-y-6">` for sections
 - Driver portal: tabs handle their own layout with `overflow-y-auto p-4 space-y-4`
 - All interactive elements: minimum 48px touch targets (driver portal is for tablets)
-- No CSS modules, no styled-components — Tailwind utility classes only
+- No CSS modules, no styled-components  - Tailwind utility classes only
 
 ---
 
@@ -500,7 +500,7 @@ if (error) return (
 
 ### 7. FEATURE ISOLATION & BOUNDARIES
 
-**Module dependency rules (unidirectional — never circular):**
+**Module dependency rules (unidirectional  - never circular):**
 ```
 Scoring Engines (pure functions, no imports from other modules)
        ↑
@@ -534,7 +534,7 @@ Voice Session → Agent (delegates to AI) → Tools → Scoring Engines
 
 ---
 
-### 8. ADDING NEW FEATURES — CHECKLIST
+### 8. ADDING NEW FEATURES  - CHECKLIST
 
 **New backend endpoint:**
 1. Define return type in `frontend/src/types/fleet.ts`
@@ -559,7 +559,7 @@ Voice Session → Agent (delegates to AI) → Tools → Scoring Engines
 
 **New scoring engine:**
 1. Create in `backend/src/scoring/`
-2. Pure function — no side effects, no external state
+2. Pure function  - no side effects, no external state
 3. Return typed result or `null`
 4. Add tool wrapper in `backend/src/tools/`
 5. Register in tool index
@@ -589,11 +589,11 @@ Voice Session → Agent (delegates to AI) → Tools → Scoring Engines
 | Changing a type in `fleet.ts` without updating consumers | Causes runtime errors in components that use the old shape | Grep for the type name, update all usages |
 | Adding a backend import without `.js` extension | Compiles but crashes at runtime (ESM requirement) | Always use `.js` extension: `from './file.js'` |
 | Forgetting `'use client'` on interactive components | Next.js server component errors, hydration mismatches | Add it to ANY component with useState, useEffect, or event handlers |
-| Mutating state in scoring engines | Breaks the pure function contract, causes stale data bugs | Scoring engines must be stateless — return new objects |
+| Mutating state in scoring engines | Breaks the pure function contract, causes stale data bugs | Scoring engines must be stateless  - return new objects |
 | Using `git add -A` or `git add .` | May commit `.env`, credentials, or unrelated files | Stage specific files by name |
-| Creating new state management (Context, Redux) | Adds complexity, no existing pattern to follow, hard to debug | Use useState + prop drilling — it works fine for this app |
-| Adding npm packages without checking bundle size | Bloats the frontend, slows load times — judges notice | Use existing packages first (Tailwind, Framer Motion, Lucide, Recharts) |
-| Hardcoding colors instead of using brand palette | Inconsistent UI — judges score UX | Use the color palette table above |
+| Creating new state management (Context, Redux) | Adds complexity, no existing pattern to follow, hard to debug | Use useState + prop drilling  - it works fine for this app |
+| Adding npm packages without checking bundle size | Bloats the frontend, slows load times  - judges notice | Use existing packages first (Tailwind, Framer Motion, Lucide, Recharts) |
+| Hardcoding colors instead of using brand palette | Inconsistent UI  - judges score UX | Use the color palette table above |
 | Not testing after changes | Broken features discovered during demo = lost points | Always verify: compile check + manual test of affected features |
 
 ---
@@ -663,8 +663,8 @@ cd frontend && npm run build   # Next.js production build
 - The frontend proxies all `/api/*` requests to the backend
 - The MyGeotab add-in is in `backend/addin/` (iframe bridge pattern)
 - TTS uses generation-counter mutex to prevent double-voice issues
-- React 19 strict mode double-fires effects — guard refs prevent duplicate fetches
-- Driver portal page.tsx is a slim orchestrator (~260 lines) — all UI is in `components/driver/`
+- React 19 strict mode double-fires effects  - guard refs prevent duplicate fetches
+- Driver portal page.tsx is a slim orchestrator (~260 lines)  - all UI is in `components/driver/`
 - Driver portal polls backend every 30s for action items and training programs
 - ActionItem type has `category` (coaching/wellness/safety/general), `priority` (low/medium/high/urgent), and optional `missionId`
 - Completed operator missions (coaching_sweep, wellness_check, safety_investigation) auto-sync action items to affected drivers
@@ -729,11 +729,11 @@ curl -s https://fleetshieldai.vercel.app/api/fleet/data-source
 ```
 
 ### Important Notes
-- ngrok URL **changes every restart** — repeat Steps 2-5 each time
+- ngrok URL **changes every restart**  - repeat Steps 2-5 each time
 - The Vercel project is linked in `frontend/` directory (run vercel commands from there)
 - Keep both `ngrok` and `backend` running during demos
 - Vercel project name: `frontend` under `klickgenais-projects`
-- Frontend local dev (port 3001) is independent — it uses `next.config.ts` rewrites to `localhost:3000`
+- Frontend local dev (port 3001) is independent  - it uses `next.config.ts` rewrites to `localhost:3000`
 
 ### Quick One-Liner for Repeat Deployments
 After ngrok is already running:

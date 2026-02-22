@@ -148,7 +148,7 @@ Create a voice-first driver dashboard for truck-mounted tablets:
 - Full-screen, dark theme (slate-900), no sidebar
 - Tab-based: Home | Training | Voice (center, larger) | Load | Rank
 - Floating amber mic button on all tabs except Voice
-- 11 components in components/driver/ — page.tsx is a slim orchestrator
+- 11 components in components/driver/  - page.tsx is a slim orchestrator
 - Large touch targets (48px+ buttons) for tablet use
 - PIN-based login (3-digit employee number + 4-digit PIN)
 ```
@@ -202,7 +202,7 @@ and report generation.
 ```
 Create a mission system where Tasha can deploy autonomous background agents:
 - 5 types: coaching sweep, wellness check, safety investigation, insurance optimization, pre-shift sweep
-- Missions call scoring engines directly (no LLM sub-agents) — fast and cheap
+- Missions call scoring engines directly (no LLM sub-agents)  - fast and cheap
 - Only the final executive summary uses one Claude call
 - Progress streams via EventEmitter bridge → SSE/WebSocket
 - Cross-page notifications (bell icon with badge count)
@@ -214,10 +214,10 @@ Create a mission system where Tasha can deploy autonomous background agents:
 1. **Why voice-first for drivers?** Truck drivers can't use touchscreens while driving. Voice is the only safe interface.
 2. **Why real phone calls?** Simulated dispatch is a demo feature. Real Twilio calls prove the technology works end-to-end and make the product genuinely useful.
 3. **Why insurance scoring?** Fleet managers think in dollars. Connecting behavior to premiums makes safety investments tangible.
-4. **Why HOS gauges?** Driver's #1 daily question is "How many hours do I have left?" — buried in ELD compliance screens everywhere else.
+4. **Why HOS gauges?** Driver's #1 daily question is "How many hours do I have left?"  - buried in ELD compliance screens everywhere else.
 5. **Why wellness check-ins?** Driver life expectancy is 61 years. 25% report loneliness. No fleet app does proactive, privacy-respecting wellness.
 6. **Why sustainability?** Fleet decarbonization is a $B opportunity. Operators need data to justify EV transitions and idle reduction policies.
 7. **Why gamification?** Drivers respond better to coaching and competition than surveillance. Points, badges, and leaderboards drive engagement.
 8. **Why Ace integration?** Natural language queries let non-technical managers explore their data without learning query tools.
-9. **Why mission agents, not just chat?** Chat is reactive. Missions are proactive — they do the analyst's job while the operator keeps working.
+9. **Why mission agents, not just chat?** Chat is reactive. Missions are proactive  - they do the analyst's job while the operator keeps working.
 10. **Why batch STT with pacing?** Phone audio through Twilio arrives in 20ms continuous packets. Burst-sending to Pulse STT causes empty transcripts on short utterances. Paced sending simulates real-time streaming.
