@@ -102,9 +102,8 @@ export default function LandingPage() {
             <FleetShieldLogo size={36} />
             <div className="flex flex-col">
               <span className="text-lg font-extrabold tracking-tight leading-none">
-                <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span>
+                <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span><span className="text-white/40 ml-1">AI</span>
               </span>
-              <span className="text-[8px] font-bold text-white/25 tracking-[3px] uppercase leading-none mt-0.5">Intelligence</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -138,9 +137,9 @@ export default function LandingPage() {
               <FleetShieldLogo size={52} />
               <div className="flex flex-col">
                 <span className="text-2xl font-extrabold tracking-tight leading-none">
-                  <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span>
+                  <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span><span className="text-white/40 ml-1.5">AI</span>
                 </span>
-                <span className="text-[9px] font-bold text-white/25 tracking-[3px] uppercase leading-none mt-0.5">AI Intelligence Platform</span>
+                <span className="text-[9px] font-bold text-white/25 tracking-[3px] uppercase leading-none mt-0.5">Predictive Fleet Intelligence</span>
               </div>
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.06] border border-white/[0.08]">
@@ -716,8 +715,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <FleetShieldLogo size={28} />
             <span className="text-sm font-semibold text-white/40">
-              <span className="text-white/60">Fleet</span><span className="text-[#FBAF1A]/60">Shield</span>
-              <span className="text-white/20"> AI</span>
+              <span className="text-white/60">Fleet</span><span className="text-[#FBAF1A]/60">Shield</span><span className="text-white/30 ml-0.5">AI</span>
             </span>
           </div>
           <div className="text-xs text-white/20 text-center">

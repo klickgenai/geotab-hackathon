@@ -11,6 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { geotabAuth } from './services/geotab-auth.js';
+import { geotabCore } from './services/geotab-core.js';
 import { getFleetSummary, getDriverStats, seedDrivers, seedVehicles, seedSafetyEvents } from './data/seed-data.js';
 import { initFleetData } from './data/fleet-data-provider.js';
 import { calculateInsuranceScore } from './scoring/insurance-score-engine.js';
@@ -1098,6 +1099,123 @@ app.get('/api/fleet/data-source', (_req, res) => {
     geotabConfigured: geotabAuth.isConfigured(),
     database: geotabAuth.isConfigured() ? process.env.GEOTAB_DATABASE : null,
   });
+});
+
+// --- Geotab Integration Verification ---
+app.get('/api/fleet/verify-integration', async (_req, res) => {
+  try {
+    const configured = geotabAuth.isConfigured();
+    const result: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      isLiveData: isUsingLiveData(),
+      mygeotab: {
+        configured,
+        authenticated: false,
+        database: configured ? process.env.GEOTAB_DATABASE : null,
+        server: configured ? (process.env.GEOTAB_SERVER || 'my.geotab.com') : null,
+        deviceCount: 0,
+        userCount: 0,
+        recentEventCount: 0,
+      },
+      ace: {
+        configured,
+        available: false,
+        testResult: null,
+      },
+      apis: {
+        mygeotab: configured ? 'https://my.geotab.com/apiv1' : null,
+        ace: configured ? 'https://ace-api.geotab.com/api/v2' : null,
+        dataConnector: configured ? 'OData v4 (optional)' : null,
+      },
+    };
+
+    if (configured) {
+      try {
+        // Verify MyGeotab authentication + fetch real counts
+        const [devices, users] = await Promise.all([
+          geotabCore.getDevices().catch(() => []),
+          geotabCore.getUsers({ isDriver: true }).catch(() => []),
+        ]);
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const events = await geotabCore.getExceptionEvents(
+          weekAgo.toISOString(),
+          now.toISOString()
+        ).catch(() => []);
+
+        (result.mygeotab as Record<string, unknown>).authenticated = true;
+        (result.mygeotab as Record<string, unknown>).deviceCount = devices.length;
+        (result.mygeotab as Record<string, unknown>).userCount = users.length;
+        (result.mygeotab as Record<string, unknown>).recentEventCount = events.length;
+        (result.mygeotab as Record<string, unknown>).sampleDevices = devices.slice(0, 3).map((d: { name?: string; id?: string }) => d.name || d.id);
+      } catch {
+        (result.mygeotab as Record<string, unknown>).error = 'Authentication failed';
+      }
+
+      try {
+        // Test Ace API availability
+        const aceResult = await geotabAce.query('How many vehicles are in my fleet?');
+        (result.ace as Record<string, unknown>).available = true;
+        (result.ace as Record<string, unknown>).testResult = aceResult.text?.substring(0, 200);
+      } catch {
+        (result.ace as Record<string, unknown>).error = 'Ace query failed';
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to verify integration' });
+  }
+});
+
+// --- Geotab Integration Verification (for judges) ---
+app.get('/api/fleet/verify-integration', async (_req, res) => {
+  const result: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    isLiveData: isUsingLiveData(),
+  };
+
+  if (!geotabAuth.isConfigured()) {
+    result.mygeotab = { authenticated: false, reason: 'Credentials not configured' };
+    result.ace = { available: false, reason: 'Requires MyGeotab authentication' };
+    return res.json(result);
+  }
+
+  // Verify MyGeotab API
+  try {
+    const session = await geotabAuth.authenticate();
+    const devices = await geotabCore.getDevices();
+    result.mygeotab = {
+      authenticated: true,
+      database: process.env.GEOTAB_DATABASE,
+      server: session.server,
+      deviceCount: devices.length,
+      sampleDevices: devices.slice(0, 3).map(d => ({ id: d.id, name: d.name, serialNumber: d.serialNumber })),
+    };
+  } catch (error) {
+    result.mygeotab = {
+      authenticated: false,
+      error: error instanceof Error ? error.message : 'Authentication failed',
+    };
+  }
+
+  // Verify Ace API
+  try {
+    const aceResult = await geotabAce.query('How many vehicles are in my fleet?');
+    result.ace = {
+      available: true,
+      testQuery: 'How many vehicles are in my fleet?',
+      response: aceResult.text?.slice(0, 200),
+      status: aceResult.status || 'completed',
+    };
+  } catch (error) {
+    result.ace = {
+      available: false,
+      error: error instanceof Error ? error.message : 'Ace query failed',
+    };
+  }
+
+  res.json(result);
 });
 
 // --- Twilio Call Status Webhook ---

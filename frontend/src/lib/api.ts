@@ -124,6 +124,7 @@ export const api = {
 
   // Data Source
   dataSource: () => fetchJSON<{ isLiveData: boolean; geotabConfigured: boolean; database: string | null }>('/api/fleet/data-source'),
+  verifyIntegration: () => fetchJSON<Record<string, unknown>>('/api/fleet/verify-integration'),
 
   // Driver Portal
   driverLogin: (driverId: string) => postJSON<DriverSession>('/api/driver/login', { driverId }),

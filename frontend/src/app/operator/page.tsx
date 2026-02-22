@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useFleetData } from '@/hooks/useFleetData';
+import { api } from '@/lib/api';
 import PageHeader from '@/components/layout/PageHeader';
 import KPICards from '@/components/dashboard/KPICards';
 import ScoreCard from '@/components/dashboard/ScoreCard';
 import DriverTable from '@/components/dashboard/DriverTable';
 import WellnessCard from '@/components/dashboard/WellnessCard';
 import FinancialCard from '@/components/dashboard/FinancialCard';
+import AceInsights from '@/components/dashboard/AceInsights';
 
 import { Shield, Loader2, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -15,6 +17,14 @@ import { useRouter } from 'next/navigation';
 export default function Dashboard() {
   const { overview, score, risks, wellness, loading, error, refresh } = useFleetData();
   const router = useRouter();
+  const [dataSource, setDataSource] = useState<{ isLiveData: boolean; geotabConfigured: boolean; database: string | null } | null>(null);
+  const dsRef = useRef(false);
+
+  useEffect(() => {
+    if (dsRef.current) return;
+    dsRef.current = true;
+    api.dataSource().then(setDataSource).catch(() => {});
+  }, []);
 
   const handleGenerateReport = useCallback(() => {
     window.open('/api/reports/generate', '_blank');
@@ -68,13 +78,29 @@ export default function Dashboard() {
         subtitle="Real-time fleet risk intelligence"
         onRefresh={refresh}
         actions={
-          <button
-            onClick={handleGenerateReport}
-            className="flex items-center gap-1.5 px-3 py-[7px] rounded-xl text-sm font-medium bg-[#18202F] text-white hover:bg-[#2D3748] transition-all duration-200"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Generate Report
-          </button>
+          <div className="flex items-center gap-3">
+            {dataSource && (
+              <div className={`flex items-center gap-2 px-3 py-[7px] rounded-xl text-xs font-semibold border ${
+                dataSource.isLiveData
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-amber-50 border-amber-200 text-amber-700'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${dataSource.isLiveData ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                {dataSource.isLiveData ? (
+                  <span>Live: <span className="font-bold">{dataSource.database}</span> &middot; MyGeotab + Ace APIs</span>
+                ) : (
+                  <span>Seed Data Mode</span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={handleGenerateReport}
+              className="flex items-center gap-1.5 px-3 py-[7px] rounded-xl text-sm font-medium bg-[#18202F] text-white hover:bg-[#2D3748] transition-all duration-200"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Generate Report
+            </button>
+          </div>
         }
       />
 
@@ -101,6 +127,12 @@ export default function Dashboard() {
               risks={risks}
               onGenerateReport={handleGenerateReport}
             />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-12 gap-5">
+          <div className="col-span-12">
+            <AceInsights />
           </div>
         </div>
       </div>

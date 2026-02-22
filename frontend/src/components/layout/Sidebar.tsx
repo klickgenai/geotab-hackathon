@@ -58,9 +58,8 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
           </svg>
           <div>
             <div className="font-extrabold text-base tracking-tight leading-none">
-              <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span>
+              <span className="text-white">Fleet</span><span className="text-[#FBAF1A]">Shield</span><span className="text-white/40 ml-1">AI</span>
             </div>
-            <div className="text-[9px] text-white/30 font-bold tracking-[2.5px] uppercase mt-0.5">Intelligence</div>
           </div>
         </Link>
       </div>
