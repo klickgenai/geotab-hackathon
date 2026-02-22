@@ -88,20 +88,28 @@ function MissionNotificationBell() {
       {/* Toast notification */}
       {toast && (
         <div
-          className="fixed top-4 right-4 z-[60] animate-in slide-in-from-top-2 cursor-pointer"
+          className="fixed top-16 right-4 z-[60] animate-in slide-in-from-top-2 cursor-pointer"
           onClick={() => { handleClick(toast); setToast(null); }}
         >
-          <div className="bg-[#18202F] text-white rounded-xl px-5 py-3.5 shadow-2xl shadow-black/30 border border-white/10 max-w-sm">
+          <div className="bg-[#18202F] text-white rounded-xl pl-5 pr-2 py-3 shadow-2xl shadow-black/30 border border-white/10 max-w-sm">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
                 <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold">{toast.displayName} completed</div>
                 <div className="text-xs text-white/50 truncate mt-0.5">Click to view results</div>
               </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); setToast(null); }}
+                className="w-6 h-6 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>

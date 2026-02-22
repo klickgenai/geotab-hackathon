@@ -148,7 +148,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Headline */}
+          {/* Headline — Problem first, then Tasha as the answer */}
           <div className="text-center mb-12">
             <h1 className="text-5xl md:text-[5.5rem] font-extrabold leading-[1.02] tracking-tight mb-6">
               <span className="text-white">Your fleet data holds</span><br />
@@ -156,11 +156,54 @@ export default function LandingPage() {
                 million-dollar answers.
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-white/45 max-w-4xl mx-auto leading-relaxed">
-              FleetShield turns raw telematics into <span className="text-white/80 font-semibold">actionable intelligence</span>: who needs intervention,{' '}
-              what it&apos;s costing you, how to fix it,{' '}
-              and a <span className="text-pink-400 font-bold">Voice AI</span> that keeps drivers safe, hands-free.
+            <p className="text-xl md:text-2xl text-white/45 max-w-4xl mx-auto leading-relaxed mb-8">
+              $91K per accident. 87% driver turnover. 2,400 alerts buried daily.{' '}
+              The data to prevent it all is already in your Geotab — but nobody has time to find it.
             </p>
+
+            {/* Tasha intro */}
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-pink-500/10 to-[#FBAF1A]/10 border border-pink-500/15 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-[#FBAF1A] flex items-center justify-center shadow-lg shadow-pink-500/20">
+                <Mic className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <div className="text-lg font-extrabold text-white">
+                  Meet <span className="bg-gradient-to-r from-pink-400 to-[#FBAF1A] bg-clip-text text-transparent">Tasha</span> — your fleet&apos;s Voice AI Agent.
+                </div>
+                <div className="text-sm text-white/40">She finds the answers, predicts the risks, and talks to your drivers hands-free.</div>
+              </div>
+            </div>
+
+            {/* Tasha voice preview */}
+            <div className="max-w-2xl mx-auto bg-gradient-to-br from-slate-900/90 to-slate-800/90 rounded-3xl p-6 border border-white/[0.08] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-pink-500/[0.06] rounded-full blur-[60px]" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#FBAF1A]/[0.04] rounded-full blur-[50px]" />
+              <div className="relative">
+                <div className="flex items-center justify-center gap-2 mb-5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-white/30 uppercase tracking-[2px]">Tasha Voice AI — Live</span>
+                  <div className="ml-2"><VoiceWave /></div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2.5 justify-start">
+                    <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                      <Mic className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-4 py-2.5">
+                      <p className="text-sm text-white/80">&quot;Tasha, which drivers need attention today?&quot;</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 justify-end">
+                    <div className="bg-gradient-to-r from-pink-500/10 to-[#FBAF1A]/10 rounded-2xl rounded-tr-sm px-4 py-2.5 border border-pink-500/10">
+                      <p className="text-sm text-white/80">&quot;3 drivers flagged. Marcus has a 23% higher risk this week — increased hard braking on I-401. I&apos;ve prepared a coaching plan. Want me to deploy it?&quot;</p>
+                    </div>
+                    <div className="w-7 h-7 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                      <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Two Portal Preview Cards */}

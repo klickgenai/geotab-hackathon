@@ -55,6 +55,27 @@ export class GeotabAce {
     return (mg?.id || result.message_group_id || result.messageGroupId || '') as string;
   }
 
+  /** Build a brief summary of data results */
+  private summarizeData(preview: unknown[]): string {
+    if (!preview?.length) return '';
+    const rows = preview as Record<string, unknown>[];
+    return `Found ${rows.length} result${rows.length === 1 ? '' : 's'} from your fleet data.`;
+  }
+
+  /** Extract a concise finding from verbose reasoning text */
+  private cleanReasoning(reasoning: string): string {
+    // The reasoning field often has markdown headers like **Outcome**, **Process**
+    // Try to extract just the Outcome section
+    const outcomeMatch = reasoning.match(/\*\*Outcome\*\*\s*([\s\S]*?)(?:\*\*Process\*\*|$)/i);
+    if (outcomeMatch) {
+      return outcomeMatch[1].trim().replace(/\*\*/g, '');
+    }
+    // Strip markdown bold markers and return first 2 sentences max
+    const cleaned = reasoning.replace(/\*\*/g, '').trim();
+    const sentences = cleaned.split(/\.\s+/);
+    return sentences.slice(0, 2).join('. ') + (sentences.length > 2 ? '.' : '');
+  }
+
   /** Step 3: Poll for result with exponential backoff */
   async pollResult(chatId: string, messageGroupId: string, maxWaitMs: number = 60000): Promise<AceResult> {
     const startTime = Date.now();
@@ -83,12 +104,25 @@ export class GeotabAce {
             const reasoning = dataMsg.reasoning as string || '';
             const preview = dataMsg.preview_array as unknown[];
             const insight = dataMsg.insight as string || '';
-            // Build a readable response from the structured data
-            const parts: string[] = [];
-            if (reasoning) parts.push(reasoning);
-            if (insight) parts.push(insight);
-            if (preview?.length) parts.push('\nData: ' + JSON.stringify(preview, null, 2));
-            text = parts.join('\n\n') || 'Analysis complete';
+
+            // Priority: insight > summary of data > cleaned reasoning
+            // When data rows exist, the frontend renders them as a table —
+            // so text should be a brief summary, NOT a text dump of the data.
+            if (insight) {
+              text = insight;
+            } else if (preview?.length) {
+              // Data exists but no insight — provide a brief summary + let table show details
+              const summary = this.summarizeData(preview);
+              if (reasoning) {
+                text = this.cleanReasoning(reasoning) + '\n\n' + summary;
+              } else {
+                text = summary;
+              }
+            } else if (reasoning) {
+              text = this.cleanReasoning(reasoning);
+            } else {
+              text = 'Analysis complete — no specific data found for this query.';
+            }
             data = preview || null;
           } else {
             // Fallback: find assistant message

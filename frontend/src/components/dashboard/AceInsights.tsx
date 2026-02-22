@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Send, Loader2, Sparkles, MessageSquare } from 'lucide-react';
+import { Brain, Send, Loader2, Sparkles, MessageSquare, AlertTriangle, Wrench, Truck } from 'lucide-react';
 import { api } from '@/lib/api';
 
 const QUICK_QUERIES = [
@@ -12,9 +12,193 @@ const QUICK_QUERIES = [
   { label: 'Driver performance', prompt: 'How are my drivers performing?' },
 ];
 
+// Map raw Geotab column names to friendly display names
+const COLUMN_LABELS: Record<string, string> = {
+  AssetName: 'Vehicle',
+  FaultCodeDescription: 'Issue',
+  FaultSeverity: 'Severity',
+  DiagnosticType: 'Type',
+  LastSeen: 'Last Seen',
+  DeviceName: 'Device',
+  DriverName: 'Driver',
+  Distance: 'Distance (km)',
+  Duration: 'Duration',
+  Speed: 'Speed',
+  MaxSpeed: 'Max Speed',
+  AverageSpeed: 'Avg Speed',
+  SpeedingCount: 'Speeding Count',
+  HarshBrakingCount: 'Harsh Braking',
+  IdlingDuration: 'Idling',
+  FuelUsed: 'Fuel Used (L)',
+  VehicleName: 'Vehicle',
+  TripCount: 'Trips',
+  StartTime: 'Start',
+  EndTime: 'End',
+  StopDuration: 'Stop Duration',
+};
+
+// Columns to hide — too technical for display
+const HIDDEN_COLUMNS = new Set([
+  'DeviceTimeZoneId',
+  'DeviceId',
+  'FaultCode',
+  'Id',
+  'id',
+  'DeviceSerialNumber',
+]);
+
+function formatColumnName(key: string): string {
+  if (COLUMN_LABELS[key]) return COLUMN_LABELS[key];
+  // Convert camelCase/snake_case to Title Case
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatCellValue(val: unknown, key: string): string {
+  if (val === null || val === undefined) return '-';
+  if (typeof val === 'number') {
+    return Number.isInteger(val) ? String(val) : (val as number).toFixed(1);
+  }
+  const str = String(val);
+  // Format timestamps to be more readable
+  if (key.toLowerCase().includes('time') || key.toLowerCase().includes('seen') || key.toLowerCase().includes('date')) {
+    try {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+               d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      }
+    } catch { /* use raw */ }
+  }
+  return str;
+}
+
+function getSeverityStyle(val: unknown): string {
+  const s = String(val ?? '').toLowerCase();
+  if (s.includes('critical') || s.includes('high') || s.includes('severe')) return 'text-red-600 bg-red-50 border-red-200';
+  if (s.includes('warning') || s.includes('medium') || s.includes('moderate')) return 'text-amber-600 bg-amber-50 border-amber-200';
+  if (s.includes('low') || s.includes('minor') || s.includes('info')) return 'text-blue-600 bg-blue-50 border-blue-200';
+  return '';
+}
+
+function getIssueIcon(description: string) {
+  const d = description.toLowerCase();
+  if (d.includes('collision') || d.includes('acceleration') || d.includes('speed')) return <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />;
+  if (d.includes('maintenance') || d.includes('fault') || d.includes('warning') || d.includes('device')) return <Wrench className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />;
+  return <Truck className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />;
+}
+
+interface AceDataTableProps {
+  data: Record<string, unknown>[];
+}
+
+function AceDataTable({ data }: AceDataTableProps) {
+  const visibleColumns = useMemo(() => {
+    if (!data.length) return [];
+    return Object.keys(data[0]).filter(k => !HIDDEN_COLUMNS.has(k));
+  }, [data]);
+
+  const hasIssueColumn = visibleColumns.includes('FaultCodeDescription');
+  const hasVehicleColumn = visibleColumns.includes('AssetName') || visibleColumns.includes('VehicleName');
+
+  // If it's a fault/maintenance result, show card layout
+  if (hasIssueColumn && hasVehicleColumn) {
+    const vehicleKey = visibleColumns.includes('AssetName') ? 'AssetName' : 'VehicleName';
+    return (
+      <div className="mt-3 space-y-2 max-h-[300px] overflow-y-auto">
+        {data.slice(0, 15).map((row, i) => {
+          const desc = String(row.FaultCodeDescription ?? '');
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="flex items-start gap-2.5 p-2.5 rounded-lg bg-white border border-[#E5E2DC] hover:border-indigo-200 transition-colors"
+            >
+              {getIssueIcon(desc)}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs font-semibold text-gray-800">{String(row[vehicleKey] ?? '-')}</span>
+                  {row.DiagnosticType ? (
+                    <span className="text-[9px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                      {String(row.DiagnosticType)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-gray-600 leading-snug">{desc}</p>
+                {row.LastSeen ? (
+                  <p className="text-[10px] text-gray-400 mt-1">{formatCellValue(row.LastSeen, 'LastSeen')}</p>
+                ) : null}
+              </div>
+            </motion.div>
+          );
+        })}
+        {data.length > 15 && (
+          <p className="text-[10px] text-gray-400 text-center py-1">
+            Showing 15 of {data.length} results
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Generic table for other data types
+  return (
+    <div className="mt-3 overflow-x-auto max-h-[300px] overflow-y-auto rounded-lg border border-[#E5E2DC]">
+      <table className="w-full text-xs border-collapse">
+        <thead className="sticky top-0 bg-[#FAF9F7]">
+          <tr className="border-b border-[#E5E2DC]">
+            {visibleColumns.map((key) => (
+              <th key={key} className="text-left py-2 px-2.5 font-semibold text-gray-500 text-[10px] uppercase tracking-wide whitespace-nowrap">
+                {formatColumnName(key)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.slice(0, 15).map((row, i) => (
+            <motion.tr
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.03 }}
+              className="border-b border-[#E5E2DC]/50 last:border-0 hover:bg-indigo-50/30 transition-colors"
+            >
+              {visibleColumns.map((key) => {
+                const val = row[key];
+                const sevStyle = (key.toLowerCase().includes('severity') || key.toLowerCase().includes('priority')) ? getSeverityStyle(val) : '';
+                return (
+                  <td key={key} className="py-1.5 px-2.5 text-gray-600 whitespace-nowrap">
+                    {sevStyle ? (
+                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${sevStyle}`}>
+                        {formatCellValue(val, key)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px]">{formatCellValue(val, key)}</span>
+                    )}
+                  </td>
+                );
+              })}
+            </motion.tr>
+          ))}
+        </tbody>
+      </table>
+      {data.length > 15 && (
+        <p className="text-[10px] text-gray-400 text-center py-1.5 border-t border-[#E5E2DC]/50">
+          Showing 15 of {data.length} results
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AceInsights() {
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState<string | null>(null);
+  const [responseData, setResponseData] = useState<Record<string, unknown>[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -22,6 +206,7 @@ export default function AceInsights() {
     if (!prompt.trim() || loading) return;
     setLoading(true);
     setResponse(null);
+    setResponseData(null);
     setUnavailable(false);
 
     try {
@@ -31,6 +216,9 @@ export default function AceInsights() {
         setResponse(null);
       } else {
         setResponse(result.text);
+        if (Array.isArray(result.data) && result.data.length > 0) {
+          setResponseData(result.data as Record<string, unknown>[]);
+        }
       }
     } catch {
       setResponse('Unable to reach Geotab Ace. Please try again later.');
@@ -145,12 +333,19 @@ export default function AceInsights() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3 }}
-            className="px-4 py-3 rounded-xl bg-[#FAF9F7] border border-[#E5E2DC]"
+            className="rounded-xl bg-[#FAF9F7] border border-[#E5E2DC] overflow-hidden"
           >
-            <div className="flex items-start gap-2">
-              <MessageSquare className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{response}</p>
+            <div className="px-4 py-3">
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700 leading-relaxed">{response}</p>
+              </div>
             </div>
+            {responseData && responseData.length > 0 && (
+              <div className="px-3 pb-3">
+                <AceDataTable data={responseData} />
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

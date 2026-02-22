@@ -30,14 +30,14 @@ Traditional fleet AI answers questions. FleetShield's **Mission Agents** do work
 ### 2. Real Phone Calls to Dispatch
 When a driver says *"I'm stuck in snow, call dispatch"*, Tasha doesn't simulate a response — she places a **real phone call** via Twilio, has a multi-turn AI-mediated conversation with a human dispatcher using speech-to-text and text-to-speech, and relays the outcome back to the driver. This is a working, end-to-end voice AI ↔ telephony bridge.
 
-### 3. Dual AI Assistants with Voice
-**Tasha** (operator-facing) and the driver voice AI each have specialized tool sets, voice pipelines, and personas. Operators get analytical, dollar-quantified insights. Drivers get warm, encouraging coaching through a hands-free voice-first interface designed for truck-mounted tablets.
+### 3. Tasha — Voice AI Agent with Dual Geotab API Access
+**Tasha** is your fleet's voice-first AI agent. She has 17 specialized tools including direct access to **both Geotab APIs** — MyGeotab for real-time telematics and **Geotab Ace for conversational fleet analytics**. Ask Tasha a question by voice and she'll query Ace to pull live fleet data, analyze it through our scoring engines, and speak the answer back. Operators get analytical, dollar-quantified insights. Drivers get warm, encouraging coaching through a hands-free interface designed for truck-mounted tablets.
 
 ### 4. Proactive Driver Wellness
 While competitors use invasive dashcam fatigue detection that drivers hate, FleetShield uses **privacy-respecting wellness check-ins** and **HOS compliance gauges** — giving drivers agency over their own wellbeing and real-time visibility into their remaining drive hours.
 
-### 5. Dual Geotab API Integration
-Uses **both** MyGeotab API (vehicles, trips, diagnostics, GPS, safety events via JSON-RPC) **and** Geotab Ace API (conversational AI queries about fleet data) — the required dual-API integration for the hackathon.
+### 5. Dual Geotab API Integration — Deeply Woven In
+Uses **both** MyGeotab API (vehicles, trips, diagnostics, GPS, safety events via JSON-RPC) **and** Geotab Ace API (conversational AI queries about fleet data). Ace isn't just a standalone widget — it's integrated as a tool inside Tasha's voice AI agent, so operators can ask fleet questions by voice and get Ace-powered answers spoken back to them. The dashboard also surfaces Ace directly via quick-query chips for instant fleet data lookups.
 
 ### 6. Quantified ROI for Every Recommendation
 Every insight comes with dollar-quantified projections. Not "you should reduce speeding" but "reducing speeding by 15% would save $23,400/year in insurance premiums and prevent an estimated 2.3 incidents."
@@ -250,7 +250,7 @@ Dispatcher's Phone (real human speaking)
 
 ### Voice AI Pipeline — Dual-Client Architecture
 
-Two voice clients (operator + driver) share the same backend pipeline but with different AI personas and tool sets.
+Two voice clients (operator + driver) share the same backend pipeline but with different AI personas and tool sets. Both have access to **Geotab Ace API** as a tool — operators can ask fleet data questions by voice (e.g., "Which vehicles have faults?") and Tasha queries Ace in real-time, then speaks the results back.
 
 ```
 Browser Microphone
@@ -261,7 +261,7 @@ Browser Microphone
       → PulseSTTPipeline (Smallest AI, per-utterance WebSocket)
       → Transcribed text
       → Claude AI Agent (17 tools, role-aware system prompt)
-      → Tool calls → scoring engines → formatted responses
+      → Tool calls → scoring engines + Geotab Ace API → formatted responses
       → TTSSentencePipeline (sentence-level streaming)
       → Smallest AI Waves TTS (24kHz PCM)
       → Base64 audio chunks via WebSocket

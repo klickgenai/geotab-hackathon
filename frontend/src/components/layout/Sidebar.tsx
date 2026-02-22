@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Shield, LayoutDashboard, Users, AlertTriangle, Heart, Truck,
-  Brain, Bell, MapPin, DollarSign, Award, Bot, Leaf,
+  Brain, Bell, MapPin, DollarSign, Award, Bot, Leaf, Mic, Sparkles, LogOut,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -32,7 +32,6 @@ const sections = [
       { href: '/operator/map', label: 'Live Map', icon: MapPin },
       { href: '/operator/roi', label: 'ROI Dashboard', icon: DollarSign },
       { href: '/operator/sustainability', label: 'Sustainability', icon: Leaf },
-      { href: '/operator/assistant', label: 'AI Assistant', icon: Bot },
     ],
   },
 ];
@@ -66,6 +65,44 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-2 overflow-y-auto">
+        {/* Tasha — Voice AI Agent (top priority) */}
+        <div className="px-1 pb-3">
+          <Link
+            href="/operator/assistant"
+            className={clsx(
+              'group relative flex items-center gap-3 w-full px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-300 overflow-hidden',
+              pathname === '/operator/assistant'
+                ? 'bg-gradient-to-r from-[#FBAF1A] to-[#F59E0B] text-[#18202F] shadow-lg shadow-[#FBAF1A]/20'
+                : 'bg-gradient-to-r from-[#FBAF1A]/15 to-[#F59E0B]/10 text-[#FBAF1A] hover:from-[#FBAF1A]/25 hover:to-[#F59E0B]/20 hover:shadow-md hover:shadow-[#FBAF1A]/10'
+            )}
+          >
+            <div className={clsx(
+              'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+              pathname === '/operator/assistant'
+                ? 'bg-[#18202F]/20'
+                : 'bg-[#FBAF1A]/20'
+            )}>
+              <Mic className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span>Tasha</span>
+                <Sparkles className="w-3 h-3 opacity-70" />
+              </div>
+              <div className={clsx(
+                'text-[10px] font-medium -mt-0.5',
+                pathname === '/operator/assistant' ? 'text-[#18202F]/60' : 'text-[#FBAF1A]/50'
+              )}>
+                Voice AI Agent
+              </div>
+            </div>
+            <div className={clsx(
+              'w-2 h-2 rounded-full flex-shrink-0 animate-pulse',
+              pathname === '/operator/assistant' ? 'bg-[#18202F]/40' : 'bg-[#FBAF1A]/60'
+            )} />
+          </Link>
+        </div>
+
         {sections.map((section) => (
           <div key={section.title}>
             <div className="text-[10px] font-semibold text-white/25 uppercase tracking-[1.5px] px-3 pt-4 pb-1">
@@ -96,7 +133,7 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t border-white/[0.08]">
+      <div className="px-3 py-3 border-t border-white/[0.08] space-y-2">
         <div className={clsx(
           'flex items-center gap-2.5 px-3 py-2 rounded-xl',
           geotabConfigured ? 'bg-emerald-500/10' : 'bg-[#FBAF1A]/10'
@@ -114,6 +151,13 @@ export default function Sidebar({ geotabConfigured }: SidebarProps) {
             </div>
           </div>
         </div>
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all duration-200"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="text-[11px] font-medium">Back to Home</span>
+        </Link>
       </div>
     </aside>
   );

@@ -83,7 +83,7 @@ FleetShield AI is a Predictive Fleet Safety & Insurance Intelligence Platform bu
 - `src/components/driver/` - 11 driver portal components (tabs, overlays, gauges)
 - `src/app/operator/` - Operator Portal (12 sub-pages)
   - `page.tsx` - Operator Dashboard
-  - `assistant/page.tsx` - Tasha AI Assistant (full-screen, voice + text)
+  - `assistant/page.tsx` - Tasha Voice AI Agent (full-screen, voice + text, top of sidebar)
   - `alerts/page.tsx` - Alert Triage
   - `drivers/page.tsx` & `drivers/[id]/page.tsx` - Driver management
   - `insurance/page.tsx` - Insurance Dashboard
@@ -163,8 +163,9 @@ Each page follows the same structure:
 5. Use Tailwind utility classes (no CSS modules)
 
 ### Operator Portal Layout
-- Sidebar navigation with all operator pages
-- AppShell wrapper with mission notification bell
+- Sidebar navigation with "Tasha — Voice AI Agent" as top-priority button (gold gradient)
+- Sidebar footer: Geotab connection status + "Back to Home" logout link
+- AppShell wrapper with mission notification bell + toast (with X dismiss button)
 - Full-width content area (`ml-[240px]`)
 - Consistent warm color palette (amber/gold accents on cream background)
 
