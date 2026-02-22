@@ -263,6 +263,7 @@ export default function DriverPortalPage() {
     setDispatchCallActive(true);
     setDispatchMessages([]);
     setDispatchSummary('');
+    setDispatchPhase('connecting');
     setAiCallState(undefined);
     setAiCallTranscript([]);
     setAiCallSummary(undefined);
@@ -292,8 +293,47 @@ export default function DriverPortalPage() {
             // Polling error, continue
           }
         }, 2000);
+      } else if (result._stream) {
+        // SSE streaming for simulated dispatch call
+        const reader = result._stream.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          let currentEvent = '';
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim();
+            } else if (line.startsWith('data: ') && currentEvent) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (currentEvent === 'status') {
+                  setDispatchPhase(data.phase);
+                } else if (currentEvent === 'message') {
+                  setDispatchMessages((prev) => [...prev, { role: data.role, text: data.text }]);
+                } else if (currentEvent === 'outcome') {
+                  setDispatchSummary(data.summary || 'Call completed.');
+                } else if (currentEvent === 'complete') {
+                  if (!data.summary) {
+                    // summary was already set by outcome event
+                  }
+                } else if (currentEvent === 'error') {
+                  setDispatchPhase('error');
+                  setDispatchSummary(data.error || 'Call failed.');
+                }
+              } catch { /* ignore parse errors */ }
+              currentEvent = '';
+            }
+          }
+        }
       } else {
-        // Simulated mode - stream messages
+        // JSON fallback (e.g., Twilio without callId)
         if (result.messages) {
           for (let i = 0; i < result.messages.length; i++) {
             await new Promise((r) => setTimeout(r, 800));
@@ -304,6 +344,7 @@ export default function DriverPortalPage() {
       }
     } catch {
       setDispatchMode('simulated');
+      setDispatchPhase('error');
       setDispatchSummary('Failed to connect to dispatch.');
     }
   };

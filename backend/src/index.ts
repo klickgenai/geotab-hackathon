@@ -41,7 +41,7 @@ import {
   submitWellnessCheckIn,
   getWellnessTrend,
 } from './data/driver-session.js';
-import { simulateDispatcherCall } from './data/dispatcher-ai.js';
+import { runDispatcherDelegation } from './data/dispatcher-ai.js';
 import { calculateFleetROI, calculateBeforeAfter, calculateRetentionSavings } from './scoring/roi-engine.js';
 import { getGamificationState, getPointsHistory, getDriverBadges, getRewardsCatalog, getDailyChallenge, checkChallengeProgress } from './scoring/gamification-engine.js';
 import { simulateWhatIf, getDefaultScenarios } from './scoring/what-if-simulator.js';
@@ -1240,7 +1240,7 @@ app.post('/api/twilio/call-status', (req, res) => {
   res.sendStatus(200);
 });
 
-// --- Dispatcher Call ---
+// --- Dispatcher Call (SSE streaming) ---
 app.post('/api/driver/:id/dispatch-call', async (req, res) => {
   try {
     const { intent } = req.body;
@@ -1252,7 +1252,7 @@ app.post('/api/driver/:id/dispatch-call', async (req, res) => {
     const load = getDriverLoad(req.params.id);
     const session = getDriverSession(req.params.id);
 
-    // If Twilio is configured, use real AI dispatch call
+    // If Twilio is configured, use real AI dispatch call (non-streaming, returns JSON)
     if (process.env.TWILIO_ACCOUNT_SID && process.env.NGROK_URL) {
       try {
         const aiCall = new TwilioAIDispatchCall(intent, {
@@ -1270,19 +1270,55 @@ app.post('/api/driver/:id/dispatch-call', async (req, res) => {
           mode: 'twilio',
         });
       } catch (err) {
-        // Twilio failed, fall back to simulated
         console.error('Twilio AI dispatch failed, falling back to simulation:', (err as Error).message);
       }
     }
 
-    // Fallback: simulated dispatch call
-    const result = await simulateDispatcherCall(req.params.id, intent, {
-      currentLoad: load,
-      driverName: driver.name,
+    // SSE streaming for simulated dispatch call
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
     });
-    res.json({ ...result, mode: 'simulated' });
+
+    const sendSSE = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const abortController = new AbortController();
+    req.on('close', () => abortController.abort());
+
+    const sseCallbacks: import('./voice/dispatch-bridge.js').DispatchProgressCallback = {
+      onStatus(phase, message) {
+        sendSSE('status', { phase, message });
+      },
+      onMessage(role, text, turnNumber) {
+        sendSSE('message', { role, text, turnNumber });
+      },
+      onOutcome(outcome, summary, details) {
+        sendSSE('outcome', { outcome, summary, details });
+      },
+    };
+
+    const result = await runDispatcherDelegation(
+      req.params.id,
+      intent,
+      { currentLoad: load, driverName: driver.name },
+      sseCallbacks,
+      abortController.signal,
+    );
+
+    // Send final complete event with full result
+    sendSSE('complete', { ...result, mode: 'simulated' });
+    res.end();
   } catch (error) {
-    res.status(500).json({ error: 'Failed to process dispatch call' });
+    // If headers already sent (SSE started), send error event
+    if (res.headersSent) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'Dispatch call failed' })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({ error: 'Failed to process dispatch call' });
+    }
   }
 });
 

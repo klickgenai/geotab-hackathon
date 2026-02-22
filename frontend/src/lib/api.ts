@@ -143,7 +143,22 @@ export const api = {
   updateLoadStatus: (id: string, status: string) => putJSON(`/api/driver/${id}/load/status`, { status }),
   driverMessages: (id: string) => fetchJSON<unknown[]>(`/api/driver/${id}/messages`),
   driverLeaderboard: () => fetchJSON<DriverRanking[]>('/api/driver/leaderboard'),
-  dispatchCall: (id: string, intent: string) => postJSON<{ callId?: string; mode: string; messages?: { role: string; text: string }[]; summary?: string }>(`/api/driver/${id}/dispatch-call`, { intent }),
+  dispatchCall: async (id: string, intent: string) => {
+    const res = await fetch(`${API_BASE}/api/driver/${id}/dispatch-call`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent }),
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    // Check if SSE stream (simulated mode) or JSON (twilio mode)
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/event-stream')) {
+      return { _stream: res, mode: 'simulated' as const };
+    }
+    // Twilio mode returns JSON directly
+    const json = await res.json();
+    return { ...json, mode: json.mode || 'twilio' };
+  },
   dispatchCallStatus: (id: string, callId: string) => fetchJSON<{ callId: string; state: string; transcript: { role: string; text: string; timestamp: string }[]; summary?: string; duration?: number }>(`/api/driver/${id}/dispatch-call/${callId}/status`),
 
   // Gamification

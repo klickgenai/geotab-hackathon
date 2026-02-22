@@ -150,14 +150,20 @@ export class TwilioAIDispatchCall {
 
     log(this.callId, `Calling ${dispatcherPhone} from ${fromNumber}, WS: ${wsUrl}`);
 
+    // TwiML: Say a brief message first (gives WebSocket time to connect after
+    // the Twilio trial account message), then start the bidirectional stream.
+    // Fallback <Say> after </Connect> handles stream connection failures.
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="Polly.Joanna">Please hold while I connect you with Tasha from FleetShield.</Say>
+  <Pause length="1"/>
   <Connect>
     <Stream url="${wsUrl}">
       <Parameter name="callId" value="${this.callId}" />
       <Parameter name="mode" value="ai" />
     </Stream>
   </Connect>
+  <Say voice="Polly.Joanna">The call has ended. Thank you.</Say>
 </Response>`;
 
     const call = await client.calls.create({

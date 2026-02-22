@@ -99,11 +99,14 @@ export class TwilioDispatchSession {
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="Polly.Joanna">Please hold while I connect you with Tasha from FleetShield.</Say>
+  <Pause length="1"/>
   <Connect>
     <Stream url="${wsUrl}">
       <Parameter name="callId" value="${this.callId}" />
     </Stream>
   </Connect>
+  <Say voice="Polly.Joanna">The call has ended. Thank you.</Say>
 </Response>`;
 
     const call = await client.calls.create({
