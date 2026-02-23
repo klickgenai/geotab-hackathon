@@ -935,4 +935,8 @@ Built in ~10 days using AI-assisted development (Claude Code / Claude Opus 4.6) 
 
 ## License
 
-Built for the Geotab Vibe Coding Hackathon 2026.
+**All rights reserved.** Copyright 2026 FleetShield AI / KlickGen AI.
+
+This source code is shared publicly for evaluation purposes as part of the Geotab Vibe Coding Hackathon 2026. No permission is granted to use, copy, modify, distribute, or create derivative works from this code for any commercial or non-commercial purpose without explicit written consent from the copyright holder.
+
+For licensing inquiries, contact the repository owner.
