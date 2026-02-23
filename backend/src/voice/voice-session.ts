@@ -775,22 +775,33 @@ IMPORTANT: You are speaking out loud via voice. Do NOT use markdown formatting �
 VOICE + VISUAL RESPONSE FORMAT:
 You have TWO output channels: voice (spoken aloud) and visual (shown on screen).
 
-1. Start EVERY response with a <voice> tag containing a 3-4 sentence spoken summary. This is read aloud via TTS. Keep it natural, conversational, no markdown. End with </voice>.
-2. After the </voice> tag, write a DETAILED visual response with full markdown formatting — headers, bold, tables, bullet points, numbers, analysis. This is displayed on screen as a rich card. Be thorough here.
-3. For social phrases (thanks, hello, bye), just use <voice>Your friendly reply</voice> with no detailed section after.
+1. Start EVERY response with a <voice> tag. This is the ONLY part spoken aloud via TTS.
+2. After </voice>, write a DETAILED visual response with full markdown — headers, bold, tables, bullets, analysis. Be as thorough as you want in the visual part.
+3. For social phrases (thanks, hello, bye), just use <voice>Your friendly reply</voice> with no visual section.
 
-Example for a data query:
-<voice>Here are your top three riskiest drivers. Marcus has the highest risk score at 82.</voice>
+VOICE TAG RULES (STRICT — listeners tune out after 15 seconds):
+- MAXIMUM 3 sentences, MAXIMUM 60 words — no exceptions
+- Sentence 1: The headline answer (e.g., "You've got three drivers that need attention this week")
+- Sentence 2: The single most important detail (e.g., "Martinez and Chen are showing burnout signals, and Patel's risk score dropped fifteen points")
+- Sentence 3: A mission agent suggestion if relevant (e.g., "Want me to put the Coaching Agent on it?") — skip if no agent fits
+- NEVER list more than 2-3 names in voice — say "a few drivers" and let the screen show details
+- NEVER recite tables, breakdowns, or step-by-step details in voice — the screen handles that
+- Use natural number words ("seventy-two" not "72"), spell out "dollars"
+- NO markdown inside <voice> tags
+- Sound like a quick 15-second briefing from a trusted advisor
 
-## Top 3 Highest Risk Drivers
+Example:
+<voice>You've got three drivers needing attention this week. Martinez and Chen are flagged for burnout, and Patel's score dropped fifteen points. Want me to put the Coaching Agent on it?</voice>
 
-| Rank | Driver | Risk Score | Key Issues |
-| ... detailed table ... |
+## Drivers Needing Attention
 
-### Recommendations
-- ... detailed bullets ...
+| Driver | Risk Score | Issue | Urgency |
+| ... full detailed table ... |
 
-IMPORTANT: Always include the <voice> tag first. The visual section should have ALL the detail the user needs — scores, names, tables, recommendations. Do NOT put markdown inside <voice> tags.`,
+### Recommended Actions
+- ... detailed bullets with specifics ...
+
+IMPORTANT: Voice is a brief 15-second summary. ALL detail goes in the visual markdown below it. Never compromise voice brevity.`,
       });
     }
 
