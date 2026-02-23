@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search, Filter, ArrowUpDown, ChevronRight, AlertTriangle, Shield } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import PageHeader from '@/components/layout/PageHeader';
+import { InsightTooltip } from '@/components/ui/InsightTooltip';
+import { MethodologyPanel } from '@/components/ui/MethodologyPanel';
 import { api } from '@/lib/api';
 import type { DriverRisk } from '@/types/fleet';
 
@@ -164,7 +166,7 @@ export default function DriversPage() {
                   { key: 'name' as SortField, label: 'Driver' },
                   { key: 'riskScore' as SortField, label: 'Risk Score' },
                   { key: 'tier' as SortField, label: 'Tier' },
-                  { key: 'annualizedCost' as SortField, label: 'Annual Cost' },
+                  { key: 'annualizedCost' as SortField, label: 'Cost Exposure/yr' },
                   { key: null, label: 'Top Issues' },
                   { key: null, label: '' },
                 ].map((col) => (
@@ -178,6 +180,8 @@ export default function DriversPage() {
                   >
                     <span className="flex items-center gap-1">
                       {col.label}
+                      {col.key === 'annualizedCost' && <InsightTooltip metricKey="drivers.annualCostExposure" />}
+                      {col.key === 'riskScore' && <InsightTooltip metricKey="drivers.riskScore" />}
                       {col.key && sortField === col.key && (
                         <ArrowUpDown className="w-3 h-3" />
                       )}
@@ -249,6 +253,56 @@ export default function DriversPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Methodology Panel */}
+        <MethodologyPanel
+          title="How We Calculate Driver Risk & Cost Exposure"
+          description="Each driver receives a 0-100 risk score based on their telematics safety event history. The 'Cost Exposure' column shows the statistically expected annual financial risk this driver represents — NOT an actual cost incurred. It represents potential liability from accidents, insurance impact, and operational disruption."
+          formulas={[
+            {
+              label: 'Driver Risk Score (0-100)',
+              formula: 'score = (event_frequency x 0.40) + (severity x 0.25) + (pattern x 0.20) + (trend x 0.15)',
+              example: 'Frequency: 60 x 0.40 = 24, Severity: 70 x 0.25 = 17.5, Pattern: 50 x 0.20 = 10, Trend: 40 x 0.15 = 6 = Total: 57.5 (high tier)',
+            },
+            {
+              label: 'Risk Tiers',
+              formula: 'Low: 0-25 | Moderate: 26-50 | High: 51-75 | Critical: 76-100',
+              example: 'A score of 57.5 falls in the "high" tier',
+            },
+            {
+              label: 'Annual Cost Exposure by Tier',
+              formula: 'Low = $2,000 | Moderate = $8,000 | High = $25,000 | Critical = $65,000',
+              example: 'A critical-tier driver at $65K represents ~1 major accident per 1-2 years at $91K avg cost, discounted for probability',
+              source: 'FMCSA/NHTSA: $91K avg accident cost (vehicle damage + medical + liability + downtime)',
+            },
+            {
+              label: 'Event Frequency Score (40% weight)',
+              formula: 'events per 1,000 miles driven, normalized to 0-100 scale',
+              example: 'Industry avg: ~12 events/1K miles. Below 5 = low risk; above 20 = critical risk',
+            },
+            {
+              label: 'Severity Score (25% weight)',
+              formula: 'weighted average: critical events x 4 + high x 2 + moderate x 1, normalized',
+              example: 'Driver with mostly critical events scores much higher than one with the same count of moderate events',
+            },
+            {
+              label: 'Pattern Score (20% weight)',
+              formula: 'Measures behavioral concentration — do events cluster around one bad habit?',
+              example: 'Driver who only speeds vs. driver with varied events. Concentrated = higher pattern score',
+            },
+            {
+              label: 'Trend Score (15% weight)',
+              formula: 'Compares recent 30-day event rate to prior 30-day rate',
+              example: 'Worsening trend adds points; improving trend subtracts points',
+            },
+          ]}
+          sources={[
+            'FMCSA/NHTSA: $91,000 average commercial vehicle accident cost',
+            'Cost tiers based on actuarial accident probability by risk level',
+            'Geotab telematics: safety events, GPS, trip data, driver identification',
+            'Important: cost exposure is potential risk, not actual incurred cost',
+          ]}
+        />
       </div>
     </>
   );

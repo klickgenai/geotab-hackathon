@@ -46,11 +46,11 @@ export const insightContent: Record<string, InsightContent> = {
   'dashboard.scoreGauge': {
     title: 'Fleet Score Gauge',
     explanation:
-      'A visual gauge mapping the fleet-wide safety score to a letter grade from A+ (90-100) down to F (below 40).',
+      'A visual gauge mapping the fleet-wide safety score to a letter grade from A+ (95-100) down to F (below 50).',
     methodology:
-      'Grade boundaries: A+ >= 90, A >= 80, B >= 70, C >= 60, D >= 50, F < 50. The ring fill represents the numeric score.',
+      'Grade boundaries: A+ (95-100), A (90-94), B+ (85-89), B (75-84), C+ (70-74), C (60-69), D (50-59), F (<50). The ring fill represents the numeric score.',
     actionable:
-      'Aim for the A tier (80+) to unlock the best insurance premium discounts.',
+      'Aim for the B+ tier (85+) to unlock the best insurance premium discounts.',
   },
   'dashboard.percentile': {
     title: 'Fleet Percentile',
@@ -73,18 +73,18 @@ export const insightContent: Record<string, InsightContent> = {
   'dashboard.premiumImpact': {
     title: 'Premium Impact',
     explanation:
-      'The estimated change in your annual insurance premium based on the current safety score trajectory.',
+      'The estimated change in your annual insurance premium based on the current safety score versus the industry benchmark.',
     methodology:
-      'Uses actuarial curves mapping safety scores to loss ratios. A 10-point score improvement typically yields a 3-5% premium decrease.',
+      'Benchmark premium = fleet size x $14,200/vehicle (Class 8 commercial avg). Each point above 50 saves 0.3% of the benchmark premium. Formula: savings = (score - 50) x 0.3% x benchmark.',
     actionable:
       'Share this metric with your insurance broker during renewal negotiations to justify rate adjustments.',
   },
   'dashboard.annualSavings': {
     title: 'Annual Savings',
     explanation:
-      'Projected yearly savings from safety score improvements including fewer claims and lower premiums.',
+      'Projected yearly cost avoidance from safety improvements including reduced premiums, fewer accidents, fuel savings, driver retention, and productivity gains.',
     methodology:
-      'Calculated as (premium reduction from score improvement) + (avoided claim costs based on reduced event frequency).',
+      'Sum of 5 categories: insurance savings (score-based premium reduction), accident prevention ($91K avg cost x prevented incidents), fuel savings (idle reduction x $3.85/gal), retention savings ($35K replacement cost x prevented turnover), and productivity gains ($150/event prevented).',
     actionable:
       'Use this figure in ROI conversations with leadership to justify continued safety investment.',
   },
@@ -93,7 +93,7 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'Measures sudden deceleration events per 1,000 miles driven. A leading indicator of tailgating and inattentive driving.',
     methodology:
-      'Geotab accelerometer data flags decelerations exceeding -8.8 m/s\u00B2. Events are severity-weighted (light / moderate / severe).',
+      'Geotab accelerometer data flags decelerations exceeding thresholds. Events are severity-weighted: light (1x), moderate (2x), severe (4x). Normalized per 1K miles.',
     actionable:
       'Drivers with high rates benefit most from following-distance coaching and forward-collision warnings.',
   },
@@ -120,7 +120,7 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'Average engine idle time per trip expressed as a percentage of total engine run time.',
     methodology:
-      'Engine-on + speed = 0 intervals are summed per trip. Fleet average is weighted by trip duration.',
+      'Engine-on + speed = 0 intervals are summed per trip. Fleet average is weighted by trip duration. Industry target: below 15%.',
     actionable:
       'Set idle-shutdown timers and educate drivers on the fuel and emissions cost of idling.',
   },
@@ -129,7 +129,7 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'A fleet-wide index (0-100) reflecting driver well-being based on fatigue signals, hours worked, and stress indicators.',
     methodology:
-      'Combines hours-of-service utilization, rest-period regularity, late-night driving frequency, and trip-pattern volatility.',
+      'Combines hours-of-service utilization, rest-period regularity, late-night driving frequency, and trip-pattern volatility into a weighted score per driver, then averaged across the fleet.',
     actionable:
       'Prioritize wellness check-ins for drivers below the fleet average to prevent burnout.',
   },
@@ -138,7 +138,7 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'The percentage of drivers showing burnout signals who are at risk of leaving within the next 90 days.',
     methodology:
-      'Drivers with 2+ burnout indicators (excessive hours, irregular rest, declining performance) are flagged as at-risk.',
+      'Drivers with 2+ burnout indicators (excessive hours, irregular rest, declining performance) are flagged as at-risk. Each critical signal adds 22% to burnout probability; each warning adds 12%.',
     actionable:
       'Engage at-risk drivers with schedule adjustments, recognition, or route preferences before they resign.',
   },
@@ -147,25 +147,25 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'Count of drivers currently exceeding fatigue or hours-driven thresholds that indicate potential burnout.',
     methodology:
-      'Flags are raised when a driver exceeds 55 hours/week, has fewer than 10 hours between shifts, or shows a pattern of late-night driving.',
+      '6 signals monitored: shift irregularity (schedule variance), consecutive long days (>10h driving), rest compression (shrinking rest periods), harsh event escalation (week-over-week increase), night driving creep (increasing night hours), excessive daily hours (% of days >11h).',
     actionable:
       'Review flagged drivers\' schedules immediately and redistribute workload where possible.',
   },
   'dashboard.financialSavings': {
     title: 'Financial Savings',
     explanation:
-      'Total cost savings from all FleetShield interventions during the current reporting period.',
+      'Total projected cost avoidance from all FleetShield interventions during the current reporting period.',
     methodology:
-      'Sum of insurance premium reductions, avoided claims, fuel savings from reduced idling, and avoided turnover costs.',
+      'Sum of: insurance premium reduction, accident prevention (fewer high-severity events x $91K avg accident cost), fuel savings (idle reduction), retention savings ($35K/driver), and productivity gains.',
     actionable:
       'Present this to stakeholders as the direct ROI of the FleetShield platform.',
   },
   'dashboard.claimsReduction': {
     title: 'Claims Reduction',
     explanation:
-      'The reduction in insurance claims count compared to the pre-FleetShield baseline period.',
+      'The reduction in estimated accident incidents compared to the baseline period.',
     methodology:
-      'Compares the trailing 6-month claims count to the 6 months before FleetShield deployment, normalized for fleet size.',
+      'High-severity events are tracked over 45-day windows. Reduction in events is annualized and converted to prevented accidents using 1-in-200 event-to-accident ratio (0.5%, based on FMCSA data). Savings = prevented accidents x $91,000 avg cost.',
     actionable:
       'Document this metric for your insurance carrier to support premium renegotiation.',
   },
@@ -174,166 +174,166 @@ export const insightContent: Record<string, InsightContent> = {
   'insurance.overallScore': {
     title: 'Insurance Grade',
     explanation:
-      'A composite insurance grade (A+ to F) combining four safety components into a single insurability metric.',
+      'A composite insurance grade (A+ to F) combining four safety components into a single 0-100 insurability metric.',
     methodology:
-      'Weighted average of Safe Driving (35%), Compliance (25%), Maintenance (20%), and Driver Quality (20%) scores.',
+      'Weighted average of 4 components: Safe Driving (35%) + Compliance (25%) + Maintenance (20%) + Driver Quality (20%). Each component is scored 0-100 independently, then multiplied by its weight and summed.',
     actionable:
-      'Improve the lowest-weighted component first for the most efficient grade improvement.',
+      'Improve the lowest-scoring component first -- it has the most room to lift the total.',
   },
   'insurance.percentile': {
     title: 'Insurance Percentile',
     explanation:
       'Your fleet\'s ranking among all insured fleets in the same size bracket.',
     methodology:
-      'Benchmark data from industry loss-ratio databases, segmented by fleet size (small / medium / large).',
+      'Benchmark data from industry loss-ratio databases, segmented by fleet size. A score of 80+ puts you in the top 20% of fleets.',
     actionable:
       'Crossing the 80th percentile threshold typically qualifies your fleet for preferred-tier pricing.',
   },
   'insurance.premiumEstimate': {
-    title: 'Premium Estimate',
+    title: 'Annual Premium Impact',
     explanation:
-      'Estimated annual insurance premium based on your current safety profile and fleet composition.',
+      'Estimated annual insurance savings compared to the industry-average premium for your fleet size and vehicle class.',
     methodology:
-      'Uses base rate * fleet size * vehicle-class multiplier * safety-score discount/surcharge factor.',
+      'Benchmark: $14,200/vehicle/year (Class 8 commercial average). Total benchmark = vehicles x $14,200. Each point above 50 saves 0.3% of the benchmark. Formula: savings = (score - 50) x 0.003 x benchmark. Example: score 72 with 25 vehicles = (72-50) x 0.003 x $355,000 = $23,430/year.',
     actionable:
-      'Compare this estimate against your actual premium to identify negotiation opportunities.',
+      'Compare this estimate against your actual premium to identify negotiation opportunities with your broker.',
   },
   'insurance.harshBraking': {
-    title: 'Harsh Braking (Insurance)',
+    title: 'Safe Driving Component',
     explanation:
-      'Insurance component score for harsh braking events, weighted by severity level.',
+      'Insurance component score based on incident frequency, severity distribution, and 30-day trends. Weighted at 35% of the total score.',
     methodology:
-      'Light events (<-8.8 m/s\u00B2) count 1x, moderate (<-11 m/s\u00B2) count 2x, severe (<-14 m/s\u00B2) count 4x. Normalized per 1K miles.',
+      'Sub-factors: event rate per 1,000 miles (industry avg ~12), total event count, severity mix (light/moderate/severe weighted 1x/2x/4x), and 30-day trend direction. Score 0-100 where 100 = safest.',
     actionable:
       'Reducing severe events has 4x the impact on this score compared to light events.',
   },
   'insurance.speeding': {
-    title: 'Speeding (Insurance)',
+    title: 'Driver Quality Component',
     explanation:
-      'Insurance component measuring speeding as percentage of time over the limit, weighted by excess speed.',
+      'Insurance component measuring driver tenure, risk distribution, and overall team experience. Weighted at 20% of the total score.',
     methodology:
-      '1-10 mph over counts 1x, 10-20 mph over counts 2x, 20+ mph over counts 4x. Lower is better.',
+      'Sub-factors: average driver tenure (years), % of drivers in low-risk tier, % in high/critical tiers, total driver count. Experienced, low-risk teams score highest.',
     actionable:
-      'Eliminating 20+ mph-over events will have the biggest impact on this component.',
+      'Retaining experienced drivers and coaching high-risk ones improves this component fastest.',
   },
   'insurance.seatbelt': {
-    title: 'Seatbelt (Insurance)',
+    title: 'Compliance Component',
     explanation:
-      'Insurance component for seatbelt compliance across all monitored trips.',
+      'Insurance component for regulatory and policy compliance. Weighted at 25% of the total score.',
     methodology:
-      'Percentage of total driving seconds where the seatbelt was buckled. Industry target is 99%+.',
+      'Sub-factors: seatbelt violations (0 = full score), speeding events per 30 days, HOS violations, average daily driving hours vs 11h limit. Each metric scored against fleet-specific thresholds.',
     actionable:
-      'Even a few unbuckled trips can drop this score significantly. Enforce a strict seatbelt policy.',
+      'Zero-tolerance seatbelt + HOS policies deliver the fastest compliance score lift.',
   },
   'insurance.idleTime': {
-    title: 'Idle Time (Insurance)',
+    title: 'Maintenance Component',
     explanation:
-      'Insurance component for excessive idling. High idle time indicates fatigue risk and increases exposure time on the road.',
+      'Insurance component for vehicle condition and fleet modernity. Weighted at 20% of the total score.',
     methodology:
-      'Fleet average idle-to-drive ratio compared to industry benchmarks. Under 15% is good; over 25% is poor.',
+      'Sub-factors: average vehicle age (years), active fault codes, faults per vehicle, average odometer. Newer vehicles with fewer faults score highest.',
     actionable:
-      'Install automatic engine shutdown systems to enforce idle limits.',
+      'Clear active fault codes and prioritize PM schedules to improve this score.',
   },
   'insurance.whatIf': {
     title: 'What-If Simulator',
     explanation:
-      'Interactive simulator showing how changing one safety metric affects the overall insurance score and premium.',
+      'Interactive tool showing how specific safety improvements translate to insurance score increases and premium savings.',
     methodology:
-      'Recalculates the weighted score formula in real time as you adjust individual component sliders.',
+      'Each slider maps to a score boost formula. Example: Harsh Braking Reduction -- boost = (reduction% / 100) x 0.35 x 15 max pts. Speeding Reduction -- boost = (reduction% / 100) x 0.25 x 18 max pts. Total boost converts to dollar savings via the 0.3%-per-point premium formula.',
     actionable:
-      'Use this tool to build a business case for targeted safety investments.',
+      'Use this tool to build a business case: pick interventions with the best savings-to-difficulty ratio.',
   },
 
   // ── ROI ─────────────────────────────────────────────────────
   'roi.annualSavings': {
     title: 'Total Annual Savings',
     explanation:
-      'Total projected yearly savings across all five savings categories: insurance, claims, fuel, retention, and compliance.',
+      'Total projected yearly cost avoidance across five categories. These are potential savings from preventing costly events, not guaranteed refunds.',
     methodology:
-      'Sum of individual savings categories, each calculated from before/after metric comparisons and industry cost benchmarks.',
+      'Sum of: (1) Insurance premium savings from score improvement, (2) Accident prevention: reduced high-severity events x 1/200 accident conversion x $91K avg cost, (3) Fuel: idle reduction x 0.8 gal/hr x $3.85/gal, (4) Retention: at-risk drivers x $35K replacement cost x 65% intervention success, (5) Productivity: prevented events x $150/event.',
     actionable:
       'Present this headline number to leadership alongside the ROI percentage for budget approval.',
   },
   'roi.roiPercent': {
     title: 'Return on Investment',
     explanation:
-      'The return on your FleetShield investment: (total savings / platform cost) x 100.',
+      'The return on your FleetShield investment: (total savings - investment cost) / investment cost x 100.',
     methodology:
-      'Annual platform cost includes subscription + implementation. Savings are projected from the trailing 90-day trend.',
+      'Investment cost = fleet size x ($45 platform + $35 support) x 12 months/year. ROI = ((annual savings - investment) / investment) x 100. Example: $80K savings on $24K investment = 233% ROI.',
     actionable:
-      'An ROI above 300% is typical for well-adopted fleet safety platforms within the first year.',
+      'An ROI above 200% is strong. Accelerate by prioritizing the highest-value intervention categories.',
   },
   'roi.paybackMonths': {
     title: 'Payback Period',
     explanation:
       'The number of months until your FleetShield investment is fully recovered from accumulated savings.',
     methodology:
-      'Monthly savings rate divided into total implementation + subscription cost to date.',
+      'Formula: (annual investment cost / annual savings) x 12 months. Example: $24K investment / $80K savings = 3.6 months payback.',
     actionable:
-      'Most fleets achieve payback within 4-6 months. Accelerate by prioritizing high-impact interventions.',
+      'Most fleets achieve payback within 3-6 months. Accelerate by prioritizing high-impact interventions.',
   },
   'roi.costPerDriver': {
-    title: 'Cost per Driver',
+    title: '3-Year Projected Value',
     explanation:
-      'The monthly FleetShield cost divided by the number of active drivers.',
+      'The cumulative net value (savings minus cost) projected over 3 years, assuming 8% annual improvement from compounding safety gains.',
     methodology:
-      'Total monthly platform cost / active driver count. Includes all features and support.',
+      'Year 1: annual savings - investment. Year 2: (annual savings x 1.08) - investment. Year 3: (annual savings x 1.08^2) - investment. Total = sum of all 3 years.',
     actionable:
-      'Compare this against the per-driver savings to demonstrate individual-level ROI.',
+      'Use this long-term projection to justify multi-year safety program commitments.',
   },
   'roi.insuranceSavings': {
-    title: 'Insurance Savings',
+    title: 'Insurance Premium Savings',
     explanation:
-      'Annual savings from lower insurance premiums due to improved safety scores.',
+      'Annual savings from lower insurance premiums due to your improved safety score vs. the industry baseline.',
     methodology:
-      'Difference between estimated premium at original score vs. current score, annualized.',
+      'Benchmark: $14,200/vehicle/year. Premium reduction = (insurance score - 50) x 0.3% of benchmark. Example: score 72 with 25 vehicles = 22 pts x 0.3% x $355K = $23,430/year saved vs. industry average.',
     actionable:
-      'Lock in savings by scheduling an insurance review when your score crosses a grade boundary.',
+      'Lock in savings by scheduling an insurance review when your score crosses a grade boundary (e.g., C to B).',
   },
   'roi.claimsSavings': {
-    title: 'Claims Savings',
+    title: 'Accident Prevention Savings',
     explanation:
-      'Savings from fewer accident claims calculated as frequency reduction times average claim cost.',
+      'Estimated cost avoidance from prevented accidents, based on the reduction in high-severity safety events over time.',
     methodology:
-      'Claims frequency (per million miles) reduction x average cost per claim ($15K-$45K depending on severity).',
+      'Compares high-severity events in the first 45 days vs. last 45 days, annualizes the reduction, then converts to prevented accidents using a 1-in-200 ratio (FMCSA data: ~0.5% of telematics events result in reportable crashes). Savings = prevented accidents x $91,000 (avg accident cost including vehicle damage, medical, liability, downtime). Source: FMCSA/NHTSA.',
     actionable:
-      'Even a 10% reduction in claims frequency can save tens of thousands annually.',
+      'Even preventing 0.5 accidents/year saves ~$45K. Focus on reducing critical and high-severity events.',
   },
   'roi.fuelSavings': {
     title: 'Fuel Savings',
     explanation:
-      'Savings from reduced idling and speed optimization across the fleet.',
+      'Savings from reduced engine idling across the fleet.',
     methodology:
-      'Idle-time reduction x fuel burn rate ($3.50/hr) + speed-optimization fuel efficiency gains.',
+      'Formula: vehicles x 365 days x 0.8 gal/hr idle burn rate x (current idle% - target idle%) x $3.85/gal diesel. Current idle: ~13% (fleet avg). Target: 8% (industry best practice). Example: 25 vehicles x 365 x 0.8 x 5.1% x $3.85 = ~$14,300/year.',
     actionable:
-      'Idle reduction is the quickest fuel win. Each 1% idle reduction saves roughly $50/vehicle/year.',
+      'Install idle-shutdown timers and APUs. Each 1% idle reduction saves ~$2,800/year for a 25-vehicle fleet.',
   },
   'roi.retentionSavings': {
-    title: 'Retention Savings',
+    title: 'Driver Retention Savings',
     explanation:
-      'Savings from lower driver turnover. Average replacement cost is $8,000 to $12,000 per driver.',
+      'Savings from preventing driver turnover. Replacement cost is $35,000 per driver (recruiting, training, onboarding, lost productivity during ramp-up).',
     methodology:
-      'Avoided turnover count x average replacement cost (recruiting + training + productivity ramp-up).',
+      'Identifies at-risk drivers using burnout probability (from wellness engine). Total at-risk cost = sum of ($35,000 x each driver\'s burnout probability). Projected savings = at-risk cost x 65% intervention success rate. Source: ATA replacement cost data; DOT/FMCSA wellness intervention studies.',
     actionable:
-      'Retaining even 2-3 additional drivers per year can save $20K-$35K.',
+      'Proactive wellness interventions cost a fraction of $35K replacement. Target high-burnout drivers first.',
   },
   'roi.complianceSavings': {
-    title: 'Compliance Savings',
+    title: 'Productivity Gains',
     explanation:
-      'Avoided fines and penalties from maintaining HOS and FMCSA compliance.',
+      'Value of productivity recovered from fewer safety events disrupting operations (investigations, vehicle downtime, scheduling disruptions).',
     methodology:
-      'Historical violation rate reduction x average fine amount ($1,000-$16,000 per violation).',
+      'Each prevented safety event saves an estimated $150 in operational disruption (investigation time, paperwork, vehicle inspection). Capped at $50K/year. Total = prevented events x $150.',
     actionable:
-      'Proactive HOS monitoring eliminates most compliance violations before they occur.',
+      'Reducing event volume frees up safety managers and dispatchers to focus on growth, not firefighting.',
   },
   'roi.beforeAfter': {
     title: 'Before / After Comparison',
     explanation:
-      'Side-by-side comparison of key fleet metrics before and after FleetShield deployment.',
+      'Side-by-side comparison of key fleet metrics from the first 45 days vs. the most recent 45 days of the 90-day monitoring window.',
     methodology:
-      'Compares the 90-day period before deployment to the most recent 90-day period, normalized for fleet size changes.',
+      'Metrics compared: total events, high-severity events, avg safety score, event rate per 1K miles, avg rest hours. Dollar impact is calculated from the change in each metric using the corresponding cost formula.',
     actionable:
-      'Use this comparison in executive reports and insurance negotiations.',
+      'Use this comparison in executive reports and insurance negotiations to show measurable progress.',
   },
   'roi.retentionRate': {
     title: 'Retention Rate',
@@ -349,18 +349,18 @@ export const insightContent: Record<string, InsightContent> = {
   'predictive.highRiskDrivers': {
     title: 'High-Risk Drivers',
     explanation:
-      'Drivers flagged by the predictive model as having an elevated incident probability in the next 7 days.',
+      'Drivers flagged by the predictive model as having an elevated incident probability before their next shift.',
     methodology:
-      'Machine-learning model trained on historical events, hours driven, rest patterns, weather, and route difficulty.',
+      'Pre-shift risk score (0-100) combines 4 factors: Fatigue (0-30 pts: rest hours, consecutive days, night driving), Behavior Trend (0-25 pts: recent event rate vs. baseline), Recent Severity (0-25 pts: critical/high events in last 48h and 7d), Workload (0-20 pts: daily hours and distance). Levels: low (0-25), elevated (26-50), high (51-75), critical (76-100).',
     actionable:
       'Assign flagged drivers to lower-risk routes or schedule mandatory rest before their next shift.',
   },
   'predictive.forecastAccuracy': {
     title: 'Forecast Accuracy',
     explanation:
-      'The historical accuracy of the predictive model, measured as the percentage of predictions that were confirmed by actual events.',
+      'The historical accuracy of the predictive model, measured as the percentage of predictions confirmed by actual events.',
     methodology:
-      'Backtested against 6 months of historical data. Accuracy = (true positives + true negatives) / total predictions.',
+      'Backtested against 90 days of historical data. Accuracy = (true positives + true negatives) / total predictions.',
     actionable:
       'Accuracy improves over time as the model ingests more fleet-specific data.',
   },
@@ -369,25 +369,25 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'The fleet-wide risk trend direction over the last 14 days: increasing, stable, or decreasing.',
     methodology:
-      'Compares the average daily risk score for the last 7 days vs. the prior 7 days.',
+      'Compares the average daily risk score for the last 7 days vs. the prior 7 days. Week-over-week event rate change determines deterioration.',
     actionable:
       'An increasing trend should trigger a fleet-wide safety stand-down or refresher training.',
   },
   'predictive.preShiftScore': {
-    title: 'Pre-Shift Score',
+    title: 'Pre-Shift Risk Score',
     explanation:
-      'An individual driver\'s risk score calculated before they start a shift. Scale: 0-100 where higher is safer.',
+      'An individual driver\'s risk score calculated before they start a shift. Scale: 0-100 where lower is safer.',
     methodology:
-      'Factors in hours since last rest, cumulative hours this week, time of day, weather forecast, and recent event history.',
+      'Sum of 4 factors: Fatigue Factor (0-30): hours since rest, consecutive long days, night driving pattern. Behavior Trend (0-25): event rate in last 7 days vs. 30-day baseline. Recent Severity (0-25): count of critical/high events in 48h and 7d windows. Workload Factor (0-20): avg hours and distance per day.',
     actionable:
-      'Drivers scoring below 60 should be reassigned or given additional rest before driving.',
+      'Drivers scoring above 50 should be reassigned or given additional rest before driving.',
   },
   'predictive.riskFactors': {
     title: 'Risk Factors',
     explanation:
-      'The key variables driving a driver\'s current risk level: fatigue, hours, weather conditions, and route history.',
+      'The key variables driving a driver\'s current risk level, ranked by contribution to the overall score.',
     methodology:
-      'SHAP (SHapley Additive exPlanations) values from the ML model ranked by contribution magnitude.',
+      'Each factor contributes a specific point range: Fatigue (up to 30), Behavior (up to 25), Severity (up to 25), Workload (up to 20). The highest-contributing factor is the primary risk driver.',
     actionable:
       'Address the top risk factor first for the most efficient risk reduction.',
   },
@@ -396,74 +396,74 @@ export const insightContent: Record<string, InsightContent> = {
   'wellness.retentionCost': {
     title: 'Retention Cost at Risk',
     explanation:
-      'Estimated annual cost if at-risk drivers leave, including replacement hiring, training, and productivity loss.',
+      'The estimated financial exposure if at-risk drivers leave, based on $35,000 average replacement cost per driver (recruiting, CDL training, onboarding, 6-month productivity ramp-up).',
     methodology:
-      'Number of at-risk drivers x average replacement cost ($8K-$12K) + productivity ramp-up period cost.',
+      'For each driver: retention cost = $35,000 x burnout probability. Burnout probability = (critical signals x 0.22) + (warning signals x 0.12) + 0.03 baseline. Total = sum across all drivers. Source: American Trucking Associations (ATA) driver replacement cost data.',
     actionable:
-      'Proactive wellness interventions cost a fraction of replacement. Invest in retention programs.',
+      'Proactive wellness interventions (schedule adjustments, coaching) cost far less than $35K replacement. Target high-probability drivers first.',
   },
   'wellness.burnoutSignals': {
-    title: 'Burnout Signals',
+    title: 'Burnout Signal Detection',
     explanation:
-      'Count of drivers currently showing 2 or more burnout indicators such as excessive hours, short rest periods, or pattern changes.',
+      '6 telematics-based signals are continuously monitored to detect early signs of driver burnout before it leads to turnover or accidents.',
     methodology:
-      'Burnout indicators: >55 hrs/week, <10 hrs between shifts, >3 late-night shifts/week, declining safety scores.',
+      'Signals: (1) Shift Irregularity: schedule variance std dev. (2) Consecutive Long Days: days with >10h driving. (3) Rest Compression: shrinking rest periods between shifts. (4) Harsh Event Escalation: week-over-week event rate increase. (5) Night Driving Creep: increasing night hours. (6) Excessive Daily Hours: % of days exceeding 11h. Each signal classified as normal/warning/critical.',
     actionable:
       'Schedule one-on-one check-ins with flagged drivers and adjust their routes or schedules.',
   },
   'wellness.fatigueScore': {
-    title: 'Fatigue Score',
+    title: 'Wellness Score',
     explanation:
-      'An individual driver fatigue metric based on hours driven, rest period quality, and time-of-day patterns.',
+      'An individual driver wellness metric (0-100) reflecting fatigue risk based on work patterns from telematics data.',
     methodology:
-      'Combines cumulative drive time, time since last 8+ hour rest, and circadian rhythm alignment (2-4 AM driving penalized).',
+      'Inversely proportional to burnout signals: 100 = no signals detected, score decreases as critical and warning signals accumulate. Drivers with 3+ critical signals typically score below 40.',
     actionable:
-      'Ensure drivers with low fatigue scores receive mandatory rest before their next assignment.',
+      'Ensure drivers with low wellness scores receive mandatory rest before their next assignment.',
   },
   'wellness.hoursCompliance': {
-    title: 'HOS Compliance',
+    title: 'Average Wellness Score',
     explanation:
-      'Percentage of drivers operating within Hours of Service (HOS) regulatory limits.',
+      'Fleet-wide average of individual driver wellness scores, indicating overall workforce well-being.',
     methodology:
-      'Tracks 11-hour driving limit, 14-hour on-duty limit, and 60/70-hour weekly limit per FMCSA regulations.',
+      'Simple average of all driver wellness scores (0-100). A fleet average above 70 indicates a generally healthy workforce; below 50 indicates systemic overwork.',
     actionable:
-      'Automate HOS warnings at 80% of limit to give drivers time to find safe stopping points.',
+      'If fleet average is below 60, review scheduling policies and workload distribution fleet-wide.',
   },
   'wellness.interventionSuccess': {
-    title: 'Intervention Success Rate',
+    title: 'Intervention Impact',
     explanation:
-      'Percentage of wellness interventions (schedule changes, coaching, etc.) that resulted in improved driver metrics within 30 days.',
+      'Wellness interventions (schedule changes, coaching, rest mandates) succeed in retaining 65% of at-risk drivers, based on DOT/FMCSA wellness program studies.',
     methodology:
-      'Tracks pre/post intervention safety scores, hours compliance, and fatigue metrics for each intervened driver.',
+      'Projected savings = total retention cost at risk x 65% intervention success rate. This is a conservative estimate -- industry studies show 60-75% success for structured wellness programs.',
     actionable:
-      'Analyze which intervention types have the highest success rates and standardize those approaches.',
+      'Analyze which intervention types (schedule adjustment, coaching, route change) have the highest success in your fleet and standardize them.',
   },
 
   // ── Alerts ──────────────────────────────────────────────────
   'alerts.urgencyScore': {
     title: 'Urgency Score',
     explanation:
-      'AI-computed priority score from 1 (low) to 10 (critical) based on event severity, recency, and the driver\'s history.',
+      'AI-computed priority score (0-100) based on event severity, recency, and the driver\'s history pattern.',
     methodology:
-      'Weighted formula: severity (40%) + recency (30%) + driver history (20%) + environmental context (10%).',
+      'Base severity score + repeat offender bonus (if 3+ similar events in 7d) + recency bonus (events in last 2h score higher) + pattern bonus (if clustered with other event types). Priority: critical (75-100), high (50-74), medium (25-49), low (0-24).',
     actionable:
-      'Address alerts scoring 8+ within 1 hour. Alerts 5-7 should be reviewed same-day.',
+      'Address critical alerts (75+) within 1 hour. High alerts (50-74) should be reviewed same-day.',
   },
   'alerts.priorityLevel': {
     title: 'Priority Level',
     explanation:
-      'Alert classification into Critical, High, Medium, or Low based on urgency score and potential impact.',
+      'Alert classification into Critical, High, Medium, or Low based on computed urgency score.',
     methodology:
-      'Critical: urgency 9-10, High: 7-8, Medium: 4-6, Low: 1-3. Adjusted by potential financial impact.',
+      'Critical: score 75-100 (immediate action). High: 50-74 (same-day review). Medium: 25-49 (weekly review). Low: 0-24 (informational). Categories: mechanical, compliance, behavioral, pattern.',
     actionable:
       'Set up push notifications for Critical and High alerts to ensure immediate response.',
   },
   'alerts.category': {
     title: 'Alert Category',
     explanation:
-      'Groups alerts by type: Safety Event, Maintenance, Compliance, or Wellness for organized triage.',
+      'Groups alerts by type: Behavioral, Mechanical, Compliance, or Pattern for organized triage.',
     methodology:
-      'Auto-classified based on the source rule, diagnostic code, or wellness indicator that triggered the alert.',
+      'Auto-classified based on the source event type. Behavioral: harsh braking, speeding. Mechanical: fault codes, maintenance. Compliance: HOS, seatbelt. Pattern: clustered recurring events.',
     actionable:
       'Filter by category to delegate alerts to the right team (safety manager, mechanic, HR).',
   },
@@ -550,8 +550,28 @@ export const insightContent: Record<string, InsightContent> = {
     explanation:
       'A detailed cost analysis showing FleetShield ROI with supporting data for each savings category.',
     methodology:
-      'Breaks down savings by category with before/after comparisons, methodology notes, and confidence intervals.',
+      'Breaks down savings by category with before/after comparisons, methodology notes, and industry benchmark sources.',
     actionable:
       'Use this report to justify continued FleetShield investment and request budget for additional safety programs.',
+  },
+
+  // ── Driver Risk ───────────────────────────────────────────────
+  'drivers.riskScore': {
+    title: 'Driver Risk Score',
+    explanation:
+      'A 0-100 score measuring individual driver risk based on their safety event history. Higher = riskier.',
+    methodology:
+      'Weighted formula: Event Frequency (40%): events per 1,000 miles driven. Severity (25%): weighted avg of event severity (critical=4x, high=2x, moderate=1x). Pattern (20%): concentration of habitual behaviors. Trend (15%): improving vs. worsening trajectory. Tiers: low (0-25), moderate (26-50), high (51-75), critical (76-100).',
+    actionable:
+      'Focus coaching on critical and high-tier drivers first for the biggest fleet-wide safety improvement.',
+  },
+  'drivers.annualCostExposure': {
+    title: 'Annual Cost Exposure',
+    explanation:
+      'The estimated annual financial risk this driver represents to the fleet, NOT an actual cost incurred. This is the statistically expected cost based on their risk tier.',
+    methodology:
+      'Cost exposure by tier: Low = $2,000/yr (minimal incidents), Moderate = $8,000/yr (occasional accidents), High = $25,000/yr (~1 major accident every 3-4 years), Critical = $65,000/yr (~1 major accident every 1-2 years). Based on actuarial data: avg accident cost $91K (FMCSA/NHTSA) x accident probability by tier.',
+    actionable:
+      'A critical driver at $65K exposure can be reduced to high ($25K) with targeted coaching, saving ~$40K in risk. This is potential cost avoidance, not a guaranteed savings.',
   },
 };

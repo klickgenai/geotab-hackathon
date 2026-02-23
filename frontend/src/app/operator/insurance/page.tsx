@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { InsightTooltip } from '@/components/ui/InsightTooltip';
+import { MethodologyPanel } from '@/components/ui/MethodologyPanel';
 
 function AnimatedNumber({ value, duration = 1500 }: { value: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
@@ -773,6 +774,55 @@ export default function InsurancePage() {
             </div>
           </motion.div>
         </div>
+        {/* Methodology Panel */}
+        <MethodologyPanel
+          title="How We Calculate Insurance Scores"
+          description="The insurance score is a weighted composite of four safety components, each scored independently from 0-100. The premium impact translates score points into estimated dollar savings using industry-standard actuarial formulas."
+          formulas={[
+            {
+              label: 'Overall Insurance Score',
+              formula: 'score = Safe Driving (35%) + Compliance (25%) + Maintenance (20%) + Driver Quality (20%)',
+              example: 'Safe Driving: 70 x 0.35 = 24.5, Compliance: 65 x 0.25 = 16.25, Maintenance: 80 x 0.20 = 16, Quality: 75 x 0.20 = 15 = Total: 71.75',
+            },
+            {
+              label: 'Premium Impact Formula',
+              formula: 'savings = (score - 50) x 0.3% x (fleet_size x $14,200)',
+              example: 'Score 72, 25 vehicles: (72-50) x 0.003 x $355,000 = $23,430/yr savings vs industry avg',
+              source: '$14,200/vehicle/yr = Class 8 commercial benchmark premium',
+            },
+            {
+              label: 'Safe Driving Component (35%)',
+              formula: 'Based on: event rate/1K miles, total events (30d), severity mix, 30-day trend',
+              example: 'Event rate <5/1K mi = good (industry avg ~12); severity: light 1x, moderate 2x, severe 4x weighting',
+            },
+            {
+              label: 'Compliance Component (25%)',
+              formula: 'Based on: seatbelt violations, speeding events, HOS violations, avg daily hours',
+              example: '0 seatbelt violations = full marks; HOS violations > 3 = critical; avg hours > 11h = critical',
+            },
+            {
+              label: 'Maintenance Component (20%)',
+              formula: 'Based on: fleet age (years), active fault codes, faults/vehicle, avg odometer',
+              example: 'Fleet age <3yr = good; active faults >5 = critical; odometer >400K km = critical',
+            },
+            {
+              label: 'Driver Quality Component (20%)',
+              formula: 'Based on: avg tenure (years), % low-risk drivers, % high/critical risk, team size',
+              example: 'Tenure >5yr = good; >60% low-risk = good; >20% high-risk = critical',
+            },
+            {
+              label: 'What-If Score Boost Formulas',
+              formula: 'Harsh Braking: (reduction%/100) x 0.35 x 15 max pts | Speeding: (reduction%/100) x 0.25 x 18 | Idling: (reduction%/100) x 0.20 x 8 | Night Driving: (reduction%/100) x 0.35 x 6 | Compliance: (improvement%/100) x 0.25 x 20 | Maintenance: (boost%/100) x 0.20 x 20',
+              example: '30% speeding reduction: (30/100) x 0.25 x 18 = 4.5 point boost = 4.5 x 0.3% x $355K = $4,792/yr savings',
+            },
+          ]}
+          sources={[
+            'Insurance benchmark: $14,200/vehicle/yr (Class 8 commercial average)',
+            'Premium sensitivity: 0.3% per score point (standard underwriting practice)',
+            'Grade scale: A+ (95-100), A (90-94), B+ (85-89), B (75-84), C+ (70-74), C (60-69), D (50-59), F (<50)',
+            'Component thresholds calibrated against Geotab fleet benchmark data',
+          ]}
+        />
       </div>
     </>
   );

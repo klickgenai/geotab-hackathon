@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { InsightTooltip } from '@/components/ui/InsightTooltip';
+import { MethodologyPanel } from '@/components/ui/MethodologyPanel';
 import PageHeader from '@/components/layout/PageHeader';
 import { api } from '@/lib/api';
 import type { WellnessResult, WellnessSummary } from '@/types/fleet';
@@ -459,6 +460,48 @@ export default function WellnessPage() {
             );
           })}
         </div>
+
+        {/* Methodology Panel */}
+        <MethodologyPanel
+          title="How We Detect Burnout & Calculate Retention Risk"
+          description="Burnout detection uses 6 telematics-based signals extracted from driving patterns. Each signal is classified as normal, warning, or critical. The retention cost represents the financial exposure if at-risk drivers leave, based on the $35,000 industry average replacement cost."
+          formulas={[
+            {
+              label: 'Burnout Probability',
+              formula: 'probability = (critical_signals x 0.22) + (warning_signals x 0.12) + 0.03 baseline',
+              example: '3 critical + 2 warning signals: (3 x 0.22) + (2 x 0.12) + 0.03 = 0.93 (93% burnout risk)',
+              source: 'ATRI/ATA: single burnout signal = 20-30% turnover risk increase',
+            },
+            {
+              label: 'Per-Driver Retention Cost',
+              formula: 'retention_cost = $35,000 x burnout_probability',
+              example: 'Driver with 81% burnout probability: $35,000 x 0.81 = $28,350 at risk',
+              source: 'ATA: $35K avg replacement cost (recruiting $3-5K, training $8-12K, lost productivity $15-25K)',
+            },
+            {
+              label: 'Total Retention Cost at Risk',
+              formula: 'total = SUM of all drivers\' retention_cost values',
+              example: '8 at-risk drivers with varying probabilities might total $180K in retention cost exposure',
+            },
+            {
+              label: 'Intervention Success Rate',
+              formula: 'projected_savings = total_retention_cost x 65% success_rate',
+              example: '$180K at risk x 65% = $117K in projected retention savings with proactive intervention',
+              source: 'DOT/FMCSA: wellness programs show 60-75% retention improvement',
+            },
+            {
+              label: '6 Burnout Signals Monitored',
+              formula: '(1) Shift Irregularity: schedule variance std dev | (2) Consecutive Long Days: days >10h driving | (3) Rest Compression: shrinking rest between shifts | (4) Event Escalation: week-over-week harsh event increase | (5) Night Driving Creep: increasing night hours | (6) Excessive Daily Hours: % of days >11h',
+              example: 'A driver with irregular shifts, 5 consecutive long days, and shrinking rest = 2 critical + 1 warning signal',
+            },
+          ]}
+          sources={[
+            'American Trucking Associations (ATA): $35,000 avg driver replacement cost',
+            'DOT/FMCSA wellness intervention studies: 60-75% success rates',
+            'ATRI driver turnover correlation with fatigue signals',
+            'Geotab telematics data: driving hours, rest periods, trip patterns',
+          ]}
+        />
 
         {/* Intervention Impact CTA */}
         <motion.div

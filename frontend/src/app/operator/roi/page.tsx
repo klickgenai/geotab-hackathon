@@ -10,6 +10,7 @@ import {
   Loader2, ArrowRight, ChevronDown,
 } from 'lucide-react';
 import { InsightTooltip } from '@/components/ui/InsightTooltip';
+import { MethodologyPanel } from '@/components/ui/MethodologyPanel';
 
 function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -313,6 +314,60 @@ export default function ROIPage() {
             </table>
           </div>
         )}
+        {/* Methodology Panel */}
+        <MethodologyPanel
+          title="How We Calculate ROI"
+          description="All savings figures represent potential cost avoidance based on industry benchmarks and your fleet's telematics data. These are not guaranteed refunds but statistically projected savings from preventing costly events."
+          formulas={[
+            {
+              label: 'Insurance Premium Savings',
+              formula: 'savings = (insurance_score - 50) x 0.3% x benchmark_premium',
+              example: 'Score 72 with 25 vehicles: (72-50) x 0.003 x (25 x $14,200) = $23,430/yr',
+              source: 'Industry avg: $14,200/vehicle/yr for Class 8 commercial',
+            },
+            {
+              label: 'Accident Prevention',
+              formula: 'savings = (high_severity_reduction / 200) x $91,000 avg_accident_cost',
+              example: '10 fewer high-severity events/45 days, annualized = 81/yr. 81/200 = 0.4 prevented accidents. 0.4 x $91K = $36,400',
+              source: 'FMCSA/NHTSA: $91K avg accident cost; 0.5% event-to-crash ratio',
+            },
+            {
+              label: 'Fuel Savings (Idle Reduction)',
+              formula: 'savings = vehicles x 365 x 0.8 gal/hr x (current_idle% - target_idle%) x $3.85/gal',
+              example: '25 vehicles, 13.1% idle to 8% target: 25 x 365 x 0.8 x 5.1% x $3.85 = ~$14,300/yr',
+              source: 'OEM spec: 0.8 gal/hr idle burn; EIA: $3.85/gal diesel avg',
+            },
+            {
+              label: 'Driver Retention',
+              formula: 'savings = SUM(burnout_probability x $35,000) x 65% intervention_success_rate',
+              example: '5 at-risk drivers avg 70% burnout: 5 x $24,500 = $122K at risk. $122K x 65% = $79,625 saved',
+              source: 'ATA: $35K replacement cost; DOT: 60-75% wellness intervention success',
+            },
+            {
+              label: 'Productivity Gains',
+              formula: 'savings = prevented_events x $150/event (capped at $50K/yr)',
+              example: '200 fewer events/yr x $150 = $30,000 in recovered productivity',
+            },
+            {
+              label: 'ROI Percentage',
+              formula: 'ROI = ((total_annual_savings - investment_cost) / investment_cost) x 100',
+              example: 'Investment: 25 vehicles x ($45 + $35)/mo x 12 = $24K/yr. Savings $80K. ROI = ($80K-$24K)/$24K x 100 = 233%',
+            },
+            {
+              label: '3-Year Projection',
+              formula: 'Year 1 + (savings x 1.08 - cost) + (savings x 1.08^2 - cost)',
+              example: '$80K savings: Y1=$56K + Y2=$62.4K + Y3=$69.3K = $187.7K cumulative',
+              source: '8% annual compounding from sustained safety improvements',
+            },
+          ]}
+          sources={[
+            'FMCSA/NHTSA accident cost databases',
+            'American Trucking Associations (ATA) driver replacement cost studies',
+            'DOT/FMCSA wellness program intervention data',
+            'EIA diesel fuel price averages',
+            'Geotab fleet telematics benchmarks',
+          ]}
+        />
       </div>
     </>
   );
