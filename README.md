@@ -42,6 +42,9 @@ Uses **both** MyGeotab API (vehicles, trips, diagnostics, GPS, safety events via
 ### 6. Quantified ROI for Every Recommendation
 Every insight comes with dollar-quantified projections. Not "you should reduce speeding" but "reducing speeding by 15% would save $23,400/year in insurance premiums and prevent an estimated 2.3 incidents."
 
+### 7. Fully Transparent Methodology
+Every score, metric, and financial figure is auditable. Each dashboard page includes a collapsible "How We Calculate This" panel showing the exact formulas, worked examples, and industry data sources. For a complete reference of all 9 scoring engines, see **[METHODOLOGY.md](METHODOLOGY.md)**.
+
 ---
 
 ## Platform Overview  - 8 Core Pillars
@@ -378,6 +381,8 @@ Operator runs coaching sweep → per-driver coaching plans generated
 ### 9 Scoring Engines  - Pure Functions, No Side Effects
 
 All scoring engines are pure functions that take typed parameters and return typed results. No side effects, no external state mutation, no API calls. They're called from routes, tools, AND missions  - making the system modular and testable.
+
+> **Full methodology with exact formulas, worked examples, thresholds, and industry data sources:** See **[METHODOLOGY.md](METHODOLOGY.md)**
 
 | Engine | Input | Output | Weight/Method |
 |--------|-------|--------|---------------|
@@ -747,6 +752,7 @@ fleetshield-ai/
 ├── CLAUDE.md                                 # AI development guide + coding standards
 ├── COMPETITION.md                            # Hackathon rules + judging criteria
 ├── DRIVER_PORTAL_TEST_SCENARIOS.md           # Test scenarios + demo flow
+├── METHODOLOGY.md                            # Full scoring methodology + formulas + data sources
 ├── STORY.md                                  # Problem, solution, and impact narrative
 ├── PROMPTS_USED.md                           # Key vibe coding prompts
 └── README.md                                 # This file
