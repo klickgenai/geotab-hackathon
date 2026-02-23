@@ -754,9 +754,26 @@ fleetshield-ai/
 ├── DRIVER_PORTAL_TEST_SCENARIOS.md           # Test scenarios + demo flow
 ├── METHODOLOGY.md                            # Full scoring methodology + formulas + data sources
 ├── STORY.md                                  # Problem, solution, and impact narrative
-├── PROMPTS_USED.md                           # Key vibe coding prompts
+├── PROMPTS.md                                # Complete prompt engineering history
+├── PROMPTS_USED.md                           # Key vibe coding prompts (submission format)
 └── README.md                                 # This file
 ```
+
+---
+
+## Project Documentation
+
+These companion documents provide full context on how FleetShield AI was built, how every metric is calculated, and how to test it:
+
+| Document | Description |
+|----------|-------------|
+| **[METHODOLOGY.md](METHODOLOGY.md)** | Complete scoring methodology for all 9 engines with exact formulas, worked examples, industry benchmarks, thresholds, and data sources. Start here to understand how every number in the app is calculated. |
+| **[STORY.md](STORY.md)** | The problem we're solving, our approach, the impact, and the journey. Narrative format for the hackathon submission. |
+| **[PROMPTS_USED.md](PROMPTS_USED.md)** | Key prompts used during vibe coding development, showing how AI-assisted development shaped the project. Required for hackathon submission. |
+| **[PROMPTS.md](PROMPTS.md)** | Extended prompt engineering history with the full evolution of prompts across development sessions. |
+| **[DRIVER_PORTAL_TEST_SCENARIOS.md](DRIVER_PORTAL_TEST_SCENARIOS.md)** | Comprehensive test scenarios for the driver portal: voice questions to try, tab navigation flows, dispatch call testing, mission sync verification, and a recommended 3-minute demo script. |
+| **[COMPETITION.md](COMPETITION.md)** | Geotab Vibe Coding Hackathon rules, judging criteria (6 dimensions), prize tiers, and submission requirements. |
+| **[CLAUDE.md](CLAUDE.md)** | AI development guide with coding standards, architecture rules, module boundaries, and checklists. Used by Claude Code during development. |
 
 ---
 
