@@ -4,6 +4,11 @@
 
 > **Geotab Vibe Coding Hackathon 2026** | Powered by Geotab Telematics + Claude Opus 4.6 + Real-Time Voice AI
 
+### Demo Video
+
+- **[Watch the 3-Minute Demo](https://youtu.be/gDTaULcQWsg)** — Fast-paced overview of FleetShield AI in action
+- **[Watch at Normal Speed](https://youtu.be/bb52r3x8EJw)** — Same demo at a slower pace for a clearer walkthrough
+
 ---
 
 ## The Problem We're Solving
@@ -895,6 +900,11 @@ open http://localhost:3001
 ---
 
 ## Development Process  - The Vibe Coding Journey
+
+<p align="center">
+  <img src="assets/vibe-coding-setup.jpg" alt="The FleetShield AI command center — ultrawide monitor, sticky-note architecture, handwritten scoring formulas, and a lot of late nights in a Geotab hoodie." width="720" />
+</p>
+<p align="center"><em>The FleetShield AI command center — ultrawide monitor, sticky-note architecture, handwritten scoring formulas, and a lot of late nights in a Geotab hoodie.</em></p>
 
 Built in ~10 days using AI-assisted development (Claude Code / Claude Opus 4.6) with a parallel development strategy:
 
