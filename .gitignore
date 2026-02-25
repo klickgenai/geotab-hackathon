@@ -6,7 +6,7 @@ dist/
 !.env.example
 *.log
 .DS_Store
-reports/
+/reports/
 .claude/
 
 # Media files (don't commit screenshots/videos)

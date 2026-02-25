@@ -872,8 +872,24 @@ open http://localhost:3001
 ## Demo Guide
 
 ### Driver Portal Login
-- **Seed data mode**: Employee `241` / PIN `1847`
-- **Geotab connected**: Employee `141` / PIN `1073`
+
+**Production (Geotab connected):**
+
+| Driver | Employee # | PIN | Risk Profile | Best For |
+|--------|-----------|------|-------------|----------|
+| James Wilson | `141` | `1073` | Low | Default test driver, clean record |
+| Ashley Cook | `847` | `1611` | Critical | High-risk demo, coaching scenarios |
+| Justin Morgan | `984` | `1862` | Critical | Safety investigation demo |
+| Stephanie Young | `807` | `5591` | High | Moderate risk scenarios |
+| Amanda Brown | `474` | `3332` | Moderate | Balanced demo |
+
+**Local dev (seed data mode):**
+
+| Driver | Employee # | PIN | Risk Profile |
+|--------|-----------|------|-------------|
+| James Wilson | `241` | `1847` | Low |
+| Marcus Rivera | `405` | `7234` | Critical |
+| Jake Thompson | `714` | `5190` | High |
 
 ### Recommended 3-Minute Demo Flow
 
@@ -896,6 +912,72 @@ open http://localhost:3001
 5. Show `/operator/map` → Live fleet tracking
 6. Show `/operator/predictive` → Safety forecasting
 7. Show `/operator/roi` → Dollar-quantified savings
+
+---
+
+## Deployment Architecture  - Why Railway + Vercel
+
+### The Problem
+The backend runs Express + WebSocket + Twilio Media Streams  - a stateful, long-running Node.js server. The frontend is a Next.js app with static pages and a middleware proxy. These have fundamentally different hosting requirements.
+
+### Why Railway for Backend
+| Requirement | Railway | Alternatives Considered |
+|------------|---------|------------------------|
+| **WebSocket support** | Native WSS on same port | Render: works but cold starts kill WS. AWS/GCP: overkill for hackathon |
+| **Persistent process** | Always-on, no cold starts | Vercel/Netlify serverless: can't hold WS connections or in-memory state |
+| **Twilio Media Streams** | Stable public URL for callbacks | ngrok: URL changes every restart, requires laptop running 24/7 |
+| **Zero config HTTPS** | Automatic SSL on `*.up.railway.app` | Self-hosted: need nginx + certbot + domain |
+| **Environment variables** | Dashboard UI, encrypted at rest | Docker: manual `.env` management |
+| **Deploy from CLI** | `railway up` from project dir | Heroku: similar but more expensive for equivalent specs |
+| **Cost** | $5/month (hobby plan, usage-based) | Free tier available for evaluation |
+
+**Key decision**: The backend holds in-memory state (driver sessions, mission store, active WebSocket connections, Twilio call sessions). Serverless platforms can't do this. Railway gives us a traditional server with modern DX.
+
+### Why Vercel for Frontend
+| Requirement | Vercel | Why It Fits |
+|------------|--------|-------------|
+| **Next.js native** | Built by the Next.js team | Zero-config builds, automatic optimizations |
+| **Edge middleware** | Proxy `/api/*` to Railway backend | Single domain for frontend + API (no CORS issues from browser) |
+| **Global CDN** | Static pages served from edge | Fast page loads worldwide |
+| **Instant deploys** | `vercel --prod` in seconds | Git push or CLI deploy |
+| **Free tier** | Generous for hackathon use | No cost during development |
+
+### Production Architecture
+```
+Browser (https://fleetshieldai.vercel.app)
+  │
+  ├── Static pages ──→ Vercel CDN (edge, ~50ms)
+  │
+  └── /api/* requests ──→ Vercel Middleware
+                            │
+                            └──→ Railway Backend (https://fleetshield-api-production.up.railway.app)
+                                   │
+                                   ├── 50+ REST endpoints
+                                   ├── WebSocket /ws (voice AI)
+                                   ├── WebSocket /twilio-media (phone calls)
+                                   ├── SSE /api/assistant/stream (AI chat)
+                                   │
+                                   ├──→ Geotab MyGeotab API (telematics)
+                                   ├──→ Geotab Ace API (conversational analytics)
+                                   ├──→ Anthropic Claude API (AI reasoning)
+                                   ├──→ Smallest AI (STT/TTS)
+                                   └──→ Twilio (outbound phone calls)
+```
+
+### What This Replaces
+Previously, the backend ran on a laptop exposed via ngrok. This had three problems:
+1. **ngrok URL changed every restart**  - had to update Vercel env var + backend `.env` + restart
+2. **Laptop had to stay running**  - no demo if laptop sleeps or loses internet
+3. **Twilio callbacks broke silently**  - stale ngrok URL = "dispatch call ended with no conversation"
+
+Railway gives a **permanent URL** (`https://fleetshield-api-production.up.railway.app`) that never changes. Set it once in Vercel and Twilio config, done forever.
+
+### Local Development (Unchanged)
+Local dev still uses `next.config.ts` rewrites to `localhost:3000`  - no Railway or Vercel needed:
+```bash
+cd backend && npm run dev    # localhost:3000
+cd frontend && npm run dev   # localhost:3001 → proxies /api/* to :3000
+```
 
 ---
 
